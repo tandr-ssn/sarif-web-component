@@ -3,45 +3,12 @@
 
 import { Tooltip } from 'azure-devops-ui/TooltipEx'
 import * as React from 'react'
-import { Result } from 'sarif'
-import { getRepoUri } from './getRepoUri'
+import { PhysicalLocation, Result } from 'sarif'
 import { Hi } from './Hi'
 import './RunCard.renderCell.scss'
+import { SourceLocationLink } from './SourceLocationLink'
 import { TooltipSpan } from './TooltipSpan'
-import { tryLink, tryOr } from './try'
-
-function isValidURL(url: string) {
-	try {
-		return !!new URL(url)
-	} catch (error) {
-		return false
-	}
-}
-
-interface SimpleRegion {
-	startLine?: number
-	startColumn?: number
-	endColumn?: number
-}
-
-function openInNewTab(fileName: string, text: string, region: SimpleRegion | undefined): void {
-	const line = region?.startLine ?? 1
-	const col = region?.startColumn ?? 1
-	const length = (region?.endColumn ?? 1) - col
-	const [_, pre, hi, post] = new RegExp(`((?:.*?\\n){${line - 1}}.{${col - 1}})(.{${length}})((?:.|\\n)*)`, 's').exec(text)
-
-	const escape = unsafe => unsafe
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
-
-	const {document} = window.open()
-	document.title = fileName
-	document.body.innerHTML = `<pre>${escape(pre)}<mark>${escape(hi)}</mark>${escape(post)}</pre>`
-	setTimeout(() => document.body.querySelector('mark').scrollIntoView({ block: 'center' }))
-}
+import { tryOr } from './try'
 
 // TODO:
 // Unify runArt vs resultArt.
@@ -77,26 +44,9 @@ export function renderPathCell(result: Result) {
 	// uri  = src\Prototypes\README.md
 	// href = https://org.visualstudio.com/project/_git/repo?path=%2Fsrc%2FPrototypes%2FREADME.md&_a=preview
 	const href = resArtLoc?.properties?.['href']
-
-	const runArtContentsText = runArt?.contents?.text
-	const repoUri = getRepoUri(uri, result.run, ploc?.region) ?? uri
-
-	const getHref = () => {
-		if (uri?.endsWith('.dll')) return undefined
-		if (href) return href
-		if (runArtContentsText) return '#'
-		if (!isValidURL(repoUri)) return undefined // uri as artDesc case takes this code path.
-		return repoUri
-	}
-
-	const region = ploc?.region
-	const onClick = event => {
-		if (href) return // TODO: Test precedence.
-		if (!runArtContentsText) return
-		event.preventDefault()
-		event.stopPropagation()
-		openInNewTab(fileName, runArtContentsText, region) // BUG: if uri is "aaa", then fileName will be empty
-	}
+	const sourcePhysicalLocation = ploc ?? (result.analysisTarget
+		? { artifactLocation: result.analysisTarget } as PhysicalLocation
+		: undefined)
 
 	const rowClasses = 'bolt-table-two-line-cell-item flex-row scroll-hidden'
 
@@ -114,11 +64,9 @@ export function renderPathCell(result: Result) {
 				return <div className={rowClasses}>
 					{/* TODO: Enable tooltip if a) inner !== href, or b) inner === href and inner is clipped (aka overflowing) */}
 					<TooltipSpan overflowOnly={true} text={href ?? uri}>
-						{tryLink(
-							getHref,
-							uriWithEllipsis,
-							'fontSize font-size secondary-text swcColorUnset swcWidth100' /* Override .bolt-list-cell */,
-							onClick)}
+						<span className="fontSize font-size secondary-text swcColorUnset swcWidth100">
+							<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run}>{uriWithEllipsis}</SourceLocationLink>
+						</span>
 					</TooltipSpan>
 				</div>
 			})}
@@ -127,11 +75,9 @@ export function renderPathCell(result: Result) {
 			{/* Since we don't know when the ellipsis text is in effect, thus TooltipSpan.overflowOnly=false/default */}
 			{/* Consider overflowOnly=false for the other branch above. */}
 			<TooltipSpan text={href ?? uri}>
-				{tryLink(
-					getHref,
-					uriWithEllipsis,
-					'swcColorUnset',
-					onClick)}
+				<span className="swcColorUnset">
+					<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run}>{uriWithEllipsis}</SourceLocationLink>
+				</span>
 			</TooltipSpan>
 		</div>
 	)

@@ -4,7 +4,7 @@
 import './Viewer.scss'
 import * as React from 'react'
 import { Component } from 'react'
-import { computed, observable, autorun, IObservableValue } from 'mobx'
+import { computed, observable, autorun, IObservableValue, runInAction } from 'mobx'
 import { observer } from 'mobx-react'
 import { computedFn } from 'mobx-utils'
 import { Log, Run } from 'sarif'
@@ -27,8 +27,11 @@ import { SurfaceBackground, SurfaceContext } from 'azure-devops-ui/Surface'
 import { IFilterState } from 'azure-devops-ui/Utilities/Filter'
 import { ZeroData } from 'azure-devops-ui/ZeroData'
 import { ObservableValue } from 'azure-devops-ui/Core/Observable'
+import { Button } from 'azure-devops-ui/Button'
+import { createLocalSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot } from './LocalSourceFile'
+import { SourceFileReader, SourceFileReaderContext } from './SourceFile'
 
-interface ViewerProps {
+export interface ViewerProps {
 	logs?: Log[]
 
 	/**
@@ -55,6 +58,17 @@ interface ViewerProps {
 	showActions?: boolean
 
 	/**
+	 * Shows an offline source-folder picker. Locations in SARIF are resolved beneath the folder
+	 * explicitly selected by the user; the viewer never receives its absolute operating-system path.
+	 */
+	showLocalSourcePicker?: boolean
+
+	/**
+	 * Optional host-provided source reader. It takes precedence over a folder selected by the built-in picker.
+	 */
+	sourceFileReader?: SourceFileReader
+
+	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
 	 * 
@@ -73,6 +87,8 @@ interface ViewerProps {
 	private collapseComments = new ObservableValue(false)
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
+	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
+	@observable private sourceDirectoryError?: string
 
 	constructor(props) {
 		super(props)
@@ -102,8 +118,30 @@ interface ViewerProps {
 		return this.runStores(logs).slice().sorted((a, b) => b.filteredCount - a.filteredCount) // Highest count first.
 	}
 
+	private selectSourceDirectory = async () => {
+		if (!window.showDirectoryPicker) return
+		try {
+			const directory = await window.showDirectoryPicker({
+				id: 'sarif-source-root',
+				mode: 'read',
+			})
+			runInAction(() => {
+				this.sourceDirectory = directory
+				this.sourceDirectoryError = undefined
+			})
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return
+			runInAction(() => this.sourceDirectoryError = error instanceof Error ? error.message : String(error))
+		}
+	}
+
 	render() {
-		const {hideBaseline, hideLevel, showSuppression, showAge, successMessage} = this.props
+		const {hideBaseline, hideLevel, showSuppression, showAge, successMessage, showLocalSourcePicker, sourceFileReader} = this.props
+		const commonSourceRoot = getCommonAbsoluteSourceRoot(this.props.logs)
+		const selectedSourceReader = this.sourceDirectory
+			? createLocalSourceFileReader(this.sourceDirectory, commonSourceRoot)
+			: undefined
+		const effectiveSourceReader = sourceFileReader ?? selectedSourceReader
 
 		// Computed values fail to cache if called from onRenderNearElement() for unknown reasons. Thus call them in advance.
 		const currentfilterState = this.filter.getState()
@@ -172,18 +210,38 @@ interface ViewerProps {
 		})() as JSX.Element
 
 		return <FilterKeywordContext.Provider value={filterKeywords ?? ''}>
-			<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
-				<Page>
-					<div className="swcShim"></div>
-					<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge} />
-					{this.warnOldVersion && <MessageCard
-						severity={MessageCardSeverity.Warning}
-						onDismiss={() => this.warnOldVersion = false}>
-						Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
-					</MessageCard>}
-					{nearElement}
-				</Page>
-			</SurfaceContext.Provider>
+			<SourceFileReaderContext.Provider value={effectiveSourceReader}>
+				<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
+					<Page>
+						<div className="swcShim"></div>
+						{showLocalSourcePicker && <div className="swcLocalSourceBar">
+							<Button
+								text={this.sourceDirectory ? 'Change source folder...' : 'Choose source folder...'}
+								disabled={!window.showDirectoryPicker}
+								onClick={this.selectSourceDirectory} />
+							<span>
+								{this.sourceDirectory
+									? <>Source folder: <strong>{this.sourceDirectory.name}</strong></>
+									: window.showDirectoryPicker
+										? commonSourceRoot
+											? <>Choose the local folder corresponding to <code>{commonSourceRoot}</code>.</>
+											: <>Choose the top-level folder containing the source files referenced by SARIF.</>
+										: <>Local folder selection is not supported by this browser.</>}
+							</span>
+							{this.sourceDirectoryError && <span className="swcLocalSourceError">{this.sourceDirectoryError}</span>}
+						</div>}
+						<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge} />
+						{this.warnOldVersion && <MessageCard
+							severity={MessageCardSeverity.Warning}
+							onDismiss={() => this.warnOldVersion = false}>
+							Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
+						</MessageCard>}
+						{nearElement}
+					</Page>
+				</SurfaceContext.Provider>
+			</SourceFileReaderContext.Provider>
 		</FilterKeywordContext.Provider>
 	}
 }
+
+export { SourceFile, SourceFileReader } from './SourceFile'

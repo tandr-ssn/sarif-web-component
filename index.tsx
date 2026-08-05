@@ -45,8 +45,8 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 
 	render() {
 		return <>
-			<Viewer logs={this.logs}
-				showSuppression // hideLevel hideBaseline showAge 
+				<Viewer logs={this.logs}
+					showSuppression showLocalSourcePicker // hideLevel hideBaseline showAge
 				filterState={{
 					Suppression: { value: ['unsuppressed'] },
 					Baseline: { value: ['new'] },

@@ -42,6 +42,24 @@
 	.vss-ZeroDataItem { justify-content: center; }			
 }
 
+.swcLocalSourceBar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 32px;
+	background: $neutral-2;
+	border-bottom: 1px solid $neutral-8;
+	flex-shrink: 0;
+
+	code {
+		word-break: break-all;
+	}
+}
+
+.swcLocalSourceError {
+	color: $error-text;
+}
+
 // Used by both renderUniversalTreeCell and Snippet
 pre {
 	background-color: var(--palette-black-alpha-6);
