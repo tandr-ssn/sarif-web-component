@@ -251,6 +251,10 @@ export interface ViewerProps {
 									style={{ display: 'none' }} />
 								<Button
 									text={selectedSourceFolderName ? 'Change source folder...' : 'Choose source folder...'}
+									tooltipProps={{
+										addAriaDescribedBy: true,
+										text: 'Files from this folder are read locally in your browser. Nothing is uploaded or sent over the network.',
+									}}
 									onClick={this.selectSourceDirectory} />
 								<span>
 									{selectedSourceFolderName
