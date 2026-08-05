@@ -34,6 +34,8 @@ The viewer uses the File System Access API where available and a directory-selec
 
 Call stacks in `result.stacks` and execution paths in `result.codeFlows` are displayed beneath each result. Their source locations use the same offline source reader. Opening a trace location highlights every readable entry from that trace in numbered colors; gutter arrows move between source files without leaving the opened tab.
 
+The opened source toolbar supports previous/next readable trace navigation (`[` and `]`), reports unavailable locations, and can copy the current path, path with line number, or the trace summary. Source reads are cached for the current reader and SARIF run. Supported C#, Go, Java, JavaScript/TypeScript, JSON, and XML-family files receive offline syntax coloring; other file types remain escaped plain text.
+
 To build and open the standalone viewer locally:
 
 ```
