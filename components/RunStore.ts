@@ -30,6 +30,7 @@ declare module 'sarif' {
 export enum SortRuleBy { Count, Name }
 
 export const isMatch = (field: string, keywords: string[]) => !keywords.length || keywords.some(keyword => field.includes(keyword))
+export const resultColumnFilterKey = (fieldId: string) => `Column:${fieldId}`
 
 export class RunStore {
 	driverName: string
@@ -163,12 +164,19 @@ export class RunStore {
 			const resultContainer = treeItem.data as { results: Result[] }
 			treeItem.childItemsAll = resultContainer.results
 				.filter(result => {
+					for (const column of columns) {
+						const value = filter[resultColumnFilterKey(column.id)]?.value as string | string[] | undefined
+						const field = column.filterString(result)
+						if (typeof value === 'string' && value.trim() && !field.toLowerCase().includes(value.trim().toLowerCase())) return false
+						if (Array.isArray(value) && value.length && !value.includes(field)) return false
+					}
 					const {_rule} = result
 					const ruleId = _rule.id.toLowerCase()
 					const ruleName = _rule.name?.toLowerCase() ?? ''
 					const isRuleMatch = isMatch(ruleId, filterKeywords) || isMatch(ruleName, filterKeywords)
 
 					for (const columnName in filter) {
+						if (columnName.startsWith('Column:')) continue
 						if (columnName === 'Discussion') continue // Discussion filter does not apply to Results.
 						const selectedValues = filter[columnName].value
 						if (!Array.isArray(selectedValues)) continue
@@ -285,5 +293,14 @@ export class RunStore {
 				width: -2,
 			}),
 		}))
+	}
+
+	columnFilterOptions(id: string): string[] {
+		const column = this.columns.find(candidate => candidate.id === id)
+		if (!column) return []
+		return Array.from(new Set((this.run.results ?? [])
+			.map(result => column.filterString(result).trim())
+			.filter(Boolean)))
+			.sort((left, right) => left.localeCompare(right))
 	}
 }

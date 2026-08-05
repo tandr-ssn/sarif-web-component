@@ -56,12 +56,11 @@
 	}
 }
 
-.swcResultControls {
-	display: flex;
-	padding: 6px 32px;
-	background: $neutral-2;
-	border-bottom: 1px solid $neutral-8;
-	flex-shrink: 0;
+.swcLocalSourceHeader {
+	background: transparent;
+	border: 0;
+	gap: 8px;
+	padding: 0;
 }
 
 .swcLocalSourceError {

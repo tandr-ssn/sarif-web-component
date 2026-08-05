@@ -6,6 +6,8 @@ import * as React from 'react'
 import {IObservableValue, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, ResultFieldNode} from './ResultFields'
+import {Callout} from 'azure-devops-ui/Callout'
+import {Location} from 'azure-devops-ui/Utilities/Position'
 
 function leafPaths(node: ResultFieldNode): string[] {
 	return [...(node.path ? [node.path] : []), ...node.children.flatMap(leafPaths)]
@@ -42,7 +44,7 @@ class FieldTreeNode extends React.Component<{
 		if (!includesSearch(node, search)) return null
 		const paths = leafPaths(node)
 		const checkedCount = paths.filter(path => selected.get().includes(path)).length
-		const label = <label title={node.path}>
+		const label = <label title={node.path} onClick={event => event.stopPropagation()}>
 			<input type="checkbox" checked={checkedCount === paths.length} ref={this.setChecked}
 				onClick={event => event.stopPropagation()}
 				onChange={event => this.toggle(event.currentTarget.checked)} />
@@ -64,6 +66,8 @@ export class ResultFieldSelector extends React.Component<{
 	selected: IObservableValue<string[]>
 }> {
 	@observable private search = ''
+	@observable private open = false
+	private anchor?: HTMLButtonElement
 
 	render() {
 		const builtIns = Array.from(BUILT_IN_RESULT_FIELDS).filter(field => this.props.fieldPaths.includes(field))
@@ -73,13 +77,27 @@ export class ResultFieldSelector extends React.Component<{
 			...buildResultFieldTree(dynamic),
 		]
 		const search = this.search.trim().toLowerCase()
-		return <details className="swcResultFieldSelector">
-			<summary title="Choose which SARIF result fields are shown as columns">Fields ({this.props.selected.get().length})</summary>
-			<div className="swcResultFieldMenu">
+		return <div className="swcResultFieldSelector">
+			<button type="button" ref={element => this.anchor = element ?? undefined}
+				title="Choose which SARIF result fields are shown as columns"
+				aria-expanded={this.open}
+				onClick={() => this.open = !this.open}>Fields ({this.props.selected.get().length}) <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
+			{this.open && this.anchor && <Callout
+				anchorElement={this.anchor}
+				anchorOrigin={{horizontal: Location.start, vertical: Location.end}}
+				calloutOrigin={{horizontal: Location.start, vertical: Location.start}}
+				blurDismiss={false}
+				escDismiss={true}
+				lightDismiss={true}
+				onDismiss={() => this.open = false}>
+				<div className="swcResultFieldMenu"
+					onClick={event => event.stopPropagation()}
+					onMouseDown={event => event.stopPropagation()}>
 				<input type="search" aria-label="Search result fields" placeholder="Search fields" value={this.search}
 					onChange={event => this.search = event.currentTarget.value} />
 				<ul>{tree.map(node => <FieldTreeNode key={node.name} node={node} selected={this.props.selected} search={search} />)}</ul>
-			</div>
-		</details>
+				</div>
+			</Callout>}
+		</div>
 	}
 }

@@ -12,14 +12,15 @@ test('renders a nested field tree and updates the selection', () => {
 	const wrapper = mount(<ResultFieldSelector
 		fieldPaths={['Path', 'Details', 'Level', 'Kind', 'properties.audit.selection.status']}
 		selected={selected} />)
+	wrapper.find('.swcResultFieldSelector > button').simulate('click')
+	wrapper.update()
 
-	expect(wrapper.text()).toContain('properties')
-	expect(wrapper.text()).toContain('audit')
-	expect(wrapper.text()).toContain('selection')
-	expect(wrapper.text()).toContain('status')
-	const status = wrapper.find('label[title="properties.audit.selection.status"] input')
-	;(status.getDOMNode() as HTMLInputElement).checked = true
-	status.simulate('change')
+	expect(document.body.textContent).toContain('properties')
+	expect(document.body.textContent).toContain('audit')
+	expect(document.body.textContent).toContain('selection')
+	expect(document.body.textContent).toContain('status')
+	const status = document.querySelector('label[title="properties.audit.selection.status"] input') as HTMLInputElement
+	status.click()
 	expect(selected.get()).toContain('properties.audit.selection.status')
 	wrapper.unmount()
 })

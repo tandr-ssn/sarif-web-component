@@ -23,6 +23,7 @@ import {Pill, PillSize} from "azure-devops-ui/Pill"
 import {Tree, ITreeColumn} from 'azure-devops-ui/TreeEx'
 import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
 import {Tooltip} from 'azure-devops-ui/TooltipEx'
+import {ResultColumnHeader} from './ResultColumnHeader'
 
 @observer export class RunCard extends Component<{ runStore: RunStore, index: number, runCount: number }> {
 	@observable private show = true
@@ -71,6 +72,9 @@ import {Tooltip} from 'azure-devops-ui/TooltipEx'
 					width: observableWidth,
 					onSize: (e, i, newWidth) => observableWidth.value = newWidth,
 					renderCell: renderCell, // Normally renderTreeCell
+					renderHeaderCell: (columnIndex, column, focuszoneId, isFirstActionableHeader) =>
+						<ResultColumnHeader columnIndex={columnIndex} column={column} runStore={runStore}
+							focuszoneId={focuszoneId} isFirstActionableHeader={isFirstActionableHeader} />,
 					sortProps: {
 						ariaLabelAscending: "Sorted A to Z", // Need to change for date values.
 						ariaLabelDescending: "Sorted Z to A",

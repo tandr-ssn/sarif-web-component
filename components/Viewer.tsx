@@ -3,6 +3,7 @@
 
 import './Viewer.scss'
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
 import { Component } from 'react'
 import { computed, observable, autorun, IObservableValue, runInAction } from 'mobx'
 import { observer } from 'mobx-react'
@@ -70,6 +71,9 @@ export interface ViewerProps {
 	 */
 	sourceFileReader?: SourceFileReader
 
+	/** Optional container where the local source picker is rendered instead of inside the viewer. */
+	localSourcePickerContainer?: Element | null
+
 	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
@@ -90,6 +94,8 @@ export interface ViewerProps {
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
 	private selectedResultFields = observable.box<string[]>(DEFAULT_RESULT_FIELDS.slice())
+	private runCardKeys = new WeakMap<Run, number>()
+	private nextRunCardKey = 0
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
 	@observable.ref private selectedSourceFiles?: File[]
 	@observable private selectedSourceFolderName?: string
@@ -101,6 +107,12 @@ export interface ViewerProps {
 		const {defaultFilterState, filterState, showAge} = this.props
 		this.filter = new MobxFilter(defaultFilterState, filterState)
 		this.groupByAge = observable.box(showAge)
+		autorun(() => {
+			const selected = this.selectedResultFields.get()
+			Object.keys(this.filter.getState())
+				.filter(key => key.startsWith('Column:') && !selected.includes(key.slice('Column:'.length)))
+				.forEach(key => this.filter.resetFilterItemState(key))
+		})
 	}
 
 	@observable warnOldVersion = false
@@ -131,6 +143,15 @@ export interface ViewerProps {
 		if (this.props.showAge) fields.push('Rule', 'Age', 'First Observed')
 		if (this.props.logs?.some(log => log.runs?.some(run => run.results?.some(result => result.workItemUris?.length)))) fields.push('Bug')
 		return [...fields, ...discoverResultFieldPaths(this.props.logs)]
+	}
+
+	private getRunCardKey(run: Run): number {
+		let key = this.runCardKeys.get(run)
+		if (key === undefined) {
+			key = this.nextRunCardKey++
+			this.runCardKeys.set(run, key)
+		}
+		return key
 	}
 
 	private selectSourceDirectory = async () => {
@@ -171,7 +192,7 @@ export interface ViewerProps {
 	}
 
 	render() {
-		const {hideBaseline, hideLevel, showSuppression, showAge, successMessage, showLocalSourcePicker, sourceFileReader} = this.props
+		const {hideBaseline, hideLevel, showSuppression, showAge, successMessage, showLocalSourcePicker, sourceFileReader, localSourcePickerContainer} = this.props
 		const commonSourceRoot = getCommonAbsoluteSourceRoot(this.props.logs)
 		const selectedSourceReader = this.sourceDirectory
 			? createLocalSourceFileReader(this.sourceDirectory, commonSourceRoot)
@@ -180,6 +201,37 @@ export interface ViewerProps {
 				: undefined
 		const effectiveSourceReader = sourceFileReader ?? selectedSourceReader
 		const selectedSourceFolderName = this.sourceDirectory?.name ?? this.selectedSourceFolderName
+		const compactSourcePicker = !!localSourcePickerContainer
+		const sourcePicker = showLocalSourcePicker && <div className={`swcLocalSourceBar${compactSourcePicker ? ' swcLocalSourceHeader' : ''}`}
+			title={compactSourcePicker && commonSourceRoot ? `Select the local folder corresponding to ${commonSourceRoot}` : undefined}>
+			<input
+				type="file"
+				multiple
+				{...{ webkitdirectory: '' }}
+				ref={input => this.sourceDirectoryInput = input ?? undefined}
+				onChange={this.selectSourceFiles}
+				style={{ display: 'none' }} />
+			<Button
+				text={selectedSourceFolderName ? 'Change source folder...' : 'Choose source folder...'}
+				tooltipProps={{
+					addAriaDescribedBy: true,
+					text: 'Files from this folder are read locally in your browser. Nothing is uploaded or sent over the network.',
+				}}
+				onClick={this.selectSourceDirectory} />
+			{compactSourcePicker
+				? selectedSourceFolderName && <span>Source: <strong>{selectedSourceFolderName}</strong></span>
+				: <span>
+					{selectedSourceFolderName
+						? <>Source folder: <strong>{selectedSourceFolderName}</strong></>
+						: commonSourceRoot
+							? <>Choose the local folder corresponding to <code>{commonSourceRoot}</code>.</>
+							: <>Choose the top-level folder containing the source files referenced by SARIF.</>}
+				</span>}
+			{this.sourceDirectoryError && <span className="swcLocalSourceError">{this.sourceDirectoryError}</span>}
+		</div>
+		const renderedSourcePicker = sourcePicker && (localSourcePickerContainer
+			? ReactDOM.createPortal(sourcePicker, localSourcePickerContainer)
+			: localSourcePickerContainer === null ? null : sourcePicker)
 
 		// Computed values fail to cache if called from onRenderNearElement() for unknown reasons. Thus call them in advance.
 		const currentfilterState = this.filter.getState()
@@ -242,7 +294,7 @@ export interface ViewerProps {
 			}
 			return runStoresSorted
 				.filter(run => !filterKeywords || run.filteredCount)
-				.map((run, index) => <div key={run.logIndex} className="page-content-left page-content-right page-content-top">
+				.map((run, index) => <div key={this.getRunCardKey(run.run)} className="page-content-left page-content-right page-content-top">
 					<RunCard runStore={run} index={index} runCount={runStoresSorted.length} />
 				</div>)
 		})() as JSX.Element
@@ -253,34 +305,9 @@ export interface ViewerProps {
 					<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
 						<Page>
 							<div className="swcShim"></div>
-							<div className="swcResultControls">
-								<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />
-							</div>
-							{showLocalSourcePicker && <div className="swcLocalSourceBar">
-								<input
-									type="file"
-									multiple
-									{...{ webkitdirectory: '' }}
-									ref={input => this.sourceDirectoryInput = input ?? undefined}
-									onChange={this.selectSourceFiles}
-									style={{ display: 'none' }} />
-								<Button
-									text={selectedSourceFolderName ? 'Change source folder...' : 'Choose source folder...'}
-									tooltipProps={{
-										addAriaDescribedBy: true,
-										text: 'Files from this folder are read locally in your browser. Nothing is uploaded or sent over the network.',
-									}}
-									onClick={this.selectSourceDirectory} />
-								<span>
-									{selectedSourceFolderName
-										? <>Source folder: <strong>{selectedSourceFolderName}</strong></>
-										: commonSourceRoot
-											? <>Choose the local folder corresponding to <code>{commonSourceRoot}</code>.</>
-											: <>Choose the top-level folder containing the source files referenced by SARIF.</>}
-								</span>
-								{this.sourceDirectoryError && <span className="swcLocalSourceError">{this.sourceDirectoryError}</span>}
-							</div>}
-							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge} />
+							{renderedSourcePicker}
+							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
+								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />} />
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
 								onDismiss={() => this.warnOldVersion = false}>
