@@ -6,6 +6,8 @@
 .bolt-page { // Parent is #app which is display block.
 	height: 100%;
 
+	.font-size { font-size: 12pt; }
+
 	& > * { flex: 0 0 auto; }
 
 	.bolt-messagecard {
