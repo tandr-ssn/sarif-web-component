@@ -4,6 +4,31 @@
 import {PhysicalLocation, Result} from 'sarif'
 import {SourceTrace} from './SourceFile'
 
+export function getResultAuditOrigin(result: Result): SourceTrace['origin'] | undefined {
+	const origin = (result.properties as any)?.audit?.origin
+	const originLocation = origin?.location
+	const path = originLocation?.path ?? originLocation?.uri
+	const line = originLocation?.line ?? originLocation?.startLine
+	const column = originLocation?.column ?? originLocation?.startColumn
+	if (typeof path !== 'string' || typeof line !== 'number') return undefined
+	const name = typeof origin.name === 'string' ? origin.name : undefined
+	return {
+		location: {
+			artifactLocation: {uri: path},
+			region: {
+				startLine: line,
+				...(typeof column === 'number' ? {startColumn: column} : {}),
+				...(typeof originLocation.endLine === 'number' ? {endLine: originLocation.endLine} : {}),
+				...(typeof originLocation.endColumn === 'number'
+					? {endColumn: originLocation.endColumn}
+					: typeof column === 'number' && name ? {endColumn: column + name.length} : {}),
+			},
+		},
+		...(name ? {name} : {}),
+		...(typeof origin.kind === 'string' ? {kind: origin.kind} : {}),
+	}
+}
+
 function locationKey(location: PhysicalLocation | undefined): string | undefined {
 	const artifact = location?.artifactLocation
 	if (!artifact) return undefined
@@ -26,6 +51,7 @@ function withPrimaryLocation(locations: Array<PhysicalLocation | undefined>, pri
 export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 	const primary = result.locations?.[0]?.physicalLocation
 	if (!primary) return undefined
+	const origin = getResultAuditOrigin(result)
 
 	const threadFlow = result.codeFlows?.find(codeFlow => codeFlow.threadFlows?.length)?.threadFlows?.[0]
 	if (threadFlow?.locations?.length) {
@@ -41,6 +67,7 @@ export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 			...withPrimaryLocation(resolvedLocations.map(resolved => resolved?.location?.physicalLocation), primary, identifierHints),
 			label: 'Code flow',
 			inferIdentifiers: true,
+			...(origin ? {origin} : {}),
 		}
 	}
 
@@ -49,6 +76,7 @@ export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 		return {
 			...withPrimaryLocation(stack.frames.map(frame => frame.location?.physicalLocation), primary),
 			label: 'Call stack',
+			...(origin ? {origin} : {}),
 		}
 	}
 	return undefined

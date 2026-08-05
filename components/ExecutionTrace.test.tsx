@@ -24,6 +24,11 @@ test('renders result stacks and code flows', () => {
 	const result = {
 		run,
 		message: { text: 'Finding' },
+		properties: {audit: {origin: {
+			kind: 'method-parameter',
+			name: 'request',
+			location: {path: 'src/handler.ts', line: 5, column: 8},
+		}}},
 		stacks: [{
 			frames: [{
 				module: 'app',
@@ -34,7 +39,15 @@ test('renders result stacks and code flows', () => {
 			}],
 		}],
 		codeFlows: [{ threadFlows: [{ locations: [{ index: 0 }] }] }],
-	} as Result
+	} as unknown as Result
+	const origin = {
+		location: {
+			artifactLocation: {uri: 'src/handler.ts'},
+			region: {startLine: 5, startColumn: 8, endColumn: 15},
+		},
+		name: 'request',
+		kind: 'method-parameter',
+	}
 
 	const wrapper = mount(<ExecutionTrace result={result} />)
 	expect(wrapper.find('summary').map(summary => summary.text())).toEqual([
@@ -52,12 +65,14 @@ test('renders result stacks and code flows', () => {
 		locations: [result.stacks[0].frames[0].location.physicalLocation],
 		activeIndex: 0,
 		label: 'Call stack',
+		origin,
 	})
 	expect(sourceLinks.at(1).prop('trace')).toEqual({
 		locations: [run.threadFlowLocations[0].location.physicalLocation],
 		activeIndex: 0,
 		label: 'Code flow',
 		inferIdentifiers: true,
+		origin,
 	})
 	const snippetLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') === 'swcSnippetLink')
 	expect(snippetLinks).toHaveLength(2)

@@ -169,3 +169,46 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
 	open.mockRestore()
 })
+
+test('uses audit origin to highlight an input and matching identifier inside a trace region', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {
+		document: childDocument,
+		opener: window,
+		location: {hash: ''},
+	} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const source = [
+		'function send(source, path, other) {',
+		'  consume(path);',
+		'}',
+	].join('\n')
+	const reader = async () => ({name: 'src/app.ts', text: source})
+	const location: any = {artifactLocation: {uri: 'src/app.ts'}, region: {startLine: 2}}
+
+	await openSourceFile(
+		location.artifactLocation,
+		{} as any,
+		location.region,
+		reader,
+		{
+			locations: [location],
+			activeIndex: 0,
+			label: 'Code flow',
+			inferIdentifiers: true,
+			origin: {
+				location: {
+					artifactLocation: {uri: 'src/app.ts'},
+					region: {startLine: 1, startColumn: 23, endColumn: 27},
+				},
+				name: 'path',
+				kind: 'method-parameter',
+			},
+		},
+	)
+
+	const identifiers = Array.from(childDocument.querySelectorAll('.trace-identifier-highlight'))
+	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path'])
+	expect(childDocument.querySelectorAll('.trace-badge')).toHaveLength(1)
+	open.mockRestore()
+})

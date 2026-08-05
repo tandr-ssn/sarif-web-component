@@ -1,5 +1,24 @@
 import {Result} from 'sarif'
-import {getResultSourceTrace} from './ResultSourceTrace'
+import {getResultAuditOrigin, getResultSourceTrace} from './ResultSourceTrace'
+
+test('converts audit origin metadata into an exact source identifier', () => {
+	const result = {
+		properties: {audit: {origin: {
+			kind: 'method-parameter',
+			name: 'filePath',
+			location: {path: 'src/file.ts', line: 12, column: 50},
+		}}},
+	} as unknown as Result
+
+	expect(getResultAuditOrigin(result)).toEqual({
+		location: {
+			artifactLocation: {uri: 'src/file.ts'},
+			region: {startLine: 12, startColumn: 50, endColumn: 58},
+		},
+		name: 'filePath',
+		kind: 'method-parameter',
+	})
+})
 
 test('uses a code flow and appends the primary result location', () => {
 	const flowLocation: any = {artifactLocation: {uri: 'src/start.ts'}, region: {startLine: 2}}

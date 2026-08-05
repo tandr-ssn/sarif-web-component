@@ -7,6 +7,7 @@ import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow} from 'sarif'
 import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace, traceColor} from './SourceFile'
 import {Snippet} from './Snippet'
+import {getResultAuditOrigin} from './ResultSourceTrace'
 
 function messageText(message): string | undefined {
 	return message?.text ?? message?.markdown
@@ -23,8 +24,9 @@ function TraceLocation(props: {
 	identifierHints?: Array<string | undefined>
 	inferIdentifiers?: boolean
 	traceCount?: number
+	origin?: SourceTrace['origin']
 }) {
-	const {location, module, run, index, traceLocations, traceLabel, showSnippet, identifierHints, inferIdentifiers, traceCount} = props
+	const {location, module, run, index, traceLocations, traceLabel, showSnippet, identifierHints, inferIdentifiers, traceCount, origin} = props
 	const logicalName = getLogicalLocationText(location)
 	const message = messageText(location?.message)
 	const prefix = index === undefined ? undefined : <span className="swcTraceIndex">{index + 1}</span>
@@ -38,6 +40,7 @@ function TraceLocation(props: {
 			label: traceLabel,
 			...(identifierHints?.some(Boolean) ? {identifierHints} : {}),
 			...(inferIdentifiers ? {inferIdentifiers: true} : {}),
+			...(origin ? {origin} : {}),
 		}
 	return <li className="swcTraceLocation">
 		{prefix}
@@ -51,13 +54,13 @@ function TraceLocation(props: {
 	</li>
 }
 
-function StackFrames(props: { stack: Stack, run: Run, label?: string }) {
+function StackFrames(props: { stack: Stack, run: Run, label?: string, origin?: SourceTrace['origin'] }) {
 	const traceLocations = props.stack.frames?.map(frame => frame.location?.physicalLocation) ?? []
 	return <ol className="swcTraceLocations">
 		{props.stack.frames?.map((frame, index) =>
 			<TraceLocation key={index} location={frame.location} module={frame.module} run={props.run}
 				index={index} traceLocations={traceLocations} traceLabel={props.label ?? 'Call stack'}
-				traceCount={traceLocations.length} showSnippet={true} />)}
+				traceCount={traceLocations.length} showSnippet={true} origin={props.origin} />)}
 	</ol>
 }
 
@@ -69,13 +72,13 @@ function ResultStacks(props: { result: Result, run: Run }) {
 			return <details className="swcTrace" key={index}>
 				<summary>{label} ({stack.frames?.length ?? 0} frames)</summary>
 				{messageText(stack.message) && <div className="swcTraceMessage">{messageText(stack.message)}</div>}
-				<StackFrames stack={stack} run={props.run} label={label} />
+				<StackFrames stack={stack} run={props.run} label={label} origin={getResultAuditOrigin(props.result)} />
 			</details>
 		})}
 	</>
 }
 
-function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: number, threadFlowIndex: number, label: string, run: Run }) {
+function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: number, threadFlowIndex: number, label: string, run: Run, origin?: SourceTrace['origin'] }) {
 	const {threadFlow, threadFlowCount, threadFlowIndex, label, run} = props
 	const resolvedLocations = threadFlow.locations?.map(threadFlowLocation => threadFlowLocation.index === undefined
 		? threadFlowLocation
@@ -93,8 +96,8 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 			{resolvedLocations.map((resolved, locationIndex) => <React.Fragment key={locationIndex}>
 				<TraceLocation location={resolved?.location} module={resolved?.module} run={run}
 					index={locationIndex} traceLocations={traceLocations} traceLabel={label} showSnippet={true}
-					identifierHints={identifierHints} inferIdentifiers={true} traceCount={traceLocations.length} />
-				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} label="Nested stack" /></li>}
+					identifierHints={identifierHints} inferIdentifiers={true} traceCount={traceLocations.length} origin={props.origin} />
+				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} label="Nested stack" origin={props.origin} /></li>}
 			</React.Fragment>)}
 		</ol>
 	</div>
@@ -114,7 +117,8 @@ function CodeFlows(props: { result: Result, run: Run }) {
 				threadFlowCount={codeFlow.threadFlows.length}
 				threadFlowIndex={threadFlowIndex}
 				label={codeFlow.threadFlows.length > 1 ? `${label} · Thread ${threadFlowIndex + 1}` : label}
-				run={props.run} />)}
+				run={props.run}
+				origin={getResultAuditOrigin(props.result)} />)}
 		</details>})}
 	</>
 }

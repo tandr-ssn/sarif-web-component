@@ -18,6 +18,11 @@ export interface SourceTrace {
 	label?: string
 	identifierHints?: Array<string | undefined>
 	inferIdentifiers?: boolean
+	origin?: {
+		location: PhysicalLocation
+		name?: string
+		kind?: string
+	}
 }
 
 export const SourceFileReaderContext = React.createContext<SourceFileReader | undefined>(undefined)
@@ -507,6 +512,15 @@ interface ResolvedTraceLocation {
 	identifierHint?: string
 }
 
+interface ResolvedTraceOrigin {
+	location: PhysicalLocation
+	artifactLocation?: ArtifactLocation
+	key?: string
+	region?: Region
+	name?: string
+	kind?: string
+}
+
 interface IdentifierRegion {
 	identifier: string
 	region: Region
@@ -637,7 +651,10 @@ function inferIdentifierHighlights(
 		const exact = source && location.region && exactIdentifierRegion(source.text, location.region)
 		return exact ? [{...exact, key: location.key, traceIndex: location.traceIndex}] : []
 	})
-	const explicitHints = resolvedTrace.filter(location => location.identifierHint).map(location => location.identifierHint)
+	const explicitHints = [
+		...resolvedTrace.filter(location => location.identifierHint).map(location => location.identifierHint),
+		trace.origin?.name,
+	].filter(Boolean) as string[]
 	const candidateNames = Array.from(new Set([...explicitHints, ...exactSeeds.map(seed => seed.identifier)]))
 	const candidates = candidateNames.map(identifier => {
 		const explicit = explicitHints.includes(identifier)
@@ -651,7 +668,7 @@ function inferIdentifierHighlights(
 			return region ? [{traceIndex: location.traceIndex, region}] : []
 		})
 		return {identifier, explicit, matches}
-	}).filter(candidate => candidate.matches.length >= 2)
+	}).filter(candidate => candidate.matches.length >= (candidate.explicit ? 1 : 2))
 	if (!candidates.length) return new Map()
 	const bestScore = Math.max(...candidates.map(candidate => candidate.matches.length + (candidate.explicit ? 1000 : 0)))
 	const best = candidates.filter(candidate => candidate.matches.length + (candidate.explicit ? 1000 : 0) === bestScore)
@@ -692,12 +709,24 @@ export async function openSourceFile(
 				identifierHint: trace.identifierHints?.[traceIndex],
 			}
 		}) ?? []
+		const resolvedOrigin: ResolvedTraceOrigin | undefined = trace?.origin && (() => {
+			const originArtifactLocation = getArtifactLocation(trace.origin.location, run)
+			return {
+				...trace.origin,
+				artifactLocation: originArtifactLocation,
+				key: originArtifactLocation && sourceViewKey(originArtifactLocation),
+				region: trace.origin.location.region,
+			}
+		})()
 		const artifactsByKey = new Map<string, ArtifactLocation>()
 		resolvedTrace.forEach(location => {
 			if (location.key && location.artifactLocation && !artifactsByKey.has(location.key)) {
 				artifactsByKey.set(location.key, location.artifactLocation)
 			}
 		})
+		if (resolvedOrigin?.key && resolvedOrigin.artifactLocation && !artifactsByKey.has(resolvedOrigin.key)) {
+			artifactsByKey.set(resolvedOrigin.key, resolvedOrigin.artifactLocation)
+		}
 		if (!artifactsByKey.has(activeKey)) artifactsByKey.set(activeKey, artifactLocation)
 
 		const sourceFilesByKey = new Map<string, SourceFile>([[activeKey, sourceFile]])
@@ -730,6 +759,8 @@ export async function openSourceFile(
 			return undefined
 		}
 		const identifierHighlights = trace ? inferIdentifierHighlights(trace, resolvedTrace, sourceFilesByKey) : new Map()
+		const identifierColor = identifierHighlights.values().next().value?.color
+			?? traceColor(0, Math.max(1, resolvedTrace.length))
 		views.forEach(view => {
 			view.highlights = resolvedTrace
 				.filter(location => location.key === view.key && location.region?.startLine)
@@ -755,6 +786,17 @@ export async function openSourceFile(
 						isActive: location.traceIndex === trace?.activeIndex,
 					})
 				})
+			if (resolvedOrigin?.key === view.key && resolvedOrigin.region) {
+				const source = sourceFilesByKey.get(view.key)
+				const originRegion = source && resolvedOrigin.name
+					? uniqueIdentifierInRegion(source.text, resolvedOrigin.region, resolvedOrigin.name) ?? resolvedOrigin.region
+					: resolvedOrigin.region
+				view.highlights.push({
+					region: originRegion,
+					color: identifierColor,
+					isIdentifier: !!resolvedOrigin.name,
+				})
+			}
 		})
 		const activeView = viewsByKey.get(activeKey)
 		if (region?.startLine && activeView && !activeView.highlights.length) {
