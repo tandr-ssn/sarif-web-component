@@ -32,7 +32,7 @@ The user must explicitly select the folder containing the source files reference
 
 The viewer uses the File System Access API where available and a directory-selection input as a fallback. Hosts with their own filesystem integration can instead pass a `sourceFileReader` callback. Source embedded in `run.artifacts[].contents.text` continues to work without either option.
 
-Call stacks in `result.stacks` and execution paths in `result.codeFlows` are displayed beneath each result. Their source locations use the same offline source reader.
+Call stacks in `result.stacks` and execution paths in `result.codeFlows` are displayed beneath each result. Their source locations use the same offline source reader. Opening a trace location highlights every readable entry from that trace in numbered colors; gutter arrows move between source files without leaving the opened tab.
 
 To build and open the standalone viewer locally:
 
