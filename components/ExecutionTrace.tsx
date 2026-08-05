@@ -46,7 +46,7 @@ function TraceLocation(props: {
 		{prefix}
 		<div>
 			{(logicalName || module) && <div className="swcTraceName">{logicalName ?? module}</div>}
-			{message && message !== logicalName && <div>{message}</div>}
+			{message && message !== logicalName && <div className="swcTraceLocationMessage">{message}</div>}
 			<SourceLocationLink ploc={location?.physicalLocation} run={run} trace={trace} />
 			{showSnippet && <Snippet ploc={location?.physicalLocation} run={run} trace={trace}
 				highlightColor={index === undefined ? undefined : traceColor(index, traceCount ?? traceLocations?.length ?? 1)} />}

@@ -389,7 +389,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.legend-end { background: #f5b5b0; border-right: 4px solid #c50f1f; }
 		.trace-missing { margin-top: 6px; }
 		.trace-missing ol { margin: 5px 0 0; max-height: 8em; overflow: auto; }
-		pre { margin: 0; padding: 12px 0; tab-size: 4; }
+		pre { font-size: 12pt; margin: 0; padding: 12px 0; tab-size: 4; }
 		.source-file { display: none; }
 		.source-file:target { display: block; }
 		.trace-column {
