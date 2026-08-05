@@ -5,6 +5,7 @@ import {observer} from "mobx-react"
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import { Log } from 'sarif'
+import {Button} from 'azure-devops-ui/Button'
 
 import { Viewer } from '../components/Viewer'
 import Shield from './Shield'
@@ -39,6 +40,11 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 
 @observer export class Index extends React.Component {
 	@observable.ref sample = demoLog
+	private sourcePickerContainer?: HTMLSpanElement
+	state = {sourcePickerReady: false}
+	componentDidMount() {
+		this.setState({sourcePickerReady: true})
+	}
 	@autobind async loadFile(file) {
 		if (!file) return
 		if (!file.name.match(/.(json|sarif)$/i)) {
@@ -51,15 +57,17 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 		return <>
 			<div className="demoHeader">
 				<span>SARIF Viewer</span>
-				<span style={{ flexGrow: 1 }}></span>
 				<input ref="inputFile" type="file" multiple={false} accept="*.sarif" style={{ display: 'none' }}
 					onChange={async e => {
 						e.persist()
 						this.loadFile(Array.from(e.target.files)[0])
 					}} />
-				<input type="button" value="Open..." onClick={() => (this.refs.inputFile as any).click() } />&nbsp;
+				<Button className="demoOpen" text="Open..." onClick={() => (this.refs.inputFile as any).click()} />
+				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>
+				<span style={{ flexGrow: 1 }}></span>
 			</div>
 			<Viewer logs={[this.sample]} showSuppression showLocalSourcePicker
+				localSourcePickerContainer={this.state.sourcePickerReady ? this.sourcePickerContainer : null}
 				filterState={{
 					Baseline: { value: ['new', 'unchanged', 'updated'] },
 					Suppression: { value: ['unsuppressed']},

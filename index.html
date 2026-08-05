@@ -7,6 +7,12 @@
 <head>
 	<title>SARIF Viewer</title>
 	<meta charset="utf-8">
+	<script>
+		// The root page is the webpack development shell. Direct filesystem use belongs to the offline docs build.
+		if (window.location.protocol === 'file:') {
+			window.location.replace(new URL('docs/index.html', window.location.href).href)
+		}
+	</script>
 	<link rel="stylesheet" href="node_modules/azure-devops-ui/Core/override.css" />
 	<style>
 	

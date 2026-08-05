@@ -34,8 +34,23 @@ code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courie
 button, input { font: inherit; } // Override user agent.
 
 .demoHeader {
+	align-items: center;
+	gap: 8px;
 	flex: 0 0 auto;
 	padding: 15px; padding-bottom: 10px;
 	display: flex;
 	border-bottom: 1px solid #EFEFEF; // Match policy headers.
+
+	.bolt-button {
+		background: #f7f7f7;
+		border: 1px solid #8a8886;
+		font-weight: 400;
+		padding: 4px 10px;
+	}
+
+	.bolt-button:hover { background: #eeeeee; }
+}
+
+.demoSourcePicker {
+	display: inline-flex;
 }
