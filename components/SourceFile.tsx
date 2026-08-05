@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import {ArtifactLocation, PhysicalLocation, Region, Run} from 'sarif'
+import {highlightSourceSegment} from './SyntaxHighlight'
 
 export interface SourceFile {
 	name: string
@@ -117,16 +118,23 @@ function highlightBackground(highlights: SourceHighlight[]): string {
 	return `background: linear-gradient(to bottom, ${stops.join(', ')})`
 }
 
-function renderHighlightedText(text: string, lineNumber: number, highlights: SourceHighlight[]): string {
+function renderSyntaxSegment(text: string, fileName: string): string {
+	const lineEnding = text.match(/[\r\n]+$/)?.[0] ?? ''
+	const code = lineEnding ? text.slice(0, -lineEnding.length) : text
+	const highlighted = highlightSourceSegment(code, fileName)
+	return highlighted === undefined ? escapeHtml(text) : highlighted + escapeHtml(lineEnding)
+}
+
+function renderHighlightedText(text: string, lineNumber: number, highlights: SourceHighlight[], fileName: string): string {
 	const selections = highlights
 		.map(highlight => ({ highlight, selection: selectionOnLine(text, lineNumber, highlight.region) }))
 		.filter(value => value.selection !== undefined) as Array<{ highlight: SourceHighlight, selection: [number, number] }>
-	if (!selections.length) return escapeHtml(text)
+	if (!selections.length) return renderSyntaxSegment(text, fileName)
 
 	const boundaries = Array.from(new Set([0, text.length, ...selections.flatMap(value => value.selection)])).sort((a, b) => a - b)
 	return boundaries.slice(0, -1).map((start, index) => {
 		const end = boundaries[index + 1]
-		const segment = escapeHtml(text.slice(start, end))
+		const segment = renderSyntaxSegment(text.slice(start, end), fileName)
 		const active = selections.filter(value => value.selection[0] <= start && value.selection[1] >= end)
 		const activeClass = active.some(value => value.highlight.isActive) ? ' trace-active-highlight' : ''
 		const traceIndices = active
@@ -159,13 +167,13 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${title}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
-function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean): string {
+function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
 	const traceBadges = highlights
 		.filter(highlight => highlight.region.startLine === lineNumber && highlight.traceIndex !== undefined)
 		.map(renderTraceBadge)
 		.join('')
 	const traceColumn = showTraceColumn ? `<span class="trace-column">${traceBadges}</span>` : ''
-	return `<span class="source-line" data-line="${lineNumber}">${traceColumn}<span class="line-number" data-line="${lineNumber}"></span>${renderHighlightedText(text, lineNumber, highlights)}</span>`
+	return `<span class="source-line" data-line="${lineNumber}">${traceColumn}<span class="line-number" data-line="${lineNumber}"></span>${renderHighlightedText(text, lineNumber, highlights, fileName)}</span>`
 }
 
 function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView, trace?: SourceTraceSummary): string {
@@ -409,17 +417,35 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		}
 		.line-number::before { content: attr(data-line); }
 		mark { color: #111111; }
+		.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #0000a0; font-weight: bold; }
+		.hljs-string, .hljs-attr, .hljs-template-variable { color: #a31515; }
+		.hljs-comment, .hljs-quote { color: #5f6f5f; font-style: italic; }
+		.hljs-number, .hljs-symbol, .hljs-bullet { color: #098658; }
+		.hljs-title, .hljs-type, .hljs-built_in { color: #267f99; }
+		.hljs-meta { color: #795e26; }
 		@media (prefers-color-scheme: dark) {
 			body { background: #1e1e1e; color: #dddddd; }
 			.source-toolbar { background: #292929; border-color: #4a4a4a; }
 			.source-toolbar button { background: #383838; border-color: #666666; color: #f0f0f0; }
 			.line-number { color: #a0a0a0; }
+			.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #569cd6; }
+			.hljs-string, .hljs-attr, .hljs-template-variable { color: #ce9178; }
+			.hljs-comment, .hljs-quote { color: #6a9955; }
+			.hljs-number, .hljs-symbol, .hljs-bullet { color: #b5cea8; }
+			.hljs-title, .hljs-type, .hljs-built_in { color: #4ec9b0; }
+			.hljs-meta { color: #dcdcaa; }
+			.trace-highlight .hljs-keyword, .trace-highlight .hljs-selector-tag, .trace-highlight .hljs-literal, .trace-highlight .hljs-section, .trace-highlight .hljs-link { color: #0000a0; }
+			.trace-highlight .hljs-string, .trace-highlight .hljs-attr, .trace-highlight .hljs-template-variable { color: #a31515; }
+			.trace-highlight .hljs-comment, .trace-highlight .hljs-quote { color: #405540; }
+			.trace-highlight .hljs-number, .trace-highlight .hljs-symbol, .trace-highlight .hljs-bullet { color: #075f40; }
+			.trace-highlight .hljs-title, .trace-highlight .hljs-type, .trace-highlight .hljs-built_in { color: #155f75; }
+			.trace-highlight .hljs-meta { color: #654910; }
 		}
 	`
 	target.document.head.appendChild(style)
 	target.document.body.innerHTML = renderSourceToolbar(views, activeView, trace) + views.map((view, fileIndex) => {
 		const lines = sourceLines(view.sourceFile.text)
-		return `<section class="source-file" id="${view.id}" data-file-index="${fileIndex}" data-file-name="${escapeHtml(view.name)}"><pre>${lines.map((line, index) => renderSourceLine(line, index + 1, view.highlights, showTraceColumn)).join('')}</pre></section>`
+		return `<section class="source-file" id="${view.id}" data-file-index="${fileIndex}" data-file-name="${escapeHtml(view.name)}"><pre>${lines.map((line, index) => renderSourceLine(line, index + 1, view.highlights, showTraceColumn, view.name)).join('')}</pre></section>`
 	}).join('')
 	if (activeView) wireSourceDocument(target, trace, activeView)
 	const activeSection = activeView && target.document.getElementById(activeView.id)

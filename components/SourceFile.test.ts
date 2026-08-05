@@ -110,6 +110,14 @@ test('highlights every trace entry in a file and links between trace files', asy
 	await new Promise(resolve => setTimeout(resolve, 0))
 	expect(childDocument.querySelector('[data-copy-status]')?.textContent).toBe('Copied')
 	expect((childWindow.navigator.clipboard.writeText as jest.Mock)).toHaveBeenCalledWith('src/app.ts:1')
+	const copyTrace = childDocument.querySelector('[data-copy="trace"]') as HTMLButtonElement
+	copyTrace.onclick(new MouseEvent('click'))
+	await new Promise(resolve => setTimeout(resolve, 0))
+	expect((childWindow.navigator.clipboard.writeText as jest.Mock).mock.calls[1][0]).toContain([
+		'Call stack',
+		'1. src/app.ts:1',
+		'2. unavailable: src/missing.ts',
+	].join('\n'))
 	expect(reader).toHaveBeenCalledTimes(4)
 	await openSourceFile(
 		locations[0].artifactLocation,
