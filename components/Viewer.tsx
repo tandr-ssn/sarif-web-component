@@ -74,6 +74,9 @@ export interface ViewerProps {
 	/** Optional container where the local source picker is rendered instead of inside the viewer. */
 	localSourcePickerContainer?: Element | null
 
+	/** Optional session-storage prefix used to remember the selected source-folder name across reloads. */
+	sessionStorageKey?: string
+
 	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
@@ -99,6 +102,7 @@ export interface ViewerProps {
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
 	@observable.ref private selectedSourceFiles?: File[]
 	@observable private selectedSourceFolderName?: string
+	@observable private rememberedSourceFolderName?: string
 	@observable private sourceDirectoryError?: string
 	private sourceDirectoryInput?: HTMLInputElement
 
@@ -107,6 +111,11 @@ export interface ViewerProps {
 		const {defaultFilterState, filterState, showAge} = this.props
 		this.filter = new MobxFilter(defaultFilterState, filterState)
 		this.groupByAge = observable.box(showAge)
+		if (this.props.sessionStorageKey) {
+			try {
+				this.rememberedSourceFolderName = window.sessionStorage.getItem(`${this.props.sessionStorageKey}:source-folder-name`) ?? undefined
+			} catch (_) { }
+		}
 		autorun(() => {
 			const selected = this.selectedResultFields.get()
 			Object.keys(this.filter.getState())
@@ -168,8 +177,10 @@ export interface ViewerProps {
 				this.sourceDirectory = directory
 				this.selectedSourceFiles = undefined
 				this.selectedSourceFolderName = undefined
+				this.rememberedSourceFolderName = directory.name
 				this.sourceDirectoryError = undefined
 			})
+			this.rememberSourceFolderName(directory.name)
 		} catch (error) {
 			if (error instanceof DOMException && error.name === 'AbortError') return
 			runInAction(() => this.sourceDirectoryError = error instanceof Error ? error.message : String(error))
@@ -185,10 +196,19 @@ export interface ViewerProps {
 			this.sourceDirectory = undefined
 			this.selectedSourceFiles = files
 			this.selectedSourceFolderName = folderName
+			this.rememberedSourceFolderName = folderName
 			this.sourceDirectoryError = undefined
 		})
+		this.rememberSourceFolderName(folderName)
 		// Allow choosing the same directory again after its contents change.
 		event.target.value = ''
+	}
+
+	private rememberSourceFolderName(name: string) {
+		if (!this.props.sessionStorageKey) return
+		try {
+			window.sessionStorage.setItem(`${this.props.sessionStorageKey}:source-folder-name`, name)
+		} catch (_) { }
 	}
 
 	render() {
@@ -201,6 +221,8 @@ export interface ViewerProps {
 				: undefined
 		const effectiveSourceReader = sourceFileReader ?? selectedSourceReader
 		const selectedSourceFolderName = this.sourceDirectory?.name ?? this.selectedSourceFolderName
+		const sourceFolderDisplayName = selectedSourceFolderName ?? this.rememberedSourceFolderName
+		const sourceFolderNeedsReconnect = !selectedSourceFolderName && !!this.rememberedSourceFolderName
 		const compactSourcePicker = !!localSourcePickerContainer
 		const sourcePicker = showLocalSourcePicker && <div className={`swcLocalSourceBar${compactSourcePicker ? ' swcLocalSourceHeader' : ''}`}
 			title={compactSourcePicker && commonSourceRoot ? `Select the local folder corresponding to ${commonSourceRoot}` : undefined}>
@@ -212,17 +234,17 @@ export interface ViewerProps {
 				onChange={this.selectSourceFiles}
 				style={{ display: 'none' }} />
 			<Button
-				text={selectedSourceFolderName ? 'Change source folder...' : 'Choose source folder...'}
+				text={selectedSourceFolderName ? 'Change source folder...' : sourceFolderNeedsReconnect ? 'Reconnect source folder...' : 'Choose source folder...'}
 				tooltipProps={{
 					addAriaDescribedBy: true,
 					text: 'Files from this folder are read locally in your browser. Nothing is uploaded or sent over the network.',
 				}}
 				onClick={this.selectSourceDirectory} />
 			{compactSourcePicker
-				? selectedSourceFolderName && <span>Source: <strong>{selectedSourceFolderName}</strong></span>
+				? sourceFolderDisplayName && <span>Source: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</span>
 				: <span>
-					{selectedSourceFolderName
-						? <>Source folder: <strong>{selectedSourceFolderName}</strong></>
+					{sourceFolderDisplayName
+						? <>Source folder: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</>
 						: commonSourceRoot
 							? <>Choose the local folder corresponding to <code>{commonSourceRoot}</code>.</>
 							: <>Choose the top-level folder containing the source files referenced by SARIF.</>}

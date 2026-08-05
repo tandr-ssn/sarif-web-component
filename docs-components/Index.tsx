@@ -30,6 +30,18 @@ const demoLog = {
 	}]
 } as Log
 
+const docsSessionKey = 'sarif-web-component:docs'
+const sarifSessionKey = `${docsSessionKey}:sarif`
+
+function loadSessionLog(): Log | undefined {
+	try {
+		const text = window.sessionStorage.getItem(sarifSessionKey)
+		return text ? JSON.parse(text) : undefined
+	} catch (_) {
+		return undefined
+	}
+}
+
 // file is File/Blob
 const readAsText = file => new Promise<string>((resolve, reject) => {
 	let reader = new FileReader()
@@ -39,7 +51,7 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 })
 
 @observer export class Index extends React.Component {
-	@observable.ref sample = demoLog
+	@observable.ref sample = loadSessionLog() ?? demoLog
 	private sourcePickerContainer?: HTMLSpanElement
 	state = {sourcePickerReady: false}
 	componentDidMount() {
@@ -51,7 +63,11 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 			alert('File name must end with ".json" or ".sarif"')
 			return
 		}
-		this.sample = JSON.parse(await readAsText(file))
+		const text = await readAsText(file)
+		this.sample = JSON.parse(text)
+		try {
+			window.sessionStorage.setItem(sarifSessionKey, text)
+		} catch (_) { }
 	}
 	render() {
 		return <>
@@ -68,6 +84,7 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 			</div>
 			<Viewer logs={[this.sample]} showSuppression showLocalSourcePicker
 				localSourcePickerContainer={this.state.sourcePickerReady ? this.sourcePickerContainer : null}
+				sessionStorageKey={docsSessionKey}
 				filterState={{
 					Baseline: { value: ['new', 'unchanged', 'updated'] },
 					Suppression: { value: ['unsuppressed']},

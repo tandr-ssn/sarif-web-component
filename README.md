@@ -47,6 +47,8 @@ npm run docs
 
 Then open `docs/index.html` directly in the browser. Opening the repository's root `index.html` from the filesystem redirects there as a convenience; when served over HTTP, the root page remains the webpack development shell. The build bundles React and the other runtime dependencies so the resulting page works offline. Generated `docs/index.js` is intentionally ignored and must not be committed.
 
+The offline demo keeps the opened SARIF and selected source-folder name in browser session storage across page reloads. Source contents and directory handles are not persisted; after a reload, use **Reconnect source folder...** to grant local read access again.
+
 ## Publishing
 Update the package version. Run workflow `Publish`. Make sure Repository secret `NODE_AUTH_TOKEN` exists.
 
