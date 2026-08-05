@@ -12,8 +12,4 @@ module.exports = {
 		libraryTarget: 'umd',
 		globalObject: 'this',
 	},
-	externals: {
-		'react': 'React',
-		'react-dom': 'ReactDOM',
-	},
 }

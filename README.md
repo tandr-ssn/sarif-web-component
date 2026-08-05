@@ -20,6 +20,20 @@ ReactDOM.render(<Viewer logs={arrayOfLogs} />, document.body.firstChild)
 ```
 In the HTML page hosting this component, `<meta http-equiv="content-type" content="text/html; charset=utf-8">` is required to avoid text rendering issues.
 
+### Offline source navigation
+
+The standalone viewer can run without network access. Enable its local source-folder picker with:
+
+```jsx
+<Viewer logs={arrayOfLogs} showLocalSourcePicker />
+```
+
+The user must explicitly select the folder containing the source files referenced by SARIF. Relative artifact URIs are resolved beneath that folder. For absolute paths, the viewer displays the common source root detected in the results and asks the user to select the corresponding local folder. Browsers intentionally do not reveal the parent directory of a SARIF file selected with `<input type="file">`.
+
+The directory picker is currently available in browsers that implement the File System Access API. Hosts with their own filesystem integration can instead pass a `sourceFileReader` callback. Source embedded in `run.artifacts[].contents.text` continues to work without either option.
+
+Call stacks in `result.stacks` and execution paths in `result.codeFlows` are displayed beneath each result. Their source locations use the same offline source reader.
+
 ## Publishing
 Update the package version. Run workflow `Publish`. Make sure Repository secret `NODE_AUTH_TOKEN` exists.
 

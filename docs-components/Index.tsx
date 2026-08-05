@@ -1,8 +1,9 @@
-import "./index.scss"
+import "./Index.scss"
 import autobind from 'autobind-decorator'
 import {observable} from "mobx"
 import {observer} from "mobx-react"
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
 import { Log } from 'sarif'
 
 import { Viewer } from '../components/Viewer'
@@ -58,7 +59,7 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 					}} />
 				<input type="button" value="Open..." onClick={() => (this.refs.inputFile as any).click() } />&nbsp;
 			</div>
-			<Viewer logs={[this.sample]} showSuppression
+			<Viewer logs={[this.sample]} showSuppression showLocalSourcePicker
 				filterState={{
 					Baseline: { value: ['new', 'unchanged', 'updated'] },
 					Suppression: { value: ['unsuppressed']},
@@ -67,3 +68,5 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 		</>
 	}
 }
+
+ReactDOM.render(<Index />, document.getElementById('app'))
