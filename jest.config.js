@@ -4,7 +4,7 @@ module.exports = {
 	// Consider ts-jest isolatedModules for more perf.
 	maxWorkers: 1,
 
-	// testEnvironment: 'node',
+	testEnvironment: 'jsdom',
 	moduleNameMapper: {
 		'\\.(png|s?css)$': 'identity-obj-proxy'
 	},
