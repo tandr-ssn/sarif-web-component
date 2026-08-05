@@ -39,41 +39,58 @@ function escapeHtml(value: string): string {
 		.replace(/'/g, '&#039;')
 }
 
-function splitRegion(text: string, region: Region | undefined): [string, string, string] {
-	if (!region?.startLine) return ['', '', text]
+function sourceLines(text: string): string[] {
+	return text.match(/[^\n]*\n|[^\n]+$/g) ?? ['']
+}
 
-	const lines = text.match(/[^\n]*\n|[^\n]+$/g) ?? ['']
-	const startLine = Math.max(0, region.startLine - 1)
-	if (startLine >= lines.length) return ['', '', text]
-
-	const endLine = Math.min(lines.length - 1, Math.max(startLine, (region.endLine ?? region.startLine) - 1))
-	const startColumn = Math.max(0, (region.startColumn ?? 1) - 1)
-	const endColumn = region.endColumn === undefined
-		? lines[endLine].replace(/[\r\n]+$/, '').length
-		: Math.max(0, region.endColumn - 1)
-
-	const beforeLines = lines.slice(0, startLine).join('')
-	const selectedLines = lines.slice(startLine, endLine + 1)
-	const afterLines = lines.slice(endLine + 1).join('')
-	const before = beforeLines + selectedLines[0].slice(0, startColumn)
-	const selected = selectedLines.length === 1
-		? selectedLines[0].slice(startColumn, endColumn)
-		: selectedLines[0].slice(startColumn)
-			+ selectedLines.slice(1, -1).join('')
-			+ selectedLines[selectedLines.length - 1].slice(0, endColumn)
-	const after = selectedLines[selectedLines.length - 1].slice(endColumn) + afterLines
-
-	return [before, selected, after]
+function renderSourceLine(text: string, lineNumber: number, region: Region | undefined): string {
+	let contents = escapeHtml(text)
+	if (region?.startLine) {
+		const startLine = Math.max(1, region.startLine)
+		const endLine = Math.max(startLine, region.endLine ?? startLine)
+		if (lineNumber >= startLine && lineNumber <= endLine) {
+			const startColumn = lineNumber === startLine ? Math.max(0, (region.startColumn ?? 1) - 1) : 0
+			const endColumn = lineNumber === endLine
+				? region.endColumn === undefined
+					? text.replace(/[\r\n]+$/, '').length
+					: Math.max(0, region.endColumn - 1)
+				: text.length
+			const start = Math.min(text.length, startColumn)
+			const end = Math.min(text.length, Math.max(start, endColumn))
+			if (end > start) {
+				contents = escapeHtml(text.slice(0, start))
+					+ `<mark>${escapeHtml(text.slice(start, end))}</mark>`
+					+ escapeHtml(text.slice(end))
+			}
+		}
+	}
+	return `<span class="source-line" data-line="${lineNumber}">${contents}</span>`
 }
 
 function renderSourceDocument(target: Window, sourceFile: SourceFile, region: Region | undefined): void {
-	const [before, selected, after] = splitRegion(sourceFile.text, region)
+	const lines = sourceLines(sourceFile.text)
+	const lineNumberWidth = String(lines.length).length + 3
 	target.document.title = sourceFile.name
-	target.document.body.innerHTML = selected
-		? `<pre>${escapeHtml(before)}<mark>${escapeHtml(selected)}</mark>${escapeHtml(after)}</pre>`
-		: `<pre>${escapeHtml(after)}</pre>`
+	const style = target.document.createElement('style')
+	style.textContent = `
+		body { margin: 0; }
+		pre { margin: 0; padding: 12px 0; tab-size: 4; }
+		.source-line::before {
+			box-sizing: border-box;
+			color: #767676;
+			content: attr(data-line);
+			display: inline-block;
+			margin-right: 12px;
+			padding-right: 8px;
+			text-align: right;
+			user-select: none;
+			width: ${lineNumberWidth}ch;
+		}
+	`
+	target.document.head.appendChild(style)
+	target.document.body.innerHTML = `<pre>${lines.map((line, index) => renderSourceLine(line, index + 1, region)).join('')}</pre>`
 	const mark = target.document.body.querySelector('mark')
-	if (mark) setTimeout(() => mark.scrollIntoView({ block: 'center' }))
+	if (mark) setTimeout(() => mark.scrollIntoView?.({ block: 'center' }))
 }
 
 export async function openSourceFile(
