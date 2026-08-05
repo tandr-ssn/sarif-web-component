@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import {Location, PhysicalLocation, Run} from 'sarif'
+import {Dialog} from 'azure-devops-ui/Dialog'
 import {getRepoUri} from './getRepoUri'
 import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourceTrace} from './SourceFile'
 
@@ -20,7 +21,9 @@ function SourceLocationLinkWithReader(props: {
 	selectSourceFiles?: () => void
 	trace?: SourceTrace
 	children?: React.ReactNode
+	className?: string
 }) {
+	const [confirmSourceSelection, setConfirmSourceSelection] = React.useState(false)
 	const {ploc, run, reader, selectSourceFiles, trace} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
 	const text = props.children ?? locationText(ploc, run)
@@ -29,7 +32,7 @@ function SourceLocationLinkWithReader(props: {
 
 	const canReadLocally = !!reader || getArtifactContents(artifactLocation, run) !== undefined
 	if (canReadLocally) {
-		return <a href="#" onClick={event => {
+		return <a href="#" className={props.className} onClick={event => {
 			event.preventDefault()
 			event.stopPropagation()
 			void openSourceFile(artifactLocation, run, ploc.region, reader, trace)
@@ -38,18 +41,40 @@ function SourceLocationLinkWithReader(props: {
 
 	const explicitHref = artifactLocation.properties?.['href'] as string | undefined
 	const remoteHref = explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region)
-	if (remoteHref) return <a href={remoteHref} target="_blank" rel="noopener noreferrer">{text}</a>
+	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer">{text}</a>
 	if (selectSourceFiles) {
-		return <a href="#" onClick={event => {
-			event.preventDefault()
-			event.stopPropagation()
-			selectSourceFiles()
-		}} title="Choose a source folder, then click the file again">{text}</a>
+		return <>
+			<a href="#" className={props.className} onClick={event => {
+				event.preventDefault()
+				event.stopPropagation()
+				setConfirmSourceSelection(true)
+			}} title="Choose a source folder to view this file">{text}</a>
+			{confirmSourceSelection && <Dialog
+				titleProps={{text: 'Local source folder required'}}
+				onDismiss={() => setConfirmSourceSelection(false)}
+				escDismiss={true}
+				lightDismiss={true}
+				footerButtonProps={[
+					{
+						text: 'Choose source folder...',
+						primary: true,
+						autoFocus: true,
+						onClick: () => {
+							setConfirmSourceSelection(false)
+							selectSourceFiles()
+						},
+					},
+					{text: 'Cancel', onClick: () => setConfirmSourceSelection(false)},
+				]}>
+				<p>To view this source file, select the top-level local folder containing the files referenced by the SARIF report.</p>
+				<p>The browser will ask for read access to that folder. Files stay on your computer and are not uploaded or sent over the network.</p>
+			</Dialog>}
+		</>
 	}
 	return <>{text}</>
 }
 
-export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, trace?: SourceTrace, children?: React.ReactNode }) {
+export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, trace?: SourceTrace, children?: React.ReactNode, className?: string }) {
 	if (!props.ploc) return props.children ? <>{props.children}</> : null
 	return <SourceFileReaderContext.Consumer>
 		{reader => <SourceFileSelectionContext.Consumer>
@@ -59,7 +84,8 @@ export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, t
 				reader={reader}
 				selectSourceFiles={selectSourceFiles}
 				trace={props.trace}
-				children={props.children} />}
+				children={props.children}
+				className={props.className} />}
 		</SourceFileSelectionContext.Consumer>}
 	</SourceFileReaderContext.Consumer>
 }

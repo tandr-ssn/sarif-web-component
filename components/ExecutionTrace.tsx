@@ -5,7 +5,7 @@ import './ExecutionTrace.scss'
 import * as React from 'react'
 import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow} from 'sarif'
 import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
-import {SourceTrace} from './SourceFile'
+import {SourceTrace, traceColor} from './SourceFile'
 import {Snippet} from './Snippet'
 
 function messageText(message): string | undefined {
@@ -20,8 +20,11 @@ function TraceLocation(props: {
 	traceLocations?: Array<PhysicalLocation | undefined>
 	traceLabel?: string
 	showSnippet?: boolean
+	identifierHints?: Array<string | undefined>
+	inferIdentifiers?: boolean
+	traceCount?: number
 }) {
-	const {location, module, run, index, traceLocations, traceLabel, showSnippet} = props
+	const {location, module, run, index, traceLocations, traceLabel, showSnippet, identifierHints, inferIdentifiers, traceCount} = props
 	const logicalName = getLogicalLocationText(location)
 	const message = messageText(location?.message)
 	const prefix = index === undefined ? undefined : <span className="swcTraceIndex">{index + 1}</span>
@@ -29,14 +32,21 @@ function TraceLocation(props: {
 
 	const trace: SourceTrace | undefined = index === undefined || !traceLocations
 		? undefined
-		: { locations: traceLocations, activeIndex: index, label: traceLabel }
+		: {
+			locations: traceLocations,
+			activeIndex: index,
+			label: traceLabel,
+			...(identifierHints?.some(Boolean) ? {identifierHints} : {}),
+			...(inferIdentifiers ? {inferIdentifiers: true} : {}),
+		}
 	return <li className="swcTraceLocation">
 		{prefix}
 		<div>
 			{(logicalName || module) && <div className="swcTraceName">{logicalName ?? module}</div>}
 			{message && message !== logicalName && <div>{message}</div>}
 			<SourceLocationLink ploc={location?.physicalLocation} run={run} trace={trace} />
-			{showSnippet && <Snippet ploc={location?.physicalLocation} />}
+			{showSnippet && <Snippet ploc={location?.physicalLocation} run={run} trace={trace}
+				highlightColor={index === undefined ? undefined : traceColor(index, traceCount ?? traceLocations?.length ?? 1)} />}
 		</div>
 	</li>
 }
@@ -46,7 +56,8 @@ function StackFrames(props: { stack: Stack, run: Run, label?: string }) {
 	return <ol className="swcTraceLocations">
 		{props.stack.frames?.map((frame, index) =>
 			<TraceLocation key={index} location={frame.location} module={frame.module} run={props.run}
-				index={index} traceLocations={traceLocations} traceLabel={props.label ?? 'Call stack'} />)}
+				index={index} traceLocations={traceLocations} traceLabel={props.label ?? 'Call stack'}
+				traceCount={traceLocations.length} showSnippet={true} />)}
 	</ol>
 }
 
@@ -70,6 +81,10 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 		? threadFlowLocation
 		: run.threadFlowLocations?.[threadFlowLocation.index]) ?? []
 	const traceLocations = resolvedLocations.map(resolved => resolved?.location?.physicalLocation)
+	const identifierHints = resolvedLocations.map(resolved => {
+		const identifiers = Object.keys(resolved?.state ?? {}).filter(key => /^[A-Za-z_$][\w$]*$/.test(key))
+		return identifiers.length === 1 ? identifiers[0] : undefined
+	})
 	return <div className="swcThreadFlow">
 		{(threadFlowCount > 1 || threadFlow.message || threadFlow.id) && <div className="swcThreadFlowTitle">
 			{messageText(threadFlow.message) ?? threadFlow.id ?? `Thread ${threadFlowIndex + 1}`}
@@ -77,7 +92,8 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 		<ol className="swcTraceLocations">
 			{resolvedLocations.map((resolved, locationIndex) => <React.Fragment key={locationIndex}>
 				<TraceLocation location={resolved?.location} module={resolved?.module} run={run}
-					index={locationIndex} traceLocations={traceLocations} traceLabel={label} showSnippet={true} />
+					index={locationIndex} traceLocations={traceLocations} traceLabel={label} showSnippet={true}
+					identifierHints={identifierHints} inferIdentifiers={true} traceCount={traceLocations.length} />
 				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} label="Nested stack" /></li>}
 			</React.Fragment>)}
 		</ol>

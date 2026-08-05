@@ -16,6 +16,8 @@ export interface SourceTrace {
 	locations: Array<PhysicalLocation | undefined>
 	activeIndex: number
 	label?: string
+	identifierHints?: Array<string | undefined>
+	inferIdentifiers?: boolean
 }
 
 export const SourceFileReaderContext = React.createContext<SourceFileReader | undefined>(undefined)
@@ -61,6 +63,7 @@ interface SourceNavigationTarget {
 interface SourceHighlight {
 	region: Region
 	color: string
+	isIdentifier?: boolean
 	traceIndex?: number
 	isStart?: boolean
 	isEnd?: boolean
@@ -136,13 +139,16 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 		const end = boundaries[index + 1]
 		const segment = renderSyntaxSegment(text.slice(start, end), fileName)
 		const active = selections.filter(value => value.selection[0] <= start && value.selection[1] >= end)
+		const identifierHighlights = active.filter(value => value.highlight.isIdentifier)
+		const colorHighlights = identifierHighlights.length ? identifierHighlights : active
 		const activeClass = active.some(value => value.highlight.isActive) ? ' trace-active-highlight' : ''
+		const identifierClass = identifierHighlights.length ? ' trace-identifier-highlight' : ''
 		const traceIndices = active
 			.map(value => value.highlight.traceIndex)
 			.filter(index => index !== undefined)
 			.join(' ')
 		const traceData = traceIndices ? ` data-trace-indices="${traceIndices}"` : ''
-		return active.length ? `<mark class="trace-highlight${activeClass}"${traceData} style="${highlightBackground(active.map(value => value.highlight))}">${segment}</mark>` : segment
+		return active.length ? `<mark class="trace-highlight${activeClass}${identifierClass}"${traceData} style="${highlightBackground(colorHighlights.map(value => value.highlight))}">${segment}</mark>` : segment
 	}).join('')
 }
 
@@ -170,6 +176,7 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
 	const traceBadges = highlights
 		.filter(highlight => highlight.region.startLine === lineNumber && highlight.traceIndex !== undefined)
+		.filter((highlight, index, lineHighlights) => lineHighlights.findIndex(candidate => candidate.traceIndex === highlight.traceIndex) === index)
 		.map(renderTraceBadge)
 		.join('')
 	const traceColumn = showTraceColumn ? `<span class="trace-column">${traceBadges}</span>` : ''
@@ -372,9 +379,9 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.copy-status { min-width: 4em; }
 		.trace-legend { align-items: center; display: inline-flex; gap: 4px; white-space: nowrap; }
 		.legend-swatch { border-radius: 2px; display: inline-block; height: 12px; width: 12px; }
-		.legend-start { background: #c7e9c0; border-left: 3px solid #107c10; }
+		.legend-start { background: #c7e9c0; border-left: 4px solid #107c10; }
 		.legend-active { background: #bde3f4; box-shadow: 0 0 0 2px #005fb8; }
-		.legend-end { background: #f5b5b0; border-right: 3px solid #c50f1f; }
+		.legend-end { background: #f5b5b0; border-right: 4px solid #c50f1f; }
 		.trace-missing { margin-top: 6px; }
 		.trace-missing ol { margin: 5px 0 0; max-height: 8em; overflow: auto; }
 		pre { margin: 0; padding: 12px 0; tab-size: 4; }
@@ -402,9 +409,10 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-badge a { color: #202020; font-size: 1.35em; font-weight: bold; line-height: .8; text-decoration: none; }
 		.trace-badge a:hover { text-decoration: underline; }
 		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
-		.trace-start { border-left: 3px solid #107c10; }
-		.trace-end { border-right: 3px solid #c50f1f; }
+		.trace-start { border-left: 4px solid #107c10; }
+		.trace-end { border-right: 4px solid #c50f1f; }
 		.trace-active { box-shadow: 0 0 0 2px #005fb8; }
+		.trace-active-highlight { box-shadow: inset 0 0 0 2px #005fb8; border-radius: 2px; }
 		.line-number {
 			box-sizing: border-box;
 			color: #767676;
@@ -453,8 +461,11 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 	if (mark) setTimeout(() => mark.scrollIntoView?.({ block: 'center' }))
 }
 
-function artifactKey(artifactLocation: ArtifactLocation): string | undefined {
-	return artifactLocation.uri === undefined ? undefined : `${artifactLocation.uriBaseId ?? ''}\0${artifactLocation.uri}`
+// Some producers inconsistently include uriBaseId on the result location but omit it from the
+// matching code-flow location. Local source reading resolves both to the same selected-folder path,
+// so use the URI alone when grouping locations into source views.
+function sourceViewKey(artifactLocation: ArtifactLocation): string | undefined {
+	return artifactLocation.uri
 }
 
 async function readSourceFile(
@@ -465,7 +476,7 @@ async function readSourceFile(
 	const embeddedText = getArtifactContents(artifactLocation, run)
 	if (embeddedText !== undefined) return { name: artifactLocation.uri ?? 'Source file', text: embeddedText }
 	if (!reader) return undefined
-	const key = artifactKey(artifactLocation)
+	const key = sourceViewKey(artifactLocation)
 	if (!key) return reader(artifactLocation, run)
 
 	let readerCache = sourceFileCaches.get(reader)
@@ -480,7 +491,7 @@ async function readSourceFile(
 	return sourceFile
 }
 
-function traceColor(index: number, count: number): string {
+export function traceColor(index: number, count: number): string {
 	const accessiblePalette = ['#bde3f4', '#f6d39b', '#e8bad7', '#a8dbc9', '#f7ee9f', '#aecce5', '#efb49e']
 	if (count === 1) return '#bde3f4'
 	if (index === 0) return '#c7e9c0'
@@ -493,6 +504,160 @@ interface ResolvedTraceLocation {
 	artifactLocation?: ArtifactLocation
 	key?: string
 	region?: Region
+	identifierHint?: string
+}
+
+interface IdentifierRegion {
+	identifier: string
+	region: Region
+}
+
+function lineOffsets(text: string): number[] {
+	const offsets = [0]
+	for (let index = 0; index < text.length; index++) {
+		if (text[index] === '\n') offsets.push(index + 1)
+	}
+	return offsets
+}
+
+function offsetToPosition(text: string, offset: number): {line: number, column: number} {
+	const offsets = lineOffsets(text)
+	let lineIndex = offsets.length - 1
+	while (lineIndex > 0 && offsets[lineIndex] > offset) lineIndex--
+	return {line: lineIndex + 1, column: offset - offsets[lineIndex] + 1}
+}
+
+function regionOffsets(text: string, region: Region): [number, number] | undefined {
+	if (!region.startLine) return undefined
+	const offsets = lineOffsets(text)
+	const startLineIndex = region.startLine - 1
+	const endLineIndex = (region.endLine ?? region.startLine) - 1
+	if (startLineIndex >= offsets.length || endLineIndex >= offsets.length) return undefined
+	const start = offsets[startLineIndex] + Math.max(0, (region.startColumn ?? 1) - 1)
+	const endLineEnd = endLineIndex + 1 < offsets.length ? offsets[endLineIndex + 1] - 1 : text.length
+	const end = region.endColumn === undefined
+		? endLineEnd
+		: Math.min(endLineEnd, offsets[endLineIndex] + Math.max(0, region.endColumn - 1))
+	return [Math.min(start, text.length), Math.max(start, Math.min(end, text.length))]
+}
+
+function regionFromOffsets(text: string, start: number, end: number): Region {
+	const startPosition = offsetToPosition(text, start)
+	const endPosition = offsetToPosition(text, end)
+	return {
+		startLine: startPosition.line,
+		startColumn: startPosition.column,
+		endLine: endPosition.line,
+		endColumn: endPosition.column,
+	}
+}
+
+function identifierOccurrences(text: string, start: number, end: number, identifier: string): Array<[number, number]> {
+	const occurrences: Array<[number, number]> = []
+	let index = text.indexOf(identifier, start)
+	const isIdentifierCharacter = (character: string | undefined) => !!character && /[A-Za-z0-9_$]/.test(character)
+	while (index >= 0 && index + identifier.length <= end) {
+		if (!isIdentifierCharacter(text[index - 1]) && !isIdentifierCharacter(text[index + identifier.length])) {
+			occurrences.push([index, index + identifier.length])
+		}
+		index = text.indexOf(identifier, index + identifier.length)
+	}
+	return occurrences
+}
+
+function exactIdentifierRegion(text: string, region: Region): IdentifierRegion | undefined {
+	if (region.endColumn === undefined || (region.endLine ?? region.startLine) !== region.startLine) return undefined
+	const offsets = regionOffsets(text, region)
+	if (!offsets) return undefined
+	const selected = text.slice(offsets[0], offsets[1])
+	const leading = selected.length - selected.trimStart().length
+	const identifier = selected.trim()
+	if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) return undefined
+	const start = offsets[0] + leading
+	return {identifier, region: regionFromOffsets(text, start, start + identifier.length)}
+}
+
+function uniqueIdentifierInRegion(text: string, region: Region, identifier: string): Region | undefined {
+	const offsets = regionOffsets(text, region)
+	if (!offsets) return undefined
+	const occurrences = identifierOccurrences(text, offsets[0], offsets[1], identifier)
+	return occurrences.length === 1 ? regionFromOffsets(text, occurrences[0][0], occurrences[0][1]) : undefined
+}
+
+function firstParameterRegion(text: string, locationRegion: Region, identifier: string): Region | undefined {
+	const locationOffsets = regionOffsets(text, locationRegion)
+	if (!locationOffsets) return undefined
+	const start = text.lastIndexOf('\n', locationOffsets[0] - 1) + 1
+	const limit = Math.min(text.length, start + 4000)
+	let depth = 0
+	let pairStart = -1
+	let quote: string | undefined
+	let lineComment = false
+	let blockComment = false
+	const pairs: Array<[number, number]> = []
+	for (let index = start; index < limit; index++) {
+		const character = text[index]
+		const next = text[index + 1]
+		if (lineComment) {
+			if (character === '\n') lineComment = false
+			continue
+		}
+		if (blockComment) {
+			if (character === '*' && next === '/') { blockComment = false; index++ }
+			continue
+		}
+		if (quote) {
+			if (character === '\\') { index++; continue }
+			if (character === quote) quote = undefined
+			continue
+		}
+		if (character === '/' && next === '/') { lineComment = true; index++; continue }
+		if (character === '/' && next === '*') { blockComment = true; index++; continue }
+		if (character === '"' || character === "'" || character === '`') { quote = character; continue }
+		if (depth === 0 && (character === '{' || character === ';' || (character === '=' && next === '>'))) break
+		if (character === '(') {
+			if (depth++ === 0) pairStart = index + 1
+		} else if (character === ')' && depth > 0 && --depth === 0) {
+			pairs.push([pairStart, index])
+			if (pairs.length >= 3) break
+		}
+	}
+	const matches = pairs.flatMap(pair => identifierOccurrences(text, pair[0], pair[1], identifier))
+	return matches.length === 1 ? regionFromOffsets(text, matches[0][0], matches[0][1]) : undefined
+}
+
+function inferIdentifierHighlights(
+	trace: SourceTrace,
+	resolvedTrace: ResolvedTraceLocation[],
+	sourceFilesByKey: Map<string, SourceFile>,
+): Map<number, {region: Region, color: string}> {
+	if (!trace.inferIdentifiers) return new Map()
+	const exactSeeds = resolvedTrace.flatMap(location => {
+		const source = location.key && sourceFilesByKey.get(location.key)
+		const exact = source && location.region && exactIdentifierRegion(source.text, location.region)
+		return exact ? [{...exact, key: location.key, traceIndex: location.traceIndex}] : []
+	})
+	const explicitHints = resolvedTrace.filter(location => location.identifierHint).map(location => location.identifierHint)
+	const candidateNames = Array.from(new Set([...explicitHints, ...exactSeeds.map(seed => seed.identifier)]))
+	const candidates = candidateNames.map(identifier => {
+		const explicit = explicitHints.includes(identifier)
+		const seed = exactSeeds.find(candidate => candidate.identifier === identifier)
+		const matches = resolvedTrace.flatMap(location => {
+			if (!location.key || !location.region || (!explicit && seed?.key !== location.key)) return []
+			const source = sourceFilesByKey.get(location.key)
+			if (!source) return []
+			const region = uniqueIdentifierInRegion(source.text, location.region, identifier)
+				?? (location.traceIndex === 0 ? firstParameterRegion(source.text, location.region, identifier) : undefined)
+			return region ? [{traceIndex: location.traceIndex, region}] : []
+		})
+		return {identifier, explicit, matches}
+	}).filter(candidate => candidate.matches.length >= 2)
+	if (!candidates.length) return new Map()
+	const bestScore = Math.max(...candidates.map(candidate => candidate.matches.length + (candidate.explicit ? 1000 : 0)))
+	const best = candidates.filter(candidate => candidate.matches.length + (candidate.explicit ? 1000 : 0) === bestScore)
+	if (best.length !== 1) return new Map()
+	const color = traceColor(Math.min(...best[0].matches.map(match => match.traceIndex)), resolvedTrace.length)
+	return new Map(best[0].matches.map(match => [match.traceIndex, {region: match.region, color}]))
 }
 
 export async function openSourceFile(
@@ -516,14 +681,15 @@ export async function openSourceFile(
 			return
 		}
 
-		const activeKey = artifactKey(artifactLocation) ?? 'active-source-file'
+		const activeKey = sourceViewKey(artifactLocation) ?? 'active-source-file'
 		const resolvedTrace: ResolvedTraceLocation[] = trace?.locations.map((physicalLocation, traceIndex) => {
 			const resolvedArtifactLocation = getArtifactLocation(physicalLocation, run)
 			return {
 				traceIndex,
 				artifactLocation: resolvedArtifactLocation,
-				key: resolvedArtifactLocation && artifactKey(resolvedArtifactLocation),
+				key: resolvedArtifactLocation && sourceViewKey(resolvedArtifactLocation),
 				region: physicalLocation?.region,
+				identifierHint: trace.identifierHints?.[traceIndex],
 			}
 		}) ?? []
 		const artifactsByKey = new Map<string, ArtifactLocation>()
@@ -563,6 +729,7 @@ export async function openSourceFile(
 			}
 			return undefined
 		}
+		const identifierHighlights = trace ? inferIdentifierHighlights(trace, resolvedTrace, sourceFilesByKey) : new Map()
 		views.forEach(view => {
 			view.highlights = resolvedTrace
 				.filter(location => location.key === view.key && location.region?.startLine)
@@ -576,6 +743,18 @@ export async function openSourceFile(
 					previousFile: adjacentFile(location.traceIndex, -1, view.key),
 					nextFile: adjacentFile(location.traceIndex, 1, view.key),
 				}))
+			resolvedTrace
+				.filter(location => location.key === view.key && identifierHighlights.has(location.traceIndex))
+				.forEach(location => {
+					const inferred = identifierHighlights.get(location.traceIndex)
+					view.highlights.push({
+						region: inferred.region,
+						traceIndex: location.traceIndex,
+						color: inferred.color,
+						isIdentifier: true,
+						isActive: location.traceIndex === trace?.activeIndex,
+					})
+				})
 		})
 		const activeView = viewsByKey.get(activeKey)
 		if (region?.startLine && activeView && !activeView.highlights.length) {

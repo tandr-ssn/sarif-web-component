@@ -28,12 +28,27 @@
 	.swcRegion {
 		background-color: rgba(255, 230, 0, 0.5);
 	}
+
+	&.swcTraceSnippet .swcRegion {
+		background-color: var(--swc-trace-highlight);
+		border-radius: 2px;
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+	}
 }
 
 code.lineNumber {
 	width: 36px;
 	color: hsl(0, 0%, 60%);
 	flex: 0 0 auto;
+}
+
+.swcSnippetLink {
+	color: inherit;
+	display: block;
+	text-decoration: none;
+
+	&:hover .swcSnippet { outline: 1px solid var(--communication-foreground); }
 }
 
 .swcSnippet .hljs {

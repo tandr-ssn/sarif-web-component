@@ -10,10 +10,12 @@ require('!style-loader!css-loader!highlight.js/styles/vs.css')
 
 import {FilterKeywordContext} from './Viewer'
 import {Hi} from './Hi'
-import {PhysicalLocation} from 'sarif'
+import {PhysicalLocation, Run} from 'sarif'
 import {tryOr} from './try'
+import {SourceLocationLink} from './SourceLocationLink'
+import {SourceTrace} from './SourceFile'
 
-@observer export class Snippet extends React.Component<{ ploc?: PhysicalLocation, style?: React.CSSProperties }> {
+@observer export class Snippet extends React.Component<{ ploc?: PhysicalLocation, run?: Run, trace?: SourceTrace, style?: React.CSSProperties, highlightColor?: string }> {
 	static contextType = FilterKeywordContext
 	@observable showAll = false
 
@@ -112,10 +114,13 @@ import {tryOr} from './try'
 		</>
 
 		// title={JSON.stringify(ploc, null, '  ')}
-		return <>
-			<pre className="swcSnippet"
-				style={{ ...this.props.style, maxHeight: this.showAll ? undefined : 108 } as any} // 108px is a 6-line snippet which is very common.
-				key={Date.now()} onClick={() => this.showAll = !this.showAll}
+		const snippet = <pre className={`swcSnippet${this.props.highlightColor ? ' swcTraceSnippet' : ''}`}
+				style={{
+					...this.props.style,
+					maxHeight: this.showAll ? undefined : 108,
+					...(this.props.highlightColor ? {'--swc-trace-highlight': this.props.highlightColor} : {}),
+				} as any} // 108px is a 6-line snippet which is very common.
+				key={Date.now()} onClick={this.props.run ? undefined : () => this.showAll = !this.showAll}
 				ref={pre => {
 					if (!pre) return
 					const isClipped = pre.scrollHeight > pre.clientHeight
@@ -124,7 +129,9 @@ import {tryOr} from './try'
 				}}>
 				{lineNumbersAndCode}
 			</pre>
-		</>
+		return this.props.run
+			? <SourceLocationLink ploc={ploc} run={this.props.run} trace={this.props.trace} className="swcSnippetLink">{snippet}</SourceLocationLink>
+			: snippet
 	}
 }
 

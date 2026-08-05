@@ -5,6 +5,7 @@ import * as React from 'react'
 import {Result} from 'sarif'
 import {ExecutionTrace} from './ExecutionTrace'
 import {SourceLocationLink} from './SourceLocationLink'
+import {Snippet} from './Snippet'
 
 Enzyme.configure({ adapter: new Adapter() })
 
@@ -28,7 +29,7 @@ test('renders result stacks and code flows', () => {
 				module: 'app',
 				location: {
 					logicalLocations: [{ fullyQualifiedName: 'App.Run' }],
-					physicalLocation: { artifactLocation: { uri: 'src/app.ts' }, region: { startLine: 10 } },
+					physicalLocation: { artifactLocation: { uri: 'src/app.ts' }, region: { startLine: 10, snippet: {text: 'Run(path)'} } },
 				},
 			}],
 		}],
@@ -44,8 +45,9 @@ test('renders result stacks and code flows', () => {
 	expect(wrapper.text()).toContain('src/app.ts:10')
 	expect(wrapper.text()).toContain('Enter handler')
 	expect(wrapper.text()).toContain('src/handler.ts:5')
-	expect(wrapper.find('.swcSnippet').text()).toContain('handle(request)')
-	const sourceLinks = wrapper.find(SourceLocationLink)
+	expect(wrapper.find('.swcSnippet').map(snippet => snippet.text()).join(' ')).toContain('handle(request)')
+	expect(wrapper.find(Snippet).map(snippet => snippet.prop('highlightColor'))).toEqual(['#bde3f4', '#bde3f4'])
+	const sourceLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') !== 'swcSnippetLink')
 	expect(sourceLinks.at(0).prop('trace')).toEqual({
 		locations: [result.stacks[0].frames[0].location.physicalLocation],
 		activeIndex: 0,
@@ -55,5 +57,9 @@ test('renders result stacks and code flows', () => {
 		locations: [run.threadFlowLocations[0].location.physicalLocation],
 		activeIndex: 0,
 		label: 'Code flow',
+		inferIdentifiers: true,
 	})
+	const snippetLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') === 'swcSnippetLink')
+	expect(snippetLinks).toHaveLength(2)
+	expect(snippetLinks.at(1).prop('trace')).toEqual(sourceLinks.at(1).prop('trace'))
 })

@@ -14,6 +14,7 @@ test('uses a code flow and appends the primary result location', () => {
 		locations: [flowLocation, primary],
 		activeIndex: 1,
 		label: 'Code flow',
+		inferIdentifiers: true,
 	})
 })
 

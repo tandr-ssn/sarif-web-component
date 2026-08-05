@@ -73,7 +73,7 @@ test('highlights every trace entry in a file and links between trace files', asy
 	const run = {} as any
 
 	await openSourceFile(
-		locations[3].artifactLocation,
+		{...locations[3].artifactLocation, uriBaseId: '%SRCROOT%'},
 		run,
 		locations[3].region,
 		reader,
@@ -128,5 +128,44 @@ test('highlights every trace entry in a file and links between trace files', asy
 		{ locations, activeIndex: 0, label: 'Call stack' },
 	)
 	expect(reader).toHaveBeenCalledTimes(4)
+	open.mockRestore()
+})
+
+test('reuses an identifier color only inside code-flow regions and infers the first parameter', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {
+		document: childDocument,
+		opener: window,
+		location: {hash: ''},
+	} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const source = [
+		'function send(source, path, other) {',
+		'  const next = clean(path);',
+		'  consume(path);',
+		'  console.log(path);',
+		'}',
+	].join('\n')
+	const reader = async () => ({name: 'src/app.ts', text: source})
+	const locations: any[] = [
+		{artifactLocation: {uri: 'src/app.ts'}, region: {startLine: 1, startColumn: 10, endColumn: 14}},
+		{artifactLocation: {uri: 'src/app.ts'}, region: {startLine: 2}},
+		{artifactLocation: {uri: 'src/app.ts'}, region: {startLine: 3, startColumn: 11, endColumn: 15}},
+	]
+
+	await openSourceFile(
+		locations[1].artifactLocation,
+		{} as any,
+		locations[1].region,
+		reader,
+		{locations, activeIndex: 1, label: 'Code flow', inferIdentifiers: true},
+	)
+
+	const identifiers = Array.from(childDocument.querySelectorAll('.trace-identifier-highlight'))
+	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path', 'path'])
+	expect(new Set(identifiers.map(mark => mark.getAttribute('style'))).size).toBe(1)
+	expect(Array.from(childDocument.querySelectorAll('.trace-badge > button')).map(button => button.textContent)).toEqual(['1', '2', '3'])
+	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
+	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
 	open.mockRestore()
 })

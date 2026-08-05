@@ -2,12 +2,14 @@ import {mount} from 'enzyme'
 import * as Enzyme from 'enzyme'
 import * as Adapter from 'enzyme-adapter-react-16'
 import * as React from 'react'
+import {act} from 'react-dom/test-utils'
+import {Dialog} from 'azure-devops-ui/Dialog'
 import {SourceFileSelectionContext} from './SourceFile'
 import {SourceLocationLink} from './SourceLocationLink'
 
 Enzyme.configure({ adapter: new Adapter() })
 
-test('asks for a source folder when a local file is clicked before selection', () => {
+test('explains local folder access before asking for a source folder', () => {
 	const selectSourceFiles = jest.fn()
 	const run: any = {}
 	const ploc: any = { artifactLocation: { uri: 'src/file.ts' } }
@@ -18,5 +20,9 @@ test('asks for a source folder when a local file is clicked before selection', (
 	)
 
 	wrapper.find('a').simulate('click')
+	expect(selectSourceFiles).not.toHaveBeenCalled()
+	expect(wrapper.find(Dialog).text()).toContain('Files stay on your computer and are not uploaded')
+	const chooseButton = wrapper.find(Dialog).prop('footerButtonProps')[0]
+	act(() => chooseButton.onClick({} as any))
 	expect(selectSourceFiles).toHaveBeenCalledTimes(1)
 })
