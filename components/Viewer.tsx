@@ -30,6 +30,8 @@ import { ObservableValue } from 'azure-devops-ui/Core/Observable'
 import { Button } from 'azure-devops-ui/Button'
 import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot } from './LocalSourceFile'
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext } from './SourceFile'
+import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
+import {ResultFieldSelector} from './ResultFieldSelector'
 
 export interface ViewerProps {
 	logs?: Log[]
@@ -87,6 +89,7 @@ export interface ViewerProps {
 	private collapseComments = new ObservableValue(false)
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
+	private selectedResultFields = observable.box<string[]>(DEFAULT_RESULT_FIELDS.slice())
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
 	@observable.ref private selectedSourceFiles?: File[]
 	@observable private selectedSourceFolderName?: string
@@ -111,7 +114,7 @@ export interface ViewerProps {
 		if (!logs) return [] // Undef interpreted as loading.
 		const runs = [].concat(...logs.filter(log => log.version === '2.1.0').map(log => { log.runs.forEach((run, index) => { run._index = index }); return log.runs })) as Run[]
 		const {filter, groupByAge} = this
-		const runStores = runs.map((run, i) => new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions))
+		const runStores = runs.map((run, i) => new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields))
 		runStores.sort((a, b) => a.driverName.localeCompare(b.driverName)) // May not be required after introduction of runStoresSorted.
 		return runStores
 	}, { keepAlive: true })
@@ -119,6 +122,15 @@ export interface ViewerProps {
 	@computed get runStoresSorted() {
 		const {logs} = this.props
 		return this.runStores(logs).slice().sorted((a, b) => b.filteredCount - a.filteredCount) // Highest count first.
+	}
+
+	@computed private get resultFieldPaths(): string[] {
+		const fields = DEFAULT_RESULT_FIELDS.slice()
+		if (this.props.showActions) fields.push('Actions')
+		if (!this.props.hideBaseline) fields.push('Baseline')
+		if (this.props.showAge) fields.push('Rule', 'Age', 'First Observed')
+		if (this.props.logs?.some(log => log.runs?.some(run => run.results?.some(result => result.workItemUris?.length)))) fields.push('Bug')
+		return [...fields, ...discoverResultFieldPaths(this.props.logs)]
 	}
 
 	private selectSourceDirectory = async () => {
@@ -241,6 +253,9 @@ export interface ViewerProps {
 					<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
 						<Page>
 							<div className="swcShim"></div>
+							<div className="swcResultControls">
+								<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />
+							</div>
 							{showLocalSourcePicker && <div className="swcLocalSourceBar">
 								<input
 									type="file"

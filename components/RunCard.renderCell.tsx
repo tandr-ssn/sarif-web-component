@@ -25,6 +25,7 @@ import { renderPathCell } from './RunCard.renderPathCell'
 import { renderActionsCell } from './RunCard.renderActionsCell'
 import { getRepoUri } from './getRepoUri'
 import { ExecutionTrace } from './ExecutionTrace'
+import { getResultFieldValue } from './ResultFields'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
 
@@ -80,30 +81,27 @@ export function renderCell<T extends ISimpleTableCell>(
 	}
 
 	// ROW RESULT
-	const capitalize = str => `${str[0].toUpperCase()}${str.slice(1)}`
+	const capitalize = (str: string) => str ? `${str[0].toUpperCase()}${str.slice(1)}` : str
 	const isResult = (item => item.message !== undefined) as (item: any) => item is Result
 	if (isResult(data)) {
 		const result = data
+		const rule = result._rule
 		const status = {
 			none: result.kind === 'pass' ? Statuses.Success : Statuses.Queued,
 			note: Statuses.Information,
 			error: Statuses.Failed,
 		}[result.level] || Statuses.Warning
-		return columnIndex === 0
-			// ExpandableTreeCell (td div.bolt-table-cell-content.flex-row.flex-center TreeExpand children)
-			// calls SimpleTableCell - adds an extra div
-			// calls TableCell
-			? ExpandableTreeCell({ // As close to Table#TwoLineTableCell (which calls TableCell) as possible.
-				children: <>
-					<Status {...status} className="bolt-table-two-line-cell-icon flex-noshrink bolt-table-status-icon" size={StatusSize.m} ariaLabel={result.level || 'warning'} />
-					{renderPathCell(result)}
-				</>,
-				...commonProps,
-			})
-			: TableCell({ // Don't want SimpleTableCell as it has flex row.
-				children: (() => {
-					const rule = result._rule
-					switch (treeColumn.id) {
+		const children = (() => {
+			switch (treeColumn.id) {
+				case 'Path':
+					return renderPathCell(result)
+				case 'Level':
+					return <>
+						<Status {...status} className="bolt-table-two-line-cell-icon flex-noshrink bolt-table-status-icon" size={StatusSize.m} ariaLabel={result.level || 'warning'} />
+						<Hi>{capitalize(result.level ?? 'warning')}</Hi>
+					</>
+				case 'Kind':
+					return <Hi>{capitalize(result.kind ?? 'fail')}</Hi>
 						case 'Actions':
 							return <> {renderActionsCell(result)} </>
 						case 'Details':
@@ -133,10 +131,16 @@ export function renderCell<T extends ISimpleTableCell>(
 							</Link>)
 						case 'Age':
 							return <Hi>{result.sla}</Hi>
-						case 'FirstObserved':
+						case 'First Observed':
 							return <Hi>{result.firstDetection.toLocaleDateString()}</Hi>
-					}
-				})(),
+				default:
+					return <Hi>{getResultFieldValue(result, treeColumn.id)}</Hi>
+			}
+		})()
+		return columnIndex === 0
+			? ExpandableTreeCell({children, ...commonProps})
+			: TableCell({
+				children,
 				className: css(treeColumn.className, 'font-size'),
 				columnIndex,
 			})

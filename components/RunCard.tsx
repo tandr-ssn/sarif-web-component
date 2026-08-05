@@ -66,7 +66,7 @@ import {Tooltip} from 'azure-devops-ui/TooltipEx'
 			if (!this.columnCache.has(id)) {
 				const observableWidth = new ObservableValue(width)
 				this.columnCache.set(id, {
-					id: id.replace(/ /g, ''),
+					id,
 					name: id,
 					width: observableWidth,
 					onSize: (e, i, newWidth) => observableWidth.value = newWidth,

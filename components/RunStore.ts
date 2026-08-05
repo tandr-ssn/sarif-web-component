@@ -11,6 +11,7 @@ import {MobxFilter} from './FilterBar'
 import {SortOrder} from 'azure-devops-ui/Table'
 import { getRepoUri } from './getRepoUri'
 import {tryOr} from './try'
+import {DEFAULT_RESULT_FIELDS, getResultFieldValue} from './ResultFields'
 
 declare module 'sarif' {
     interface Run {
@@ -36,7 +37,7 @@ export class RunStore {
 	@observable sortColumnIndex = 1
 	@observable sortOrder = SortOrder.ascending
 
-	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean) {
+	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice())) {
 		const {driver} = run.tool
 		this.driverName = run.properties && run.properties['logFileName'] || driver.name.replace(/^Microsoft.CodeAnalysis.Sarif.PatternMatcher$/, 'CredScan on Push')
 		const buildId = run.properties ? run.properties['buildId'] : 0
@@ -148,7 +149,9 @@ export class RunStore {
 	private filterHelper(treeItems: ITreeItem<ResultOrRuleOrMore>[]) {
 		const filter = this.filter.getState()
 		const filterKeywords = (filter.Keywords?.value ?? '').toLowerCase().split(/\s+/).filter(part => part)
-		const {sortColumnIndex, sortOrder} = this
+		const {sortOrder} = this
+		const columns = this.columns
+		const sortColumnIndex = Math.min(this.sortColumnIndex, columns.length - 1)
 
 		treeItems.forEach(treeItem => {
 			// if (!treeItem.hasOwnProperty('isShowAll')) extendObservable(treeItem, { isShowAll: false })
@@ -180,7 +183,7 @@ export class RunStore {
 						if (!selectedValues.includes(translatedCellValue)) return false
 					}
 
-					const isKeywordMatch = this.columns.some(column => {
+					const isKeywordMatch = columns.some(column => {
 						const field = column.filterString(result).toLowerCase()
 						return isMatch(field, filterKeywords)
 					})
@@ -190,7 +193,7 @@ export class RunStore {
 				.map(result => ({ data: result })) // Can cache the result here.
 
 			treeItem.childItemsAll.sort((treeItemLeft, treeItemRight) => {
-				const resultToValue = this.columns[sortColumnIndex].sortString
+				const resultToValue = columns[sortColumnIndex].sortString
 				const valueLeft = resultToValue(treeItemLeft.data as Result)
 				const valueRight = resultToValue(treeItemRight.data as Result)
 
@@ -245,104 +248,42 @@ export class RunStore {
 	@observable.ref rulesTruncated = [] as ITreeItem<ResultOrRuleOrMore>[] // Technically ITreeItem<Rule>[], ref assuming immutable array.
 
 	@computed get columns() {
-		const columns = [
-			{
-				id: 'Path',
-				filterString: (result: Result) => tryOr<string>(
-					() => `${result.locations[0].logicalLocations[0].fullyQualifiedName} ${tryOr(() => {
-							const {index} = result.locations[0].physicalLocation.artifactLocation
-							return result.run.artifacts[index].description.text
-						}, '')}`,
-					() => result.locations[0].physicalLocation.artifactLocation.uri,
-					'',
-				),
-				sortString:   (result: Result) => tryOr<string>(
-					() => result.locations[0].physicalLocation.artifactLocation.uri,
-					'\u2014', // Using escape as VS Packaging munges the char.
-				),
-				width: -3,
-			}			
-		]
-
-		if (this.showAge && this.groupByAge.get()) {
-			columns.push({
-				id: 'Rule',
-				filterString: (result: Result) => {
-					const rule = result._rule
-					return `${rule.id || rule.guid} ${rule.name ?? ''}`
-				},
-				sortString:   (result: Result) => {
-					const rule = result._rule
-					return `${rule.id || rule.guid} ${rule.name ?? ''}`
-				},
+		const pathValue = (result: Result) => tryOr<string>(
+			() => `${result.locations[0].logicalLocations[0].fullyQualifiedName} ${tryOr(() => {
+				const {index} = result.locations[0].physicalLocation.artifactLocation
+				return result.run.artifacts[index].description.text
+			}, '')}`,
+			() => result.locations[0].physicalLocation.artifactLocation.uri,
+			'',
+		)
+		const detailsValue = (result: Result) => {
+			const message = result.message?.markdown ?? result.message?.text ?? ''
+			const snippet = tryOr<string>(
+				() => result.locations[0].physicalLocation.contextRegion.snippet.text,
+				() => result.locations[0].physicalLocation.region.snippet.text,
+				'')
+			return `${message} ${snippet}`
+		}
+		const ruleValue = (result: Result) => `${result._rule?.id || result._rule?.guid || ''} ${result._rule?.name ?? ''}`
+		const definitions = {
+			Path: {filterString: pathValue, sortString: pathValue, width: -3},
+			Details: {filterString: detailsValue, sortString: (result: Result) => result.message?.text ?? '', width: -5},
+			Level: {filterString: (result: Result) => result.level ?? 'warning', sortString: (result: Result) => result.level ?? 'warning', width: -1},
+			Kind: {filterString: (result: Result) => result.kind ?? 'fail', sortString: (result: Result) => result.kind ?? 'fail', width: -1},
+			Rule: {filterString: ruleValue, sortString: ruleValue, width: -2},
+			Actions: {filterString: () => '', sortString: () => '', width: -2},
+			Baseline: {filterString: (result: Result) => result.baselineState ?? 'new', sortString: (result: Result) => result.baselineState ?? 'new', width: -1},
+			Bug: {filterString: () => '', sortString: () => '', width: -1},
+			Age: {filterString: (result: Result) => result.sla ?? '', sortString: (result: Result) => result.sla ?? '', width: -1},
+			'First Observed': {filterString: (result: Result) => result.firstDetection?.toLocaleDateString() ?? '', sortString: (result: Result) => result.firstDetection?.getTime().toString() ?? '', width: -1},
+		}
+		return this.selectedFields.get().map(id => ({
+			id,
+			...(definitions[id] ?? {
+				filterString: (result: Result) => getResultFieldValue(result, id),
+				sortString: (result: Result) => getResultFieldValue(result, id),
 				width: -2,
-			})
-		}
-
-		columns.push({
-			id: 'Details',
-			filterString: (result: Result) => {
-				// TODO: Support templated messages.
-				const message = tryOr<string>(
-					() => result.message.markdown,
-					() => result.message.text, // Can be a constant?
-					'')
-				const snippet = tryOr<string>(
-					() => result.locations[0].physicalLocation.contextRegion.snippet.text,
-					() => result.locations[0].physicalLocation.region.snippet.text,
-					'')
-				return `${message} ${snippet}`
-			},
-			sortString:   (result: Result) => result.message.text as string || '',
-			width: -5,
-		})
-
-		if (this.showActions) {
-			columns.push({
-				id: 'Actions',
-				filterString: (result: Result) => '',
-				sortString:   (result: Result) => '',
-				width: -2,
-			})
-		}
-
-		if (!this.hideBaseline) {
-			columns.push({
-				id: 'Baseline',
-				filterString: (result: Result) => result.baselineState as string || 'new',
-				sortString:   (result: Result) => result.baselineState as string || 'new',
-				width: -1,
-			})
-		}
-
-		const hasWorkItemUris = this.run.results && this.run.results.some(result => result.workItemUris && !!result.workItemUris.length)
-		if (hasWorkItemUris) {
-			columns.push({
-				id: 'Bug',
-				filterString: (result: Result) => '',
-				sortString:   (result: Result) => '',
-				width: -1,
-			})
-		}
-
-		if (this.showAge && !this.groupByAge.get()) {
-			columns.push({
-				id: 'Age',
-				filterString: (result: Result) => result.sla,
-				sortString:   (result: Result) => result.sla,
-				width: -1,
-			})
-		}
-
-		if (this.showAge) {
-			columns.push({
-				id: 'First Observed', // Consider using name instead of id
-				filterString: (result: Result) => result.firstDetection.toLocaleDateString(),
-				sortString:   (result: Result) => result.firstDetection.getTime().toString(),
-				width: -1,
-			})
-		}
-
-		return columns
+			}),
+		}))
 	}
 }
