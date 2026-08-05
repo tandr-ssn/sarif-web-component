@@ -32,9 +32,11 @@ The user must explicitly select the folder containing the source files reference
 
 The viewer uses the File System Access API where available and a directory-selection input as a fallback. Hosts with their own filesystem integration can instead pass a `sourceFileReader` callback. Source embedded in `run.artifacts[].contents.text` continues to work without either option.
 
-Call stacks in `result.stacks` and execution paths in `result.codeFlows` are displayed beneath each result. Their source locations use the same offline source reader. Opening a trace location highlights every readable entry from that trace in numbered colors; gutter arrows move between source files without leaving the opened tab.
+Call stacks in `result.stacks` and execution paths in `result.codeFlows` are displayed beneath each result; code-flow locations also display SARIF snippets when present. Their source locations use the same offline source reader. Opening a trace location highlights every readable entry from that trace in numbered colors; gutter arrows move between source files without leaving the opened tab. Clicking the result's Path uses its first code flow, or first call stack when no code flow is present, for the same navigation.
 
 The opened source toolbar supports previous/next readable trace navigation (`[` and `]`), reports unavailable locations, and can copy the current path, path with line number, or the trace summary. Source reads are cached for the current reader and SARIF run. Supported C#, Go, Java, JavaScript/TypeScript, JSON, and XML-family files receive offline syntax coloring; other file types remain escaped plain text.
+
+The Fields menu controls the result-table columns. Path, Details, Level, and Kind are selected by default. Other scalar SARIF values are shown in a searchable tree and may be selected at any depth, for example `properties.audit.selection.status`. Values found in arrays are combined into one column rather than exposed as numeric array indices.
 
 To build and open the standalone viewer locally:
 
