@@ -8,7 +8,17 @@ import { Log } from 'sarif'
 import {Button} from 'azure-devops-ui/Button'
 
 import { Viewer } from '../components/Viewer'
+import {FileSystemFileHandleLike} from '../components/LocalSourceFile'
 import Shield from './Shield'
+
+declare global {
+	interface Window {
+		showOpenFilePicker?: (options?: {
+			multiple?: boolean
+			types?: Array<{description?: string, accept: {[mimeType: string]: string[]}}>
+		}) => Promise<FileSystemFileHandleLike[]>
+	}
+}
 
 const demoLog = {
 	version: "2.1.0",
@@ -53,32 +63,77 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 @observer export class Index extends React.Component {
 	@observable.ref sample = loadSessionLog() ?? demoLog
 	private sourcePickerContainer?: HTMLSpanElement
+	private sarifFileHandle?: FileSystemFileHandleLike
+	private currentSarifFile?: File
 	state = {sourcePickerReady: false}
 	componentDidMount() {
 		this.setState({sourcePickerReady: true})
 	}
-	@autobind async loadFile(file) {
+	@autobind async loadFile(file, handle?: FileSystemFileHandleLike) {
 		if (!file) return
 		if (!file.name.match(/.(json|sarif)$/i)) {
 			alert('File name must end with ".json" or ".sarif"')
 			return
 		}
+		this.currentSarifFile = file
+		this.sarifFileHandle = handle
 		const text = await readAsText(file)
 		this.sample = JSON.parse(text)
 		try {
 			window.sessionStorage.setItem(sarifSessionKey, text)
 		} catch (_) { }
 	}
+	private openInputFilePicker = () => (this.refs.inputFile as any).click()
+	private openFile = async () => {
+		if (!window.showOpenFilePicker) {
+			this.openInputFilePicker()
+			return
+		}
+		try {
+			const [handle] = await window.showOpenFilePicker({
+				multiple: false,
+				types: [{
+					description: 'SARIF files',
+					accept: {'application/json': ['.sarif', '.json']},
+				}],
+			})
+			if (handle) await this.loadFile(await handle.getFile(), handle)
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') return
+			alert(`Unable to open SARIF file: ${error instanceof Error ? error.message : String(error)}`)
+		}
+	}
+	private reloadFile = async () => {
+		if (this.sarifFileHandle) {
+			try {
+				const file = await this.sarifFileHandle.getFile()
+				await this.loadFile(file, this.sarifFileHandle)
+				return
+			} catch (error) {
+				alert(`Unable to reload SARIF file: ${error instanceof Error ? error.message : String(error)}`)
+				return
+			}
+		}
+		// Standard File objects are immutable snapshots and cannot be refreshed from their original path.
+		// Resetting the input after every selection makes choosing the same file fire onChange again.
+		this.openInputFilePicker()
+	}
 	render() {
 		return <>
 			<div className="demoHeader">
 				<span>SARIF Viewer</span>
-				<input ref="inputFile" type="file" multiple={false} accept="*.sarif" style={{ display: 'none' }}
+				<input ref="inputFile" type="file" multiple={false} accept=".sarif,.json" style={{ display: 'none' }}
 					onChange={async e => {
 						e.persist()
-						this.loadFile(Array.from(e.target.files)[0])
+						const input = e.currentTarget
+						await this.loadFile(Array.from(input.files)[0])
+						input.value = ''
 					}} />
-				<Button className="demoOpen" text="Open..." onClick={() => (this.refs.inputFile as any).click()} />
+				<Button className="demoOpen" text="Open..." onClick={() => void this.openFile()} />
+				<Button text="Reload" tooltipProps={{text: this.currentSarifFile
+					? 'Re-read the current SARIF file from disk.'
+					: 'Select the SARIF file again to reload it from disk.'}}
+					onClick={() => void this.reloadFile()} />
 				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>
 				<span style={{ flexGrow: 1 }}></span>
 			</div>
