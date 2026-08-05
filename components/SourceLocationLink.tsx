@@ -4,7 +4,7 @@
 import * as React from 'react'
 import {Location, PhysicalLocation, Run} from 'sarif'
 import {getRepoUri} from './getRepoUri'
-import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext} from './SourceFile'
+import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourceTrace} from './SourceFile'
 
 function locationText(ploc: PhysicalLocation | undefined, run: Run): string | undefined {
 	const artifactLocation = getArtifactLocation(ploc, run)
@@ -18,9 +18,10 @@ function SourceLocationLinkWithReader(props: {
 	run: Run
 	reader?: SourceFileReader
 	selectSourceFiles?: () => void
+	trace?: SourceTrace
 	children?: React.ReactNode
 }) {
-	const {ploc, run, reader, selectSourceFiles} = props
+	const {ploc, run, reader, selectSourceFiles, trace} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
 	const text = props.children ?? locationText(ploc, run)
 	if (!text) return null
@@ -31,7 +32,7 @@ function SourceLocationLinkWithReader(props: {
 		return <a href="#" onClick={event => {
 			event.preventDefault()
 			event.stopPropagation()
-			void openSourceFile(artifactLocation, run, ploc.region, reader)
+			void openSourceFile(artifactLocation, run, ploc.region, reader, trace)
 		}} title="View source file">{text}</a>
 	}
 
@@ -48,7 +49,7 @@ function SourceLocationLinkWithReader(props: {
 	return <>{text}</>
 }
 
-export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, children?: React.ReactNode }) {
+export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, trace?: SourceTrace, children?: React.ReactNode }) {
 	if (!props.ploc) return props.children ? <>{props.children}</> : null
 	return <SourceFileReaderContext.Consumer>
 		{reader => <SourceFileSelectionContext.Consumer>
@@ -57,6 +58,7 @@ export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, c
 				run={props.run}
 				reader={reader}
 				selectSourceFiles={selectSourceFiles}
+				trace={props.trace}
 				children={props.children} />}
 		</SourceFileSelectionContext.Consumer>}
 	</SourceFileReaderContext.Consumer>

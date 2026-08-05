@@ -4,6 +4,7 @@ import * as Adapter from 'enzyme-adapter-react-16'
 import * as React from 'react'
 import {Result} from 'sarif'
 import {ExecutionTrace} from './ExecutionTrace'
+import {SourceLocationLink} from './SourceLocationLink'
 
 Enzyme.configure({ adapter: new Adapter() })
 
@@ -40,4 +41,13 @@ test('renders result stacks and code flows', () => {
 	expect(wrapper.text()).toContain('src/app.ts:10')
 	expect(wrapper.text()).toContain('Enter handler')
 	expect(wrapper.text()).toContain('src/handler.ts:5')
+	const sourceLinks = wrapper.find(SourceLocationLink)
+	expect(sourceLinks.at(0).prop('trace')).toEqual({
+		locations: [result.stacks[0].frames[0].location.physicalLocation],
+		activeIndex: 0,
+	})
+	expect(sourceLinks.at(1).prop('trace')).toEqual({
+		locations: [run.threadFlowLocations[0].location.physicalLocation],
+		activeIndex: 0,
+	})
 })
