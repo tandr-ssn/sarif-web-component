@@ -56,6 +56,25 @@ function normalizeSegments(path: string): string[] | undefined {
 	return segments
 }
 
+function artifactSegments(uri: string, commonAbsoluteRoot?: string): string[] | undefined {
+	const decoded = decodeArtifactPath(uri)
+	if (!decoded) return undefined
+
+	let path = decoded.path
+	if (decoded.absolute) {
+		if (!commonAbsoluteRoot) return undefined
+		const normalizedRoot = commonAbsoluteRoot.replace(/\\/g, '/').replace(/\/$/, '')
+		const ignoreCase = /^[a-zA-Z]:\//.test(path) && /^[a-zA-Z]:\//.test(normalizedRoot)
+		const comparablePath = ignoreCase ? path.toLowerCase() : path
+		const comparableRoot = ignoreCase ? normalizedRoot.toLowerCase() : normalizedRoot
+		if (comparablePath !== comparableRoot && !comparablePath.startsWith(`${comparableRoot}/`)) return undefined
+		path = path.slice(normalizedRoot.length)
+	}
+
+	const segments = normalizeSegments(path)
+	return segments?.length ? segments : undefined
+}
+
 function parentPath(path: string): string {
 	const slash = path.lastIndexOf('/')
 	return slash < 0 ? '' : path.slice(0, slash)
@@ -118,27 +137,39 @@ export function createLocalSourceFileReader(
 ): SourceFileReader {
 	return async (artifactLocation: ArtifactLocation) => {
 		if (!artifactLocation.uri) return undefined
-		const decoded = decodeArtifactPath(artifactLocation.uri)
-		if (!decoded) return undefined
-
-		let path = decoded.path
-		if (decoded.absolute) {
-			if (!commonAbsoluteRoot) return undefined
-			const normalizedRoot = commonAbsoluteRoot.replace(/\\/g, '/').replace(/\/$/, '')
-			const ignoreCase = /^[a-zA-Z]:\//.test(path) && /^[a-zA-Z]:\//.test(normalizedRoot)
-			const comparablePath = ignoreCase ? path.toLowerCase() : path
-			const comparableRoot = ignoreCase ? normalizedRoot.toLowerCase() : normalizedRoot
-			if (comparablePath !== comparableRoot && !comparablePath.startsWith(`${comparableRoot}/`)) return undefined
-			path = path.slice(normalizedRoot.length)
-		}
-
-		const segments = normalizeSegments(path)
-		if (!segments?.length) return undefined
+		const segments = artifactSegments(artifactLocation.uri, commonAbsoluteRoot)
+		if (!segments) return undefined
 		let directory = root
 		for (const segment of segments.slice(0, -1)) {
 			directory = await directory.getDirectoryHandle(segment)
 		}
 		const file = await (await directory.getFileHandle(segments[segments.length - 1])).getFile()
 		return { name: file.name, text: await file.text() }
+	}
+}
+
+/**
+ * Creates a source reader from files returned by an <input webkitdirectory> control.
+ * webkitRelativePath includes the selected directory itself, so remove that first segment.
+ */
+export function createSelectedFilesSourceFileReader(
+	files: File[],
+	commonAbsoluteRoot?: string,
+): SourceFileReader {
+	const filesByPath = new Map<string, File>()
+	files.forEach(file => {
+		const path = file.webkitRelativePath || file.name
+		const segments = normalizeSegments(path)
+		if (!segments?.length) return
+		const relativeSegments = file.webkitRelativePath ? segments.slice(1) : segments
+		if (relativeSegments.length) filesByPath.set(relativeSegments.join('/'), file)
+	})
+
+	return async (artifactLocation: ArtifactLocation) => {
+		if (!artifactLocation.uri) return undefined
+		const segments = artifactSegments(artifactLocation.uri, commonAbsoluteRoot)
+		if (!segments) return undefined
+		const file = filesByPath.get(segments.join('/'))
+		return file ? { name: file.name, text: await file.text() } : undefined
 	}
 }

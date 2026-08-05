@@ -28,8 +28,8 @@ import { IFilterState } from 'azure-devops-ui/Utilities/Filter'
 import { ZeroData } from 'azure-devops-ui/ZeroData'
 import { ObservableValue } from 'azure-devops-ui/Core/Observable'
 import { Button } from 'azure-devops-ui/Button'
-import { createLocalSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot } from './LocalSourceFile'
-import { SourceFileReader, SourceFileReaderContext } from './SourceFile'
+import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot } from './LocalSourceFile'
+import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext } from './SourceFile'
 
 export interface ViewerProps {
 	logs?: Log[]
@@ -88,7 +88,10 @@ export interface ViewerProps {
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
+	@observable.ref private selectedSourceFiles?: File[]
+	@observable private selectedSourceFolderName?: string
 	@observable private sourceDirectoryError?: string
+	private sourceDirectoryInput?: HTMLInputElement
 
 	constructor(props) {
 		super(props)
@@ -119,7 +122,10 @@ export interface ViewerProps {
 	}
 
 	private selectSourceDirectory = async () => {
-		if (!window.showDirectoryPicker) return
+		if (!window.showDirectoryPicker) {
+			this.sourceDirectoryInput?.click()
+			return
+		}
 		try {
 			const directory = await window.showDirectoryPicker({
 				id: 'sarif-source-root',
@@ -127,6 +133,8 @@ export interface ViewerProps {
 			})
 			runInAction(() => {
 				this.sourceDirectory = directory
+				this.selectedSourceFiles = undefined
+				this.selectedSourceFolderName = undefined
 				this.sourceDirectoryError = undefined
 			})
 		} catch (error) {
@@ -135,13 +143,31 @@ export interface ViewerProps {
 		}
 	}
 
+	private selectSourceFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const files = Array.from(event.target.files ?? [])
+		if (!files.length) return
+		const firstPath = files[0].webkitRelativePath
+		const folderName = firstPath ? firstPath.split('/')[0] : 'selected folder'
+		runInAction(() => {
+			this.sourceDirectory = undefined
+			this.selectedSourceFiles = files
+			this.selectedSourceFolderName = folderName
+			this.sourceDirectoryError = undefined
+		})
+		// Allow choosing the same directory again after its contents change.
+		event.target.value = ''
+	}
+
 	render() {
 		const {hideBaseline, hideLevel, showSuppression, showAge, successMessage, showLocalSourcePicker, sourceFileReader} = this.props
 		const commonSourceRoot = getCommonAbsoluteSourceRoot(this.props.logs)
 		const selectedSourceReader = this.sourceDirectory
 			? createLocalSourceFileReader(this.sourceDirectory, commonSourceRoot)
-			: undefined
+			: this.selectedSourceFiles
+				? createSelectedFilesSourceFileReader(this.selectedSourceFiles, commonSourceRoot)
+				: undefined
 		const effectiveSourceReader = sourceFileReader ?? selectedSourceReader
+		const selectedSourceFolderName = this.sourceDirectory?.name ?? this.selectedSourceFolderName
 
 		// Computed values fail to cache if called from onRenderNearElement() for unknown reasons. Thus call them in advance.
 		const currentfilterState = this.filter.getState()
@@ -210,36 +236,42 @@ export interface ViewerProps {
 		})() as JSX.Element
 
 		return <FilterKeywordContext.Provider value={filterKeywords ?? ''}>
-			<SourceFileReaderContext.Provider value={effectiveSourceReader}>
-				<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
-					<Page>
-						<div className="swcShim"></div>
-						{showLocalSourcePicker && <div className="swcLocalSourceBar">
-							<Button
-								text={this.sourceDirectory ? 'Change source folder...' : 'Choose source folder...'}
-								disabled={!window.showDirectoryPicker}
-								onClick={this.selectSourceDirectory} />
-							<span>
-								{this.sourceDirectory
-									? <>Source folder: <strong>{this.sourceDirectory.name}</strong></>
-									: window.showDirectoryPicker
-										? commonSourceRoot
+			<SourceFileSelectionContext.Provider value={showLocalSourcePicker ? this.selectSourceDirectory : undefined}>
+				<SourceFileReaderContext.Provider value={effectiveSourceReader}>
+					<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
+						<Page>
+							<div className="swcShim"></div>
+							{showLocalSourcePicker && <div className="swcLocalSourceBar">
+								<input
+									type="file"
+									multiple
+									{...{ webkitdirectory: '' }}
+									ref={input => this.sourceDirectoryInput = input ?? undefined}
+									onChange={this.selectSourceFiles}
+									style={{ display: 'none' }} />
+								<Button
+									text={selectedSourceFolderName ? 'Change source folder...' : 'Choose source folder...'}
+									onClick={this.selectSourceDirectory} />
+								<span>
+									{selectedSourceFolderName
+										? <>Source folder: <strong>{selectedSourceFolderName}</strong></>
+										: commonSourceRoot
 											? <>Choose the local folder corresponding to <code>{commonSourceRoot}</code>.</>
-											: <>Choose the top-level folder containing the source files referenced by SARIF.</>
-										: <>Local folder selection is not supported by this browser.</>}
-							</span>
-							{this.sourceDirectoryError && <span className="swcLocalSourceError">{this.sourceDirectoryError}</span>}
-						</div>}
-						<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge} />
-						{this.warnOldVersion && <MessageCard
-							severity={MessageCardSeverity.Warning}
-							onDismiss={() => this.warnOldVersion = false}>
-							Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
-						</MessageCard>}
-						{nearElement}
-					</Page>
-				</SurfaceContext.Provider>
-			</SourceFileReaderContext.Provider>
+											: <>Choose the top-level folder containing the source files referenced by SARIF.</>}
+								</span>
+								{this.sourceDirectoryError && <span className="swcLocalSourceError">{this.sourceDirectoryError}</span>}
+							</div>}
+							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge} />
+							{this.warnOldVersion && <MessageCard
+								severity={MessageCardSeverity.Warning}
+								onDismiss={() => this.warnOldVersion = false}>
+								Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
+							</MessageCard>}
+							{nearElement}
+						</Page>
+					</SurfaceContext.Provider>
+				</SourceFileReaderContext.Provider>
+			</SourceFileSelectionContext.Provider>
 		</FilterKeywordContext.Provider>
 	}
 }

@@ -4,7 +4,7 @@
 import * as React from 'react'
 import {Location, PhysicalLocation, Run} from 'sarif'
 import {getRepoUri} from './getRepoUri'
-import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext} from './SourceFile'
+import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext} from './SourceFile'
 
 function locationText(ploc: PhysicalLocation | undefined, run: Run): string | undefined {
 	const artifactLocation = getArtifactLocation(ploc, run)
@@ -17,9 +17,10 @@ function SourceLocationLinkWithReader(props: {
 	ploc: PhysicalLocation
 	run: Run
 	reader?: SourceFileReader
+	selectSourceFiles?: () => void
 	children?: React.ReactNode
 }) {
-	const {ploc, run, reader} = props
+	const {ploc, run, reader, selectSourceFiles} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
 	const text = props.children ?? locationText(ploc, run)
 	if (!text) return null
@@ -36,15 +37,28 @@ function SourceLocationLinkWithReader(props: {
 
 	const explicitHref = artifactLocation.properties?.['href'] as string | undefined
 	const remoteHref = explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region)
-	return remoteHref
-		? <a href={remoteHref} target="_blank" rel="noopener noreferrer">{text}</a>
-		: <>{text}</>
+	if (remoteHref) return <a href={remoteHref} target="_blank" rel="noopener noreferrer">{text}</a>
+	if (selectSourceFiles) {
+		return <a href="#" onClick={event => {
+			event.preventDefault()
+			event.stopPropagation()
+			selectSourceFiles()
+		}} title="Choose a source folder, then click the file again">{text}</a>
+	}
+	return <>{text}</>
 }
 
 export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, children?: React.ReactNode }) {
 	if (!props.ploc) return props.children ? <>{props.children}</> : null
 	return <SourceFileReaderContext.Consumer>
-		{reader => <SourceLocationLinkWithReader ploc={props.ploc} run={props.run} reader={reader} children={props.children} />}
+		{reader => <SourceFileSelectionContext.Consumer>
+			{selectSourceFiles => <SourceLocationLinkWithReader
+				ploc={props.ploc}
+				run={props.run}
+				reader={reader}
+				selectSourceFiles={selectSourceFiles}
+				children={props.children} />}
+		</SourceFileSelectionContext.Consumer>}
 	</SourceFileReaderContext.Consumer>
 }
 

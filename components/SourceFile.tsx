@@ -12,6 +12,7 @@ export interface SourceFile {
 export type SourceFileReader = (artifactLocation: ArtifactLocation, run: Run) => Promise<SourceFile | undefined>
 
 export const SourceFileReaderContext = React.createContext<SourceFileReader | undefined>(undefined)
+export const SourceFileSelectionContext = React.createContext<(() => void) | undefined>(undefined)
 
 export function getArtifactLocation(ploc: PhysicalLocation | undefined, run: Run): ArtifactLocation | undefined {
 	const artifactLocation = ploc?.artifactLocation

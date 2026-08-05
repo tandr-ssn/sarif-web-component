@@ -1,5 +1,5 @@
 import {Log} from 'sarif'
-import {createLocalSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot} from './LocalSourceFile'
+import {createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot} from './LocalSourceFile'
 
 class TestDirectory implements FileSystemDirectoryHandleLike {
 	readonly directories = new Map<string, TestDirectory>()
@@ -30,6 +30,13 @@ function sourceTree(): TestDirectory {
 	return root
 }
 
+function selectedFile(path: string, text: string): File {
+	const file = new File([text], path.split('/').pop())
+	Object.defineProperty(file, 'webkitRelativePath', { value: path })
+	Object.defineProperty(file, 'text', { value: async () => text })
+	return file
+}
+
 test('reads a relative artifact beneath the selected source root', async () => {
 	const read = createLocalSourceFileReader(sourceTree())
 	await expect(read({ uri: 'src/file.ts' }, {} as any)).resolves.toEqual({
@@ -44,6 +51,21 @@ test('maps an absolute artifact path from the detected root', async () => {
 		name: 'file.ts',
 		text: 'source text',
 	})
+})
+
+test('reads relative and absolute artifacts from a cross-browser folder selection', async () => {
+	const files = [selectedFile('repo/src/file.ts', 'source text')]
+	const read = createSelectedFilesSourceFileReader(files, '/home/user/repo')
+
+	await expect(read({ uri: 'src/file.ts' }, {} as any)).resolves.toEqual({
+		name: 'file.ts',
+		text: 'source text',
+	})
+	await expect(read({ uri: 'file:///home/user/repo/src/file.ts' }, {} as any)).resolves.toEqual({
+		name: 'file.ts',
+		text: 'source text',
+	})
+	await expect(read({ uri: '../secret.txt' }, {} as any)).resolves.toBeUndefined()
 })
 
 test('rejects paths outside the selected source root', async () => {
