@@ -24,6 +24,7 @@ import {Icon, IconSize} from 'azure-devops-ui/Icon'
 import { renderPathCell } from './RunCard.renderPathCell'
 import { renderActionsCell } from './RunCard.renderActionsCell'
 import { getRepoUri } from './getRepoUri'
+import { ExecutionTrace } from './ExecutionTrace'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
 
@@ -116,8 +117,9 @@ export function renderCell<T extends ISimpleTableCell>(
 											renderers={{ link: ({href, children}) => <a href={href} target="_blank">{children}</a> }} />
 									</div> // Div to cancel out containers display flex row.
 									: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span> || ''}
-								<Snippet ploc={result.locations?.[0]?.physicalLocation} />
-							</>
+									<Snippet ploc={result.locations?.[0]?.physicalLocation} />
+									<ExecutionTrace result={result} />
+								</>
 						case 'Rule':
 							return <>
 								{tryLink(() => rule.helpUri, <Hi>{rule.id || rule.guid}</Hi>)}

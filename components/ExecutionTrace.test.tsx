@@ -1,0 +1,43 @@
+import {mount} from 'enzyme'
+import * as Enzyme from 'enzyme'
+import * as Adapter from 'enzyme-adapter-react-16'
+import * as React from 'react'
+import {Result} from 'sarif'
+import {ExecutionTrace} from './ExecutionTrace'
+
+Enzyme.configure({ adapter: new Adapter() })
+
+test('renders result stacks and code flows', () => {
+	const run: any = {
+		threadFlowLocations: [{
+			location: {
+				message: { text: 'Enter handler' },
+				physicalLocation: { artifactLocation: { uri: 'src/handler.ts' }, region: { startLine: 5 } },
+			},
+		}],
+	}
+	const result = {
+		run,
+		message: { text: 'Finding' },
+		stacks: [{
+			frames: [{
+				module: 'app',
+				location: {
+					logicalLocations: [{ fullyQualifiedName: 'App.Run' }],
+					physicalLocation: { artifactLocation: { uri: 'src/app.ts' }, region: { startLine: 10 } },
+				},
+			}],
+		}],
+		codeFlows: [{ threadFlows: [{ locations: [{ index: 0 }] }] }],
+	} as Result
+
+	const wrapper = mount(<ExecutionTrace result={result} />)
+	expect(wrapper.find('summary').map(summary => summary.text())).toEqual([
+		'Call stack (1 frames)',
+		'Code flow',
+	])
+	expect(wrapper.text()).toContain('App.Run')
+	expect(wrapper.text()).toContain('src/app.ts:10')
+	expect(wrapper.text()).toContain('Enter handler')
+	expect(wrapper.text()).toContain('src/handler.ts:5')
+})
