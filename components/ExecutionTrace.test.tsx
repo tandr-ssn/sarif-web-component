@@ -45,9 +45,11 @@ test('renders result stacks and code flows', () => {
 	expect(sourceLinks.at(0).prop('trace')).toEqual({
 		locations: [result.stacks[0].frames[0].location.physicalLocation],
 		activeIndex: 0,
+		label: 'Call stack',
 	})
 	expect(sourceLinks.at(1).prop('trace')).toEqual({
 		locations: [run.threadFlowLocations[0].location.physicalLocation],
 		activeIndex: 0,
+		label: 'Code flow',
 	})
 })

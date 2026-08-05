@@ -15,7 +15,7 @@ test('renders embedded source as text in a new tab', async () => {
 	await openSourceFile({ uri: 'src/file.ts', index: 0 }, run, undefined, undefined)
 
 	expect(childDocument.title).toBe('src/file.ts')
-	expect(childDocument.body.textContent).toBe(source)
+	expect(childDocument.querySelector('pre')?.textContent).toBe(source)
 	expect(childDocument.querySelector('script')).toBeNull()
 	expect(childDocument.querySelectorAll('.source-line')).toHaveLength(1)
 	expect(childDocument.querySelector('.source-line')?.getAttribute('data-line')).toBe('1')
@@ -39,7 +39,7 @@ test('adds line numbers and preserves multi-line region highlighting', async () 
 
 	const lines = Array.from(childDocument.querySelectorAll('.source-line'))
 	expect(lines.map(line => line.getAttribute('data-line'))).toEqual(['1', '2', '3', '4'])
-	expect(childDocument.body.textContent).toBe(source)
+	expect(childDocument.querySelector('pre')?.textContent).toBe(source)
 	expect(Array.from(childDocument.querySelectorAll('mark')).map(mark => mark.textContent)).toEqual(['ne\n', 'tw'])
 	open.mockRestore()
 })
@@ -50,6 +50,7 @@ test('highlights every trace entry in a file and links between trace files', asy
 		document: childDocument,
 		opener: window,
 		location: { hash: '' },
+		navigator: { clipboard: { writeText: jest.fn().mockResolvedValue(undefined) } },
 	} as any as Window
 	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
 	const files = {
@@ -57,29 +58,31 @@ test('highlights every trace entry in a file and links between trace files', asy
 		'src/lib.ts': 'lib one\nlib two',
 		'src/end.ts': 'end one',
 	}
-	const reader = async artifactLocation => {
+	const reader = jest.fn(async artifactLocation => {
 		const text = files[artifactLocation.uri]
 		return text === undefined ? undefined : { name: artifactLocation.uri, text }
-	}
+	})
 	const locations: any[] = [
 		{ artifactLocation: { uri: 'src/app.ts' }, region: { startLine: 1 } },
+		{ artifactLocation: { uri: 'src/missing.ts' }, region: { startLine: 1 } },
 		{ artifactLocation: { uri: 'src/lib.ts' }, region: { startLine: 2 } },
 		{ artifactLocation: { uri: 'src/app.ts' }, region: { startLine: 3 } },
 		{ artifactLocation: { uri: 'src/end.ts' }, region: { startLine: 1 } },
 	]
+	const run = {} as any
 
 	await openSourceFile(
-		locations[2].artifactLocation,
-		{} as any,
-		locations[2].region,
+		locations[3].artifactLocation,
+		run,
+		locations[3].region,
 		reader,
-		{ locations, activeIndex: 2 },
+		{ locations, activeIndex: 3, label: 'Call stack' },
 	)
 
 	expect(childDocument.querySelectorAll('.source-file')).toHaveLength(3)
 	expect(childWindow.location.hash).toBe('source-file-1')
 	const appSection = childDocument.getElementById('source-file-1')
-	expect(Array.from(appSection.querySelectorAll('.trace-badge strong')).map(badge => badge.textContent)).toEqual(['1', '3'])
+	expect(Array.from(appSection.querySelectorAll('.trace-badge > button')).map(badge => badge.textContent)).toEqual(['1', '4'])
 	expect(appSection.querySelector('.trace-start')).not.toBeNull()
 	expect(appSection.querySelector('[data-line="3"] .trace-active')).not.toBeNull()
 	expect(appSection.querySelector('[data-line="3"] .trace-active-highlight')).not.toBeNull()
@@ -91,5 +94,30 @@ test('highlights every trace entry in a file and links between trace files', asy
 		'#source-file-3',
 	])
 	expect(childDocument.getElementById('source-file-3').querySelector('.trace-end')).not.toBeNull()
+	expect(childDocument.querySelector('.trace-missing')?.textContent).toContain('4 of 5 trace locations readable')
+	expect(childDocument.querySelector('.trace-missing')?.textContent).toContain('src/missing.ts')
+	expect(childDocument.querySelector('[data-trace-position]')?.textContent).toBe('Entry 4 of 5 · File 1 of 3')
+	;(childDocument.querySelector('[data-trace-action="next"]') as HTMLButtonElement).click()
+	expect(childWindow.location.hash).toBe('source-file-3')
+	expect(childDocument.getElementById('source-file-3').querySelector('.trace-active')).not.toBeNull()
+	childDocument.dispatchEvent(new KeyboardEvent('keydown', { key: '[' }))
+	expect(childWindow.location.hash).toBe('source-file-1')
+	appSection.querySelector('[data-activate-trace="0"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+	const copyPathAndLine = childDocument.querySelector('[data-copy="path-line"]') as HTMLButtonElement
+	expect(copyPathAndLine).not.toBeNull()
+	expect(copyPathAndLine.onclick).not.toBeNull()
+	copyPathAndLine.onclick(new MouseEvent('click'))
+	await new Promise(resolve => setTimeout(resolve, 0))
+	expect(childDocument.querySelector('[data-copy-status]')?.textContent).toBe('Copied')
+	expect((childWindow.navigator.clipboard.writeText as jest.Mock)).toHaveBeenCalledWith('src/app.ts:1')
+	expect(reader).toHaveBeenCalledTimes(4)
+	await openSourceFile(
+		locations[0].artifactLocation,
+		run,
+		locations[0].region,
+		reader,
+		{ locations, activeIndex: 0, label: 'Call stack' },
+	)
+	expect(reader).toHaveBeenCalledTimes(4)
 	open.mockRestore()
 })

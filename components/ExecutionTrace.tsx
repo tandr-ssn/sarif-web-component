@@ -17,8 +17,9 @@ function TraceLocation(props: {
 	run: Run
 	index?: number
 	traceLocations?: Array<PhysicalLocation | undefined>
+	traceLabel?: string
 }) {
-	const {location, module, run, index, traceLocations} = props
+	const {location, module, run, index, traceLocations, traceLabel} = props
 	const logicalName = getLogicalLocationText(location)
 	const message = messageText(location?.message)
 	const prefix = index === undefined ? undefined : <span className="swcTraceIndex">{index + 1}</span>
@@ -26,7 +27,7 @@ function TraceLocation(props: {
 
 	const trace: SourceTrace | undefined = index === undefined || !traceLocations
 		? undefined
-		: { locations: traceLocations, activeIndex: index }
+		: { locations: traceLocations, activeIndex: index, label: traceLabel }
 	return <li className="swcTraceLocation">
 		{prefix}
 		<div>
@@ -37,28 +38,31 @@ function TraceLocation(props: {
 	</li>
 }
 
-function StackFrames(props: { stack: Stack, run: Run }) {
+function StackFrames(props: { stack: Stack, run: Run, label?: string }) {
 	const traceLocations = props.stack.frames?.map(frame => frame.location?.physicalLocation) ?? []
 	return <ol className="swcTraceLocations">
 		{props.stack.frames?.map((frame, index) =>
 			<TraceLocation key={index} location={frame.location} module={frame.module} run={props.run}
-				index={index} traceLocations={traceLocations} />)}
+				index={index} traceLocations={traceLocations} traceLabel={props.label ?? 'Call stack'} />)}
 	</ol>
 }
 
 function ResultStacks(props: { result: Result, run: Run }) {
 	if (!props.result.stacks?.length) return null
 	return <>
-		{props.result.stacks.map((stack, index) => <details className="swcTrace" key={index}>
-			<summary>Call stack{props.result.stacks.length > 1 ? ` ${index + 1}` : ''} ({stack.frames?.length ?? 0} frames)</summary>
-			{messageText(stack.message) && <div className="swcTraceMessage">{messageText(stack.message)}</div>}
-			<StackFrames stack={stack} run={props.run} />
-		</details>)}
+		{props.result.stacks.map((stack, index) => {
+			const label = `Call stack${props.result.stacks.length > 1 ? ` ${index + 1}` : ''}`
+			return <details className="swcTrace" key={index}>
+				<summary>{label} ({stack.frames?.length ?? 0} frames)</summary>
+				{messageText(stack.message) && <div className="swcTraceMessage">{messageText(stack.message)}</div>}
+				<StackFrames stack={stack} run={props.run} label={label} />
+			</details>
+		})}
 	</>
 }
 
-function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: number, threadFlowIndex: number, run: Run }) {
-	const {threadFlow, threadFlowCount, threadFlowIndex, run} = props
+function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: number, threadFlowIndex: number, label: string, run: Run }) {
+	const {threadFlow, threadFlowCount, threadFlowIndex, label, run} = props
 	const resolvedLocations = threadFlow.locations?.map(threadFlowLocation => threadFlowLocation.index === undefined
 		? threadFlowLocation
 		: run.threadFlowLocations?.[threadFlowLocation.index]) ?? []
@@ -70,8 +74,8 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 		<ol className="swcTraceLocations">
 			{resolvedLocations.map((resolved, locationIndex) => <React.Fragment key={locationIndex}>
 				<TraceLocation location={resolved?.location} module={resolved?.module} run={run}
-					index={locationIndex} traceLocations={traceLocations} />
-				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} /></li>}
+					index={locationIndex} traceLocations={traceLocations} traceLabel={label} />
+				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} label="Nested stack" /></li>}
 			</React.Fragment>)}
 		</ol>
 	</div>
@@ -80,16 +84,19 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 function CodeFlows(props: { result: Result, run: Run }) {
 	if (!props.result.codeFlows?.length) return null
 	return <>
-		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => <details className="swcTrace" key={codeFlowIndex}>
-			<summary>Code flow{props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}</summary>
+		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => {
+			const label = `Code flow${props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}`
+			return <details className="swcTrace" key={codeFlowIndex}>
+			<summary>{label}</summary>
 			{messageText(codeFlow.message) && <div className="swcTraceMessage">{messageText(codeFlow.message)}</div>}
 			{codeFlow.threadFlows?.map((threadFlow, threadFlowIndex) => <ThreadFlowTrace
 				key={threadFlowIndex}
 				threadFlow={threadFlow}
 				threadFlowCount={codeFlow.threadFlows.length}
 				threadFlowIndex={threadFlowIndex}
+				label={codeFlow.threadFlows.length > 1 ? `${label} · Thread ${threadFlowIndex + 1}` : label}
 				run={props.run} />)}
-		</details>)}
+		</details>})}
 	</>
 }
 

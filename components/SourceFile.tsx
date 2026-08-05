@@ -14,10 +14,13 @@ export type SourceFileReader = (artifactLocation: ArtifactLocation, run: Run) =>
 export interface SourceTrace {
 	locations: Array<PhysicalLocation | undefined>
 	activeIndex: number
+	label?: string
 }
 
 export const SourceFileReaderContext = React.createContext<SourceFileReader | undefined>(undefined)
 export const SourceFileSelectionContext = React.createContext<(() => void) | undefined>(undefined)
+
+const sourceFileCaches = new WeakMap<SourceFileReader, WeakMap<Run, Map<string, Promise<SourceFile | undefined>>>>()
 
 export function getArtifactLocation(ploc: PhysicalLocation | undefined, run: Run): ArtifactLocation | undefined {
 	const artifactLocation = ploc?.artifactLocation
@@ -51,6 +54,7 @@ function sourceLines(text: string): string[] {
 interface SourceNavigationTarget {
 	id: string
 	name: string
+	traceIndex: number
 }
 
 interface SourceHighlight {
@@ -70,6 +74,19 @@ interface SourceFileView {
 	name: string
 	sourceFile: SourceFile
 	highlights: SourceHighlight[]
+}
+
+interface MissingTraceLocation {
+	traceIndex: number
+	name: string
+}
+
+interface SourceTraceSummary {
+	label: string
+	totalEntries: number
+	readableEntries: number
+	activeIndex: number
+	missing: MissingTraceLocation[]
 }
 
 function selectionOnLine(text: string, lineNumber: number, region: Region): [number, number] | undefined {
@@ -111,8 +128,13 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 		const end = boundaries[index + 1]
 		const segment = escapeHtml(text.slice(start, end))
 		const active = selections.filter(value => value.selection[0] <= start && value.selection[1] >= end)
-		const activeClass = active.some(value => value.highlight.isActive) ? ' class="trace-active-highlight"' : ''
-		return active.length ? `<mark${activeClass} style="${highlightBackground(active.map(value => value.highlight))}">${segment}</mark>` : segment
+		const activeClass = active.some(value => value.highlight.isActive) ? ' trace-active-highlight' : ''
+		const traceIndices = active
+			.map(value => value.highlight.traceIndex)
+			.filter(index => index !== undefined)
+			.join(' ')
+		const traceData = traceIndices ? ` data-trace-indices="${traceIndices}"` : ''
+		return active.length ? `<mark class="trace-highlight${activeClass}"${traceData} style="${highlightBackground(active.map(value => value.highlight))}">${segment}</mark>` : segment
 	}).join('')
 }
 
@@ -129,12 +151,12 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 			: highlight.isEnd ? 'end' : undefined
 	const title = `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
 	const previous = highlight.previousFile
-		? `<a href="#${highlight.previousFile.id}" title="Previous source file: ${escapeHtml(highlight.previousFile.name)}" aria-label="Previous source file">&#x2190;</a>`
+		? `<a href="#${highlight.previousFile.id}" data-activate-trace="${highlight.previousFile.traceIndex}" title="Previous source file: ${escapeHtml(highlight.previousFile.name)}" aria-label="Previous source file">&#x2190;</a>`
 		: ''
 	const next = highlight.nextFile
-		? `<a href="#${highlight.nextFile.id}" title="Next source file: ${escapeHtml(highlight.nextFile.name)}" aria-label="Next source file">&#x2192;</a>`
+		? `<a href="#${highlight.nextFile.id}" data-activate-trace="${highlight.nextFile.traceIndex}" title="Next source file: ${escapeHtml(highlight.nextFile.name)}" aria-label="Next source file">&#x2192;</a>`
 		: ''
-	return `<span class="${classes}" style="background-color: ${highlight.color}" title="${title}">${previous}<strong>${highlight.traceIndex + 1}</strong>${next}</span>`
+	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${title}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
 function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean): string {
@@ -146,7 +168,171 @@ function renderSourceLine(text: string, lineNumber: number, highlights: SourceHi
 	return `<span class="source-line" data-line="${lineNumber}">${traceColumn}<span class="line-number" data-line="${lineNumber}"></span>${renderHighlightedText(text, lineNumber, highlights)}</span>`
 }
 
-function renderSourceDocument(target: Window, views: SourceFileView[], activeKey: string): void {
+function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView, trace?: SourceTraceSummary): string {
+	const activeFileIndex = Math.max(0, views.indexOf(activeView))
+	const activeHighlight = activeView.highlights.find(highlight => highlight.traceIndex === trace?.activeIndex)
+		?? activeView.highlights[0]
+	const activeLine = activeHighlight?.region.startLine ?? 1
+	const traceNavigation = trace ? `
+		<strong>${escapeHtml(trace.label)}</strong>
+		<button type="button" data-trace-action="previous" title="Previous readable trace entry ([)">&#x2190; Previous</button>
+		<span data-trace-position>Entry ${trace.activeIndex + 1} of ${trace.totalEntries} &middot; File ${activeFileIndex + 1} of ${views.length}</span>
+		<button type="button" data-trace-action="next" title="Next readable trace entry (])">Next &#x2192;</button>
+		<span class="trace-legend" aria-label="Trace color legend">
+			<span class="legend-swatch legend-start"></span>Start
+			<span class="legend-swatch legend-active"></span>Active
+			<span class="legend-swatch legend-end"></span>End
+		</span>` : ''
+	const missing = trace?.missing.length ? `<details class="trace-missing">
+		<summary>${trace.readableEntries} of ${trace.totalEntries} trace locations readable</summary>
+		<ol>${trace.missing.map(location => `<li data-trace-index="${location.traceIndex}">${location.traceIndex + 1}. ${escapeHtml(location.name)}</li>`).join('')}</ol>
+	</details>` : ''
+	return `<div class="source-toolbar" data-active-line="${activeLine}" data-file-count="${views.length}" data-trace-count="${trace?.totalEntries ?? 0}">
+		<div class="source-toolbar-row">
+			${traceNavigation}
+			<span class="source-path" data-current-file>${escapeHtml(activeView.name)}</span>
+			<span class="source-actions">
+				<button type="button" data-copy="path">Copy path</button>
+				<button type="button" data-copy="path-line">Copy path:line</button>
+				${trace ? '<button type="button" data-copy="trace">Copy trace</button>' : ''}
+			</span>
+			<span class="copy-status" data-copy-status role="status" aria-live="polite"></span>
+		</div>
+		${missing}
+	</div>`
+}
+
+function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefined, activeView: SourceFileView): void {
+	const document = target.document
+	const toolbar = document.querySelector('.source-toolbar') as HTMLElement
+	const traceIndices = Array.from(document.querySelectorAll('.trace-badge[data-trace-index]'))
+		.map(badge => +(badge.getAttribute('data-trace-index') ?? -1))
+		.filter((index, position, indices) => index >= 0 && indices.indexOf(index) === position)
+		.sort((a, b) => a - b)
+	let activeTraceIndex = trace?.activeIndex
+	let activeFileId = activeView.id
+
+	const traceBadge = (index: number) => document.querySelector(`.trace-badge[data-trace-index="${index}"]`) as HTMLElement | null
+	const setButtonDisabled = (action: string, disabled: boolean) => {
+		const button = document.querySelector(`[data-trace-action="${action}"]`) as HTMLButtonElement | null
+		if (button) button.disabled = disabled
+	}
+	const activateTrace = (index: number, scroll: boolean) => {
+		const badge = traceBadge(index)
+		const line = badge?.closest('.source-line') as HTMLElement | null
+		const section = badge?.closest('.source-file') as HTMLElement | null
+		if (!badge || !line || !section) return
+		activeTraceIndex = index
+		activeFileId = section.id
+		document.querySelectorAll('.trace-active').forEach(element => element.classList.remove('trace-active'))
+		document.querySelectorAll('.trace-active-highlight').forEach(element => element.classList.remove('trace-active-highlight'))
+		badge.classList.add('trace-active')
+		document.querySelectorAll(`mark[data-trace-indices~="${index}"]`).forEach(element => element.classList.add('trace-active-highlight'))
+		if (target.location) target.location.hash = section.id
+		const fileName = section.getAttribute('data-file-name') ?? 'Source file'
+		const lineNumber = line.getAttribute('data-line') ?? '1'
+		toolbar.setAttribute('data-active-line', lineNumber)
+		const currentFile = document.querySelector('[data-current-file]')
+		if (currentFile) currentFile.textContent = fileName
+		const position = document.querySelector('[data-trace-position]')
+		if (position && trace) {
+			position.textContent = `Entry ${index + 1} of ${trace.totalEntries} · File ${+(section.getAttribute('data-file-index') ?? 0) + 1} of ${toolbar.getAttribute('data-file-count')}`
+		}
+		target.document.title = fileName
+		const navigablePosition = traceIndices.indexOf(index)
+		setButtonDisabled('previous', navigablePosition <= 0)
+		setButtonDisabled('next', navigablePosition < 0 || navigablePosition >= traceIndices.length - 1)
+		if (scroll) line.scrollIntoView?.({ block: 'center' })
+	}
+	const moveTrace = (direction: -1 | 1) => {
+		if (activeTraceIndex === undefined) return
+		const position = traceIndices.indexOf(activeTraceIndex)
+		const nextIndex = traceIndices[position + direction]
+		if (nextIndex !== undefined) activateTrace(nextIndex, true)
+	}
+	const activeSection = document.getElementById(activeView.id) as HTMLElement | null
+	const activePathAndLine = (): [string, string] => {
+		const section = document.getElementById(activeFileId) as HTMLElement | null ?? activeSection
+		const path = section?.getAttribute('data-file-name') ?? activeView.name
+		return [path, toolbar.getAttribute('data-active-line') ?? '1']
+	}
+	const copyText = async (value: string) => {
+		try {
+			if (target.navigator?.clipboard?.writeText) {
+				await target.navigator.clipboard.writeText(value)
+			} else {
+				const textarea = document.createElement('textarea')
+				textarea.value = value
+				document.body.appendChild(textarea)
+				textarea.select()
+				document.execCommand?.('copy')
+				textarea.remove()
+			}
+			const status = document.querySelector('[data-copy-status]')
+			if (status) status.textContent = 'Copied'
+		} catch (error) {
+			const status = document.querySelector('[data-copy-status]')
+			if (status) status.textContent = `Copy failed: ${error instanceof Error ? error.message : String(error)}`
+		}
+	}
+	const traceSummaryText = (): string => {
+		if (!trace) return ''
+		const entries = Array.from({ length: trace.totalEntries }, (_, index) => {
+			const badge = traceBadge(index)
+			const line = badge?.closest('.source-line')
+			const section = badge?.closest('.source-file')
+			if (badge && line && section) {
+				return `${index + 1}. ${section.getAttribute('data-file-name')}:${line.getAttribute('data-line')}`
+			}
+			const missing = trace.missing.find(location => location.traceIndex === index)
+			return `${index + 1}. unavailable${missing ? `: ${missing.name}` : ''}`
+		})
+		return [trace.label, ...entries].join('\n')
+	}
+
+	document.addEventListener('click', event => {
+		const element = event.target as HTMLElement | null
+		const activation = element?.closest('[data-activate-trace]') as HTMLElement | null
+		if (activation) {
+			event.preventDefault()
+			activateTrace(+(activation.getAttribute('data-activate-trace') ?? -1), true)
+			return
+		}
+		const action = element?.closest('[data-trace-action]')?.getAttribute('data-trace-action')
+		if (action === 'previous') moveTrace(-1)
+		if (action === 'next') moveTrace(1)
+	})
+	document.querySelectorAll('[data-copy]').forEach(button => (button as HTMLElement).onclick = () => {
+		const status = document.querySelector('[data-copy-status]')
+		if (status) status.textContent = 'Copying...'
+		try {
+			const copy = button.getAttribute('data-copy')
+			const [path, line] = activePathAndLine()
+			void copyText(copy === 'path' ? path : copy === 'path-line' ? `${path}:${line}` : traceSummaryText())
+		} catch (error) {
+			if (status) status.textContent = `Copy failed: ${error instanceof Error ? error.message : String(error)}`
+		}
+	})
+	document.addEventListener('keydown', event => {
+		if (event.altKey || event.ctrlKey || event.metaKey) return
+		if (event.key === '[') {
+			event.preventDefault()
+			moveTrace(-1)
+		}
+		if (event.key === ']') {
+			event.preventDefault()
+			moveTrace(1)
+		}
+	})
+
+	if (activeTraceIndex !== undefined && traceBadge(activeTraceIndex)) {
+		activateTrace(activeTraceIndex, false)
+	} else if (target.location && activeSection) {
+		target.location.hash = activeSection.id
+	}
+}
+
+function renderSourceDocument(target: Window, views: SourceFileView[], activeKey: string, trace?: SourceTraceSummary): void {
 	const activeView = views.find(view => view.key === activeKey) ?? views[0]
 	const showTraceColumn = views.some(view => view.highlights.some(highlight => highlight.traceIndex !== undefined))
 	const maxLines = Math.max(...views.map(view => sourceLines(view.sourceFile.text).length))
@@ -166,8 +352,23 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 	target.document.title = activeView?.name ?? 'Source file'
 	const style = target.document.createElement('style')
 	style.textContent = `
-		body { margin: 0; }
-		header { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; font: 14px sans-serif; padding: 8px 12px; position: sticky; top: 0; z-index: 1; }
+		:root { color-scheme: light dark; }
+		body { background: #ffffff; color: #202020; margin: 0; }
+		button { font: inherit; }
+		.source-toolbar { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; font: 13px sans-serif; padding: 7px 10px; position: sticky; top: 0; z-index: 1; }
+		.source-toolbar-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
+		.source-toolbar button { background: #ffffff; border: 1px solid #b3b3b3; border-radius: 3px; color: #202020; cursor: pointer; padding: 3px 7px; }
+		.source-toolbar button:disabled { cursor: default; opacity: .45; }
+		.source-path { font-family: monospace; margin-left: auto; overflow-wrap: anywhere; }
+		.source-actions { display: inline-flex; gap: 4px; }
+		.copy-status { min-width: 4em; }
+		.trace-legend { align-items: center; display: inline-flex; gap: 4px; white-space: nowrap; }
+		.legend-swatch { border-radius: 2px; display: inline-block; height: 12px; width: 12px; }
+		.legend-start { background: #c7e9c0; border-left: 3px solid #107c10; }
+		.legend-active { background: #bde3f4; box-shadow: 0 0 0 2px #005fb8; }
+		.legend-end { background: #f5b5b0; border-right: 3px solid #c50f1f; }
+		.trace-missing { margin-top: 6px; }
+		.trace-missing ol { margin: 5px 0 0; max-height: 8em; overflow: auto; }
 		pre { margin: 0; padding: 12px 0; tab-size: 4; }
 		.source-file { display: none; }
 		.source-file:target { display: block; }
@@ -192,6 +393,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		}
 		.trace-badge a { color: #202020; font-weight: bold; text-decoration: none; }
 		.trace-badge a:hover { text-decoration: underline; }
+		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
 		.trace-start { border-left: 3px solid #107c10; }
 		.trace-end { border-right: 3px solid #c50f1f; }
 		.trace-active { box-shadow: 0 0 0 2px #005fb8; }
@@ -206,15 +408,20 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			width: ${lineNumberWidth}ch;
 		}
 		.line-number::before { content: attr(data-line); }
-		mark { color: inherit; }
+		mark { color: #111111; }
+		@media (prefers-color-scheme: dark) {
+			body { background: #1e1e1e; color: #dddddd; }
+			.source-toolbar { background: #292929; border-color: #4a4a4a; }
+			.source-toolbar button { background: #383838; border-color: #666666; color: #f0f0f0; }
+			.line-number { color: #a0a0a0; }
+		}
 	`
 	target.document.head.appendChild(style)
-	target.document.body.innerHTML = views.map(view => {
+	target.document.body.innerHTML = renderSourceToolbar(views, activeView, trace) + views.map((view, fileIndex) => {
 		const lines = sourceLines(view.sourceFile.text)
-		const header = views.length > 1 ? `<header>${escapeHtml(view.name)}</header>` : ''
-		return `<section class="source-file" id="${view.id}">${header}<pre>${lines.map((line, index) => renderSourceLine(line, index + 1, view.highlights, showTraceColumn)).join('')}</pre></section>`
+		return `<section class="source-file" id="${view.id}" data-file-index="${fileIndex}" data-file-name="${escapeHtml(view.name)}"><pre>${lines.map((line, index) => renderSourceLine(line, index + 1, view.highlights, showTraceColumn)).join('')}</pre></section>`
 	}).join('')
-	if (target.location && activeView) target.location.hash = activeView.id
+	if (activeView) wireSourceDocument(target, trace, activeView)
 	const activeSection = activeView && target.document.getElementById(activeView.id)
 	const mark = activeSection?.querySelector('.trace-active-highlight') ?? activeSection?.querySelector('mark')
 	if (mark) setTimeout(() => mark.scrollIntoView?.({ block: 'center' }))
@@ -230,16 +437,29 @@ async function readSourceFile(
 	reader: SourceFileReader | undefined,
 ): Promise<SourceFile | undefined> {
 	const embeddedText = getArtifactContents(artifactLocation, run)
-	return embeddedText === undefined
-		? reader?.(artifactLocation, run)
-		: { name: artifactLocation.uri ?? 'Source file', text: embeddedText }
+	if (embeddedText !== undefined) return { name: artifactLocation.uri ?? 'Source file', text: embeddedText }
+	if (!reader) return undefined
+	const key = artifactKey(artifactLocation)
+	if (!key) return reader(artifactLocation, run)
+
+	let readerCache = sourceFileCaches.get(reader)
+	if (!readerCache) sourceFileCaches.set(reader, readerCache = new WeakMap())
+	let runCache = readerCache.get(run)
+	if (!runCache) readerCache.set(run, runCache = new Map())
+	let sourceFile = runCache.get(key)
+	if (!sourceFile) {
+		sourceFile = reader(artifactLocation, run)
+		runCache.set(key, sourceFile)
+	}
+	return sourceFile
 }
 
 function traceColor(index: number, count: number): string {
-	if (count === 1) return 'hsl(210, 75%, 80%)'
-	if (index === 0) return 'hsl(130, 55%, 78%)'
-	if (index === count - 1) return 'hsl(5, 75%, 82%)'
-	return `hsl(${Math.round((index * 137.5) % 360)}, 70%, 82%)`
+	const accessiblePalette = ['#bde3f4', '#f6d39b', '#e8bad7', '#a8dbc9', '#f7ee9f', '#aecce5', '#efb49e']
+	if (count === 1) return '#bde3f4'
+	if (index === 0) return '#c7e9c0'
+	if (index === count - 1) return '#f5b5b0'
+	return accessiblePalette[index % accessiblePalette.length]
 }
 
 interface ResolvedTraceLocation {
@@ -313,7 +533,7 @@ export async function openSourceFile(
 			for (let index = traceIndex + direction; index >= 0 && index < resolvedTrace.length; index += direction) {
 				const location = resolvedTrace[index]
 				const view = location.key && viewsByKey.get(location.key)
-				if (view && view.key !== currentKey) return { id: view.id, name: view.name }
+				if (view && view.key !== currentKey) return { id: view.id, name: view.name, traceIndex: location.traceIndex }
 			}
 			return undefined
 		}
@@ -335,7 +555,19 @@ export async function openSourceFile(
 		if (region?.startLine && activeView && !activeView.highlights.length) {
 			activeView.highlights.push({ region, color: 'hsl(55, 90%, 75%)' })
 		}
-		renderSourceDocument(target, views, activeKey)
+		const traceSummary: SourceTraceSummary | undefined = trace && {
+			label: trace.label ?? 'Trace',
+			totalEntries: resolvedTrace.length,
+			readableEntries: resolvedTrace.filter(location => location.key && sourceFilesByKey.has(location.key)).length,
+			activeIndex: trace.activeIndex,
+			missing: resolvedTrace
+				.filter(location => !location.key || !sourceFilesByKey.has(location.key))
+				.map(location => ({
+					traceIndex: location.traceIndex,
+					name: location.artifactLocation?.uri ?? 'No source location',
+				})),
+		}
+		renderSourceDocument(target, views, activeKey, traceSummary)
 	} catch (error) {
 		target.document.body.textContent = `Unable to open source file: ${error instanceof Error ? error.message : String(error)}`
 	}
