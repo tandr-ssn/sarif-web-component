@@ -399,7 +399,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			min-width: 3ch;
 			padding: 0 3px;
 		}
-		.trace-badge a { color: #202020; font-weight: bold; text-decoration: none; }
+		.trace-badge a { color: #202020; font-size: 1.35em; font-weight: bold; line-height: .8; text-decoration: none; }
 		.trace-badge a:hover { text-decoration: underline; }
 		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
 		.trace-start { border-left: 3px solid #107c10; }
@@ -503,7 +503,7 @@ export async function openSourceFile(
 	trace?: SourceTrace,
 ): Promise<void> {
 	// Open synchronously during the click event so popup blockers do not reject it after the async read.
-	const target = window.open()
+	const target = window.open('about:blank', '_blank')
 	if (!target) return
 	target.opener = null
 	target.document.title = artifactLocation.uri ?? 'Source file'

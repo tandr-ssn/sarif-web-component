@@ -13,7 +13,10 @@ test('renders result stacks and code flows', () => {
 		threadFlowLocations: [{
 			location: {
 				message: { text: 'Enter handler' },
-				physicalLocation: { artifactLocation: { uri: 'src/handler.ts' }, region: { startLine: 5 } },
+				physicalLocation: {
+					artifactLocation: { uri: 'src/handler.ts' },
+					region: { startLine: 5, snippet: {text: 'handle(request)'} },
+				},
 			},
 		}],
 	}
@@ -41,6 +44,7 @@ test('renders result stacks and code flows', () => {
 	expect(wrapper.text()).toContain('src/app.ts:10')
 	expect(wrapper.text()).toContain('Enter handler')
 	expect(wrapper.text()).toContain('src/handler.ts:5')
+	expect(wrapper.find('.swcSnippet').text()).toContain('handle(request)')
 	const sourceLinks = wrapper.find(SourceLocationLink)
 	expect(sourceLinks.at(0).prop('trace')).toEqual({
 		locations: [result.stacks[0].frames[0].location.physicalLocation],

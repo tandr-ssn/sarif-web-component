@@ -7,6 +7,7 @@ import { PhysicalLocation, Result } from 'sarif'
 import { Hi } from './Hi'
 import './RunCard.renderCell.scss'
 import { SourceLocationLink } from './SourceLocationLink'
+import { getResultSourceTrace } from './ResultSourceTrace'
 import { TooltipSpan } from './TooltipSpan'
 import { tryOr } from './try'
 
@@ -47,6 +48,7 @@ export function renderPathCell(result: Result) {
 	const sourcePhysicalLocation = ploc ?? (result.analysisTarget
 		? { artifactLocation: result.analysisTarget } as PhysicalLocation
 		: undefined)
+	const sourceTrace = getResultSourceTrace(result)
 
 	const rowClasses = 'bolt-table-two-line-cell-item flex-row scroll-hidden'
 
@@ -65,7 +67,7 @@ export function renderPathCell(result: Result) {
 					{/* TODO: Enable tooltip if a) inner !== href, or b) inner === href and inner is clipped (aka overflowing) */}
 					<TooltipSpan overflowOnly={true} text={href ?? uri}>
 						<span className="fontSize font-size secondary-text swcColorUnset swcWidth100">
-							<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run}>{uriWithEllipsis}</SourceLocationLink>
+							<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
 						</span>
 					</TooltipSpan>
 				</div>
@@ -76,7 +78,7 @@ export function renderPathCell(result: Result) {
 			{/* Consider overflowOnly=false for the other branch above. */}
 			<TooltipSpan text={href ?? uri}>
 				<span className="swcColorUnset">
-					<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run}>{uriWithEllipsis}</SourceLocationLink>
+					<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
 				</span>
 			</TooltipSpan>
 		</div>

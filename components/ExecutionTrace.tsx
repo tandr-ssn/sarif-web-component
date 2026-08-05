@@ -6,6 +6,7 @@ import * as React from 'react'
 import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow} from 'sarif'
 import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace} from './SourceFile'
+import {Snippet} from './Snippet'
 
 function messageText(message): string | undefined {
 	return message?.text ?? message?.markdown
@@ -18,8 +19,9 @@ function TraceLocation(props: {
 	index?: number
 	traceLocations?: Array<PhysicalLocation | undefined>
 	traceLabel?: string
+	showSnippet?: boolean
 }) {
-	const {location, module, run, index, traceLocations, traceLabel} = props
+	const {location, module, run, index, traceLocations, traceLabel, showSnippet} = props
 	const logicalName = getLogicalLocationText(location)
 	const message = messageText(location?.message)
 	const prefix = index === undefined ? undefined : <span className="swcTraceIndex">{index + 1}</span>
@@ -34,6 +36,7 @@ function TraceLocation(props: {
 			{(logicalName || module) && <div className="swcTraceName">{logicalName ?? module}</div>}
 			{message && message !== logicalName && <div>{message}</div>}
 			<SourceLocationLink ploc={location?.physicalLocation} run={run} trace={trace} />
+			{showSnippet && <Snippet ploc={location?.physicalLocation} />}
 		</div>
 	</li>
 }
@@ -74,7 +77,7 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 		<ol className="swcTraceLocations">
 			{resolvedLocations.map((resolved, locationIndex) => <React.Fragment key={locationIndex}>
 				<TraceLocation location={resolved?.location} module={resolved?.module} run={run}
-					index={locationIndex} traceLocations={traceLocations} traceLabel={label} />
+					index={locationIndex} traceLocations={traceLocations} traceLabel={label} showSnippet={true} />
 				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} label="Nested stack" /></li>}
 			</React.Fragment>)}
 		</ol>

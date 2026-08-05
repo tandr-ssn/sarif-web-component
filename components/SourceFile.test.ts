@@ -20,6 +20,7 @@ test('renders embedded source as text in a new tab', async () => {
 	expect(childDocument.querySelectorAll('.source-line')).toHaveLength(1)
 	expect(childDocument.querySelector('.source-line')?.getAttribute('data-line')).toBe('1')
 	expect(childWindow.opener).toBeNull()
+	expect(open).toHaveBeenCalledWith('about:blank', '_blank')
 	open.mockRestore()
 })
 
