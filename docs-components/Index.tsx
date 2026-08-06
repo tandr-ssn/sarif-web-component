@@ -130,10 +130,8 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 						input.value = ''
 					}} />
 				<Button className="demoOpen" text="Open..." onClick={() => void this.openFile()} />
-				<Button text="Reload" tooltipProps={{text: this.currentSarifFile
-					? 'Re-read the current SARIF file from disk.'
-					: 'Select the SARIF file again to reload it from disk.'}}
-					onClick={() => void this.reloadFile()} />
+				{this.sarifFileHandle && <Button text="Reload" tooltipProps={{text: 'Re-read the current SARIF file from disk.'}}
+					onClick={() => void this.reloadFile()} />}
 				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>
 				<span style={{ flexGrow: 1 }}></span>
 			</div>
