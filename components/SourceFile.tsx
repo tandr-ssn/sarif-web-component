@@ -116,14 +116,8 @@ function selectionOnLine(text: string, lineNumber: number, region: Region): [num
 }
 
 function highlightBackground(highlights: SourceHighlight[]): string {
-	const colors = Array.from(new Set(highlights.map(highlight => highlight.color)))
-	if (colors.length === 1) return `background-color: ${colors[0]}`
-	const stops = colors.map((color, index) => {
-		const start = Math.round(index * 100 / colors.length)
-		const end = Math.round((index + 1) * 100 / colors.length)
-		return `${color} ${start}%, ${color} ${end}%`
-	})
-	return `background: linear-gradient(to bottom, ${stops.join(', ')})`
+	const highlight = highlights.find(candidate => candidate.isActive) ?? highlights[0]
+	return `background-color: ${highlight.color}`
 }
 
 function renderSyntaxSegment(text: string, fileName: string): string {

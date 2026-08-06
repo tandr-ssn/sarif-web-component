@@ -45,6 +45,30 @@ test('adds line numbers and preserves multi-line region highlighting', async () 
 	open.mockRestore()
 })
 
+test('uses one color when trace regions overlap', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const reader = async () => ({name: 'src/file.ts', text: 'const value = source;'})
+	const locations: any[] = [
+		{artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 1, startColumn: 7, endColumn: 21}},
+		{artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 1, startColumn: 7, endColumn: 12}},
+	]
+
+	await openSourceFile(
+		locations[1].artifactLocation,
+		{} as any,
+		locations[1].region,
+		reader,
+		{locations, activeIndex: 1, label: 'Code flow'},
+	)
+
+	const overlap = childDocument.querySelector('mark[data-trace-indices="0 1"]') as HTMLElement
+	expect(overlap.style.backgroundColor).toBe('rgb(245, 181, 176)')
+	expect(overlap.style.backgroundImage).toBe('')
+	open.mockRestore()
+})
+
 test('highlights every trace entry in a file and links between trace files', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = {
