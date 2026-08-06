@@ -135,7 +135,7 @@ export class RunStore {
 				ruleTreeItem.childItems = !ruleTreeItem.isShowAll && ruleTreeItem.childItemsAll.length > maxLength
 					? [
 						...ruleTreeItem.childItemsAll.slice(0, maxLength),
-						{ data: { onClick: () => {
+						{ data: { count: ruleTreeItem.childItemsAll.length, onClick: () => {
 							ruleTreeItem.isShowAll = true
 							this.showAllRevision++
 						}}}

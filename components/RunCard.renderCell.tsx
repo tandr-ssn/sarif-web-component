@@ -152,7 +152,7 @@ export function renderCell<T extends ISimpleTableCell>(
 	if (isMore(data)) {
 		return columnIndex === 0
 			? ExpandableTreeCell({
-				children: <Link onClick={data.onClick} tabIndex={-1}>Show All</Link>,
+				children: <Link onClick={data.onClick} tabIndex={-1}>Show all {data.count} findings</Link>,
 				colspan,
 				...commonProps
 			})

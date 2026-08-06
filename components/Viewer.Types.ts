@@ -22,6 +22,7 @@ export interface Rule extends ReportingDescriptor {
 }
 
 export interface More {
+	count: number
 	onClick: any
 }
 
