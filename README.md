@@ -41,7 +41,7 @@ The Fields menu controls the result-table columns. Path, Details, Level, and Kin
 To build and open the standalone viewer locally, install Node.js 22.15 or newer and npm, then run this from a fresh checkout:
 
 ```
-npm install --ignore-scripts
+npm ci --ignore-scripts
 npm run docs
 ```
 
