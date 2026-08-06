@@ -3,6 +3,35 @@
 
 @use "azure-devops-ui/Core/_platformCommon.scss" as *;
 
+// Azure's icon font does not render when this bundle is opened directly from
+// file:// in Firefox. These controls stay legible with ordinary text glyphs.
+.fabric-icon.ms-Icon--Search::before,
+.fabric-icon.ms-Icon--Filter::before { content: "⌕"; }
+.fabric-icon.ms-Icon--Cancel::before { content: "×"; }
+.fabric-icon.ms-Icon--More::before,
+.fabric-icon.ms-Icon--MoreVertical::before { content: "⋮"; }
+.fabric-icon.ms-Icon--ChevronLeftMed::before { content: "‹"; }
+.fabric-icon.ms-Icon--ChevronRightMed::before { content: "›"; }
+.fabric-icon.ms-Icon--ChevronDownMed::before,
+.fabric-icon.ms-Icon--ChevronDown::before { content: "⌄"; }
+.fabric-icon.ms-Icon--ChevronUp::before { content: "⌃"; }
+.fabric-icon.ms-Icon--CheckMark::before { content: "✓"; }
+
+.fabric-icon.ms-Icon--Search::before,
+.fabric-icon.ms-Icon--Filter::before,
+.fabric-icon.ms-Icon--Cancel::before,
+.fabric-icon.ms-Icon--More::before,
+.fabric-icon.ms-Icon--MoreVertical::before,
+.fabric-icon.ms-Icon--ChevronLeftMed::before,
+.fabric-icon.ms-Icon--ChevronRightMed::before,
+.fabric-icon.ms-Icon--ChevronDownMed::before,
+.fabric-icon.ms-Icon--ChevronDown::before,
+.fabric-icon.ms-Icon--ChevronUp::before,
+.fabric-icon.ms-Icon--CheckMark::before {
+	font-family: Arial, sans-serif;
+	font-weight: bold;
+}
+
 .bolt-page { // Parent is #app which is display block.
 	height: 100%;
 

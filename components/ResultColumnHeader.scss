@@ -13,11 +13,25 @@
 		border-radius: 2px;
 		cursor: pointer;
 		flex: 0 0 auto;
-		padding: 1px 4px;
+		font-size: 1.25rem;
+		line-height: .75rem;
+		min-width: 22px;
+		padding: 2px 4px 4px;
 	}
 	> button:hover, > button.active { background: var(--palette-black-alpha-10); }
 	> button.active { color: var(--communication-foreground); font-weight: bold; }
 }
+
+// Keep sort direction readable in the offline file:// build even if Firefox
+// declines the embedded Azure DevOps icon font.
+.bolt-table-header-sort-icon.ms-Icon--SortUp::before,
+.bolt-table-header-sort-icon.ms-Icon--SortDown::before {
+	font-family: Arial, sans-serif;
+	font-size: .9rem;
+	font-weight: bold;
+}
+.bolt-table-header-sort-icon.ms-Icon--SortUp::before { content: "↑"; }
+.bolt-table-header-sort-icon.ms-Icon--SortDown::before { content: "↓"; }
 
 .swcColumnFilter {
 	background: $neutral-4;

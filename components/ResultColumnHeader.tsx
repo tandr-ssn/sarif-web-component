@@ -45,8 +45,9 @@ export class ResultColumnHeader extends React.Component<{
 			<div className="swcColumnHeader">
 				<span className="text-ellipsis" title={column.name}>{column.name}</span>
 				<button type="button" className={active ? 'active' : ''} aria-label={`Filter ${column.name}`}
+					aria-expanded={this.open} aria-haspopup="menu" title={`Filter ${column.name}`}
 					ref={element => this.anchor = element ?? undefined}
-					onMouseDown={this.stop} onClick={event => { this.stop(event); this.open = !this.open }}>▾</button>
+					onMouseDown={this.stop} onClick={event => { this.stop(event); this.open = !this.open }}>⋮</button>
 			</div>
 			{this.open && this.anchor && <Callout anchorElement={this.anchor}
 				anchorOrigin={{horizontal: Location.end, vertical: Location.end}}
