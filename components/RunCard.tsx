@@ -84,7 +84,9 @@ import {ResultColumnHeader} from './ResultColumnHeader'
 					},
 				} as ITreeColumn<ResultOrRuleOrMore>)
 			}
-			return this.columnCache.get(id)
+			const column = this.columnCache.get(id)
+			column.sortProps.sortOrder = i === runStore.sortColumnIndex ? runStore.sortOrder : undefined
+			return column
 		})
 	}
 

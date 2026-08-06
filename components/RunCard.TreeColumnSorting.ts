@@ -12,6 +12,7 @@ import {sortDelegate, SortOrder} from 'azure-devops-ui/Table'
 export class TreeColumnSorting<T> implements IBehavior<ITreeProps<T>, ITree<T>> {
 	private onSort: sortDelegate
 	private props: Readonly<ITreeProps<T>>
+	private eventDispatch?: IEventDispatch
 
 	constructor(onSort: sortDelegate) {
 		this.onSort = onSort
@@ -19,9 +20,23 @@ export class TreeColumnSorting<T> implements IBehavior<ITreeProps<T>, ITree<T>> 
 
 	public initialize = (props: Readonly<ITreeProps<T>>, table: Tree<T>, eventDispatch: IEventDispatch): void => {
 		this.props = props
+		this.eventDispatch = eventDispatch
 
 		eventDispatch.addEventListener("click", this.onClick)
 		eventDispatch.addEventListener("keydown", this.onKeyDown)
+	}
+
+	public componentDidMount = (props: Readonly<ITreeProps<T>>): void => {
+		this.props = props
+	}
+
+	public componentDidUpdate = (props: Readonly<ITreeProps<T>>): void => {
+		this.props = props
+	}
+
+	public componentWillUnmount = (): void => {
+		this.eventDispatch?.removeEventListener("click", this.onClick)
+		this.eventDispatch?.removeEventListener("keydown", this.onKeyDown)
 	}
 
 	private onClick = (event: React.MouseEvent<HTMLElement>) => {
