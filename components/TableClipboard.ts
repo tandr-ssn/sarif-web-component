@@ -1,5 +1,6 @@
 function normalizedCellText(cell: HTMLElement): string {
-	return (cell.innerText || cell.textContent || '')
+	const copyValue = cell.querySelector<HTMLElement>('[data-copy-value]')?.dataset.copyValue
+	return (copyValue ?? (cell.innerText || cell.textContent || ''))
 		.replace(/\t/g, ' ')
 		.replace(/\s*\r?\n\s*/g, ' ')
 		.trim()

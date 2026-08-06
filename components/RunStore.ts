@@ -291,7 +291,7 @@ export class RunStore {
 				() => result.locations[0].physicalLocation.contextRegion.snippet.text,
 				() => result.locations[0].physicalLocation.region.snippet.text,
 				'')
-			return `${message} ${snippet}`
+			return [message, snippet].filter(Boolean).join('\n')
 		}
 		const ruleValue = (result: Result) => `${result._rule?.id || result._rule?.guid || ''} ${result._rule?.name ?? ''}`
 		const definitions = {

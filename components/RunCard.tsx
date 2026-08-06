@@ -86,6 +86,7 @@ import {copySelectedTableCells} from './TableClipboard'
 				} as ITreeColumn<ResultOrRuleOrMore>)
 			}
 			const column = this.columnCache.get(id)
+			;(column as ITreeColumn<ResultOrRuleOrMore> & {copyString: typeof col.filterString}).copyString = col.filterString
 			column.sortProps.sortOrder = i === runStore.sortColumnIndex ? runStore.sortOrder : undefined
 			return column
 		})

@@ -4,7 +4,7 @@ import {copySelectedTableCells} from './TableClipboard'
 test('copies selected finding cells as tab-separated rows', () => {
 	const root = document.createElement('div')
 	root.innerHTML = `<table><tbody>
-		<tr data-row-index="0"><td class="bolt-table-cell" data-column-index="0">one</td><td class="bolt-table-cell" data-column-index="1">two\nlines</td></tr>
+		<tr data-row-index="0"><td class="bolt-table-cell" data-column-index="0">one</td><td class="bolt-table-cell" data-column-index="1"><span hidden data-copy-value="Finding message&#10;code snippet"></span>Finding messageCode flowHidden trace</td></tr>
 		<tr data-row-index="1"><td class="bolt-table-cell" data-column-index="0">three</td><td class="bolt-table-cell" data-column-index="1">four</td></tr>
 		<tr><td class="bolt-table-cell" data-column-index="0" colspan="99">Show all</td></tr>
 	</tbody></table>`
@@ -19,7 +19,7 @@ test('copies selected finding cells as tab-separated rows', () => {
 
 	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
 
-	expect(setData).toHaveBeenCalledWith('text/plain', 'one\ttwo lines\nthree\tfour')
+	expect(setData).toHaveBeenCalledWith('text/plain', 'one\tFinding message code snippet\nthree\tfour')
 	expect(preventDefault).toHaveBeenCalled()
 	selection.removeAllRanges()
 	root.remove()

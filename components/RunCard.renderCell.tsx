@@ -87,6 +87,8 @@ export function renderCell<T extends ISimpleTableCell>(
 	if (isResult(data)) {
 		const result = data
 		const rule = result._rule
+		const copyString = (treeColumn as ITreeColumn<T> & {copyString?: (result: Result) => string}).copyString
+		const copyMarker = <span hidden data-copy-value={copyString?.(result) ?? ''} />
 		const status = {
 			none: result.kind === 'pass' ? Statuses.Success : Statuses.Queued,
 			note: Statuses.Information,
@@ -139,9 +141,9 @@ export function renderCell<T extends ISimpleTableCell>(
 			}
 		})()
 		return columnIndex === 0
-			? ExpandableTreeCell({children, ...commonProps})
+			? ExpandableTreeCell({children: <>{copyMarker}{children}</>, ...commonProps})
 			: TableCell({
-				children,
+				children: <>{copyMarker}{children}</>,
 				className: css(treeColumn.className, 'font-size'),
 				columnIndex,
 			})
