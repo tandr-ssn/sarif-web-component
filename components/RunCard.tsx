@@ -25,6 +25,7 @@ import {Tree, ITreeColumn} from 'azure-devops-ui/TreeEx'
 import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
 import {Tooltip} from 'azure-devops-ui/TooltipEx'
 import {ResultColumnHeader} from './ResultColumnHeader'
+import {copySelectedTableCells} from './TableClipboard'
 
 @observer export class RunCard extends Component<{ runStore: RunStore, index: number, runCount: number }> {
 	@observable private show = true
@@ -193,7 +194,8 @@ import {ResultColumnHeader} from './ResultColumnHeader'
 					].filter(item => item)}
 					className="flex-grow bolt-card-no-vertical-padding">
 					{show && (itemProvider.length
-						? <Tree<ResultOrRuleOrMore>
+						? <div onCopy={copySelectedTableCells}>
+							<Tree<ResultOrRuleOrMore>
 							className="swcTree"
 							columns={this.columns}
 							itemProvider={itemProvider}
@@ -212,6 +214,7 @@ import {ResultColumnHeader} from './ResultColumnHeader'
 							behaviors={[this.sortingBehavior]}
 							selectableText={true}
 							/>
+						</div>
 						: <div className="swcRunEmpty">No Results</div>
 					)}
 				</Card>
