@@ -4,7 +4,7 @@
 import './RunCard.renderCell.scss'
 import * as React from 'react'
 import {Fragment} from 'react'
-import * as ReactMarkdown from 'react-markdown'
+import ReactMarkdown from 'react-markdown'
 import {Result} from 'sarif'
 
 import {Hi} from './Hi'
@@ -115,7 +115,7 @@ export function renderCell<T extends ISimpleTableCell>(
 										<ReactMarkdown source={formattedMarkdown}
 											renderers={{ link: ({href, children}) => <a href={href} target="_blank">{children}</a> }} />
 									</div> // Div to cancel out containers display flex row.
-									: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span> || ''}
+									: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span>}
 									<Snippet ploc={result.locations?.[0]?.physicalLocation} run={result.run} trace={getResultSourceTrace(result)} />
 									<ExecutionTrace result={result} />
 								</>

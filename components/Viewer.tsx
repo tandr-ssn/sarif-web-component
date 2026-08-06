@@ -353,4 +353,4 @@ export interface ViewerProps {
 	}
 }
 
-export { SourceFile, SourceFileReader } from './SourceFile'
+export type { SourceFile, SourceFileReader } from './SourceFile'

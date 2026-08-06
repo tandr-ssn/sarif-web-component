@@ -156,12 +156,12 @@ test('highlights every trace entry in a file and links between trace files', asy
 	const copyPathAndLine = childDocument.querySelector('[data-copy="path-line"]') as HTMLButtonElement
 	expect(copyPathAndLine).not.toBeNull()
 	expect(copyPathAndLine.onclick).not.toBeNull()
-	copyPathAndLine.onclick(new MouseEvent('click'))
+	copyPathAndLine.click()
 	await new Promise(resolve => setTimeout(resolve, 0))
 	expect(childDocument.querySelector('[data-copy-status]')?.textContent).toBe('Copied')
 	expect((childWindow.navigator.clipboard.writeText as jest.Mock)).toHaveBeenCalledWith('src/app.ts:1')
 	const copyTrace = childDocument.querySelector('[data-copy="trace"]') as HTMLButtonElement
-	copyTrace.onclick(new MouseEvent('click'))
+	copyTrace.click()
 	await new Promise(resolve => setTimeout(resolve, 0))
 	expect((childWindow.navigator.clipboard.writeText as jest.Mock).mock.calls[1][0]).toContain([
 		'Call stack',
