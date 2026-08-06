@@ -69,6 +69,31 @@ test('uses one color when trace regions overlap', async () => {
 	open.mockRestore()
 })
 
+test('caps the trace gutter at four badges and wraps additional entries', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const reader = async () => ({name: 'src/file.ts', text: 'const value = source;'})
+	const locations: any[] = Array.from({length: 6}, () => ({
+		artifactLocation: {uri: 'src/file.ts'},
+		region: {startLine: 1, startColumn: 7, endColumn: 12},
+	}))
+
+	await openSourceFile(
+		locations[0].artifactLocation,
+		{} as any,
+		locations[0].region,
+		reader,
+		{locations, activeIndex: 0, label: 'Code flow'},
+	)
+
+	expect(childDocument.querySelectorAll('.trace-column .trace-badge')).toHaveLength(6)
+	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
+	expect(sourceStyles).toContain('flex-wrap: wrap')
+	expect(sourceStyles).toContain('width: 17ch')
+	open.mockRestore()
+})
+
 test('highlights every trace entry in a file and links between trace files', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = {

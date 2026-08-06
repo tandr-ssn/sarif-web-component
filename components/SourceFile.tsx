@@ -362,7 +362,9 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		})
 		return Array.from(counts.values())
 	}))
-	const traceColumnWidth = Math.max(9, maxBadgesOnLine * (traceIndexWidth + 5) + 1)
+	const maxBadgesPerRow = 4
+	const badgesPerRow = Math.min(maxBadgesPerRow, maxBadgesOnLine)
+	const traceColumnWidth = Math.max(9, badgesPerRow * (traceIndexWidth + 3) + 1)
 	target.document.title = activeView?.name ?? 'Source file'
 	const style = target.document.createElement('style')
 	style.textContent = `
@@ -388,6 +390,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.source-file:target { display: block; }
 		.trace-column {
 			display: inline-flex;
+			flex-wrap: wrap;
 			gap: 2px;
 			justify-content: flex-end;
 			margin-right: 8px;
