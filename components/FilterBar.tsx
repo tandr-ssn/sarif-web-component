@@ -34,12 +34,13 @@ export class MobxFilter extends Filter {
 	}
 }
 
-@observer export class FilterBar extends React.Component<{ filter: MobxFilter, readonly groupByAge: boolean, hideBaseline?: boolean, hideLevel?: boolean, showSuppression?: boolean, showAge?: boolean, resultFieldSelector?: React.ReactNode }> {
+@observer export class FilterBar extends React.Component<{ filter: MobxFilter, readonly groupByAge: boolean, hideBaseline?: boolean, hideLevel?: boolean, showSuppression?: boolean, showAge?: boolean, resultFieldSelector?: React.ReactNode, resultExportMenu?: React.ReactNode }> {
 	render() {
-		const {filter, resultFieldSelector} = this.props
+		const {filter, resultFieldSelector, resultExportMenu} = this.props
 		return <AzFilterBar filter={filter}>
 			<KeywordFilterBarItem filterItemKey="Keywords" placeholder="Filter by keyword" />
 			{resultFieldSelector}
+			{resultExportMenu}
 		</AzFilterBar>
 	}
 }

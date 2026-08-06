@@ -260,6 +260,10 @@ export class RunStore {
 		return this.rulesFiltered.reduce((total, rule) => total + rule.childItemsAll.length, 0)
 	}
 
+	@computed get filteredResults(): Result[] {
+		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.map(item => item.data as Result))
+	}
+
 	@observable showAllRevision = 0
 	@observable.ref rulesTruncated = [] as ITreeItem<ResultOrRuleOrMore>[] // Technically ITreeItem<Rule>[], ref assuming immutable array.
 

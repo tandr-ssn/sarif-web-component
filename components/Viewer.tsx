@@ -33,6 +33,8 @@ import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileS
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
+import {createResultCsv, downloadResultCsv, ResultExportScope} from './ResultExport'
+import {ResultExportMenu} from './ResultExportMenu'
 
 export interface ViewerProps {
 	logs?: Log[]
@@ -163,6 +165,10 @@ export interface ViewerProps {
 		return key
 	}
 
+	private exportResults = (scope: ResultExportScope) => {
+		downloadResultCsv(createResultCsv(this.runStoresSorted, scope), `sarif-findings-${scope}.csv`)
+	}
+
 	private selectSourceDirectory = async () => {
 		if (!window.showDirectoryPicker) {
 			this.sourceDirectoryInput?.click()
@@ -257,6 +263,8 @@ export interface ViewerProps {
 
 		// Computed values fail to cache if called from onRenderNearElement() for unknown reasons. Thus call them in advance.
 		const currentfilterState = this.filter.getState()
+		const allResultCount = this.runStoresSorted.reduce((total, runStore) => total + (runStore.run.results?.length ?? 0), 0)
+		const filteredResultCount = this.runStoresSorted.reduce((total, runStore) => total + runStore.filteredResults.length, 0)
 		const filterKeywords = currentfilterState.Keywords?.value
 		const nearElement = (() => {
 			const {runStoresSorted} = this
@@ -329,7 +337,8 @@ export interface ViewerProps {
 							<div className="swcShim"></div>
 							{renderedSourcePicker}
 							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
-								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />} />
+								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
+								resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount} onExport={this.exportResults} />} />
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
 								onDismiss={() => this.warnOldVersion = false}>
