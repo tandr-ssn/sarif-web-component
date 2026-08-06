@@ -1,5 +1,8 @@
 import { Region, Run } from 'sarif'
-import * as urlJoin from 'uri-join'
+
+function joinUrl(...parts: string[]): string {
+	return parts.map((part, index) => index ? part.replace(/^\/+|\/+$/g, '') : part.replace(/\/+$/g, '')).join('/')
+}
 
 function getHostname(url: string | undefined): string | undefined {
 	if (!url) return undefined
@@ -48,7 +51,7 @@ export function getRepoUri(uri: string | undefined, run: Run, region?: Region | 
 		// https://github.com/microsoft/sarif-web-component/blob/d14c42f18766159a7ef6fbb8858ab5ad4f0b532a/.gitignore#L1
 		// Note: path-browserify's path.join does does not preserve authority slashes
 		// (ex: https://github.com becomes https:/github.com). Thus using url-join.
-		let repoUri = urlJoin(`${repositoryUri}/blob/${revisionId ?? 'main'}`, uri)
+		let repoUri = joinUrl(repositoryUri, 'blob', revisionId ?? 'main', uri)
 		if (region?.startLine) { // `startLine` is 1-based.
 			repoUri += `#L${region!.startLine}`
 		}

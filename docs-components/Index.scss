@@ -22,8 +22,8 @@ body {
 	width: 8px;
 }
 ::-webkit-scrollbar-thumb {
-	background: hsla(0, 0, 0, 0.1);
-	&:hover { background: hsla(0, 0, 0, 0.2); }
+	background: hsla(0, 0%, 0%, 0.1);
+	&:hover { background: hsla(0, 0%, 0%, 0.2); }
 }
 
 pre { margin: 0 }

@@ -10,9 +10,12 @@ module.exports = {
 		filename: 'index.js',
 	},
 	devServer : {
-		publicPath: '/dist',
-		//https: true,
-		//host: '0.0.0.0', // Necessary to server outside localhost
-		stats: 'none',
+		devMiddleware: {
+			publicPath: '/dist/',
+			stats: 'none',
+		},
+		static: {
+			directory: __dirname,
+		},
 	},
 }

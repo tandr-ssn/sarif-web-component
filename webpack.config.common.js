@@ -13,8 +13,8 @@ module.exports = {
 				test: /\.s?css$/,
 				use: ['style-loader', 'css-loader', 'sass-loader']
 			},
-			{ test: /\.png$/, use: 'url-loader' },
-			{ test: /\.woff$/, use: 'url-loader' },
+			{ test: /\.png$/, type: 'asset/inline' },
+			{ test: /\.woff$/, type: 'asset/inline' },
 		]
 	},
 	performance: {

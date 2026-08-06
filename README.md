@@ -38,7 +38,7 @@ The opened source toolbar supports previous/next readable trace navigation (`[` 
 
 The Fields menu controls the result-table columns. Path, Details, Level, and Kind are selected by default. Other scalar SARIF values are shown in a searchable tree and may be selected at any depth, for example `properties.audit.selection.status`. Values found in arrays are combined into one column rather than exposed as numeric array indices.
 
-To build and open the standalone viewer locally, install Node.js and npm, then run this from a fresh checkout:
+To build and open the standalone viewer locally, install Node.js 22.15 or newer and npm, then run this from a fresh checkout:
 
 ```
 npm install --ignore-scripts
