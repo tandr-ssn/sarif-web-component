@@ -8,6 +8,17 @@
 		cursor: pointer;
 		font-weight: 600;
 	}
+
+	&[open] {
+		background-color: rgba(0, 120, 212, 0.08);
+		border: 1px solid rgba(0, 120, 212, 0.28);
+		border-radius: 4px;
+		padding: 6px 8px 8px;
+
+		> summary {
+			margin-bottom: 4px;
+		}
+	}
 }
 
 .swcTraceMessage,
