@@ -411,7 +411,11 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-start { border-left: 4px solid #107c10; }
 		.trace-end { border-right: 4px solid #c50f1f; }
 		.trace-active { box-shadow: 0 0 0 2px #005fb8; }
-		.trace-active-highlight { box-shadow: 0 0 0 2px #005fb8; border-radius: 2px; }
+		.trace-active-highlight {
+			border-radius: 2px;
+			outline: 2px solid #005fb8;
+			outline-offset: 1px;
+		}
 		.line-number {
 			box-sizing: border-box;
 			color: #767676;
