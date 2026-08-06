@@ -35,6 +35,7 @@ export const resultColumnFilterKey = (fieldId: string) => `Column:${fieldId}`
 export class RunStore {
 	driverName: string
 	@observable sortRuleBy = SortRuleBy.Count
+	@observable sortRuleOrder = SortOrder.ascending
 	@observable sortColumnIndex = 1
 	@observable sortOrder = SortOrder.ascending
 
@@ -214,9 +215,16 @@ export class RunStore {
 
 		const treeItemsVisible = treeItems.filter(rule => rule.childItemsAll.length)
 
+		const groupName = (item: ITreeItem<ResultOrRuleOrMore>) => {
+			const data = item.data as Rule & {name?: string}
+			return data.id ?? data.name ?? ''
+		}
+		const compareNames = (a: ITreeItem<ResultOrRuleOrMore>, b: ITreeItem<ResultOrRuleOrMore>) =>
+			groupName(a).localeCompare(groupName(b))
+		const ruleOrder = this.sortRuleOrder === SortOrder.ascending ? 1 : -1
 		treeItemsVisible.sort(this.sortRuleBy === SortRuleBy.Count
-			? (a, b) => b.childItemsAll.length - a.childItemsAll.length
-			: (a, b) => (a.data as Rule).id.localeCompare((b.data as Rule).id)
+			? (a, b) => b.childItemsAll.length - a.childItemsAll.length || compareNames(a, b)
+			: (a, b) => ruleOrder * compareNames(a, b)
 		)
 		
 		treeItemsVisible.forEach((rule, i) => rule.expanded = i === 0)
@@ -254,6 +262,15 @@ export class RunStore {
 
 	@observable showAllRevision = 0
 	@observable.ref rulesTruncated = [] as ITreeItem<ResultOrRuleOrMore>[] // Technically ITreeItem<Rule>[], ref assuming immutable array.
+
+	setColumnSort(columnIndex: number, sortOrder: SortOrder): boolean {
+		this.sortColumnIndex = columnIndex
+		this.sortOrder = sortOrder
+		if (!['Rule', 'ruleId'].includes(this.columns[columnIndex]?.id)) return false
+		this.sortRuleBy = SortRuleBy.Name
+		this.sortRuleOrder = sortOrder
+		return true
+	}
 
 	@computed get columns() {
 		const pathValue = (result: Result) => tryOr<string>(

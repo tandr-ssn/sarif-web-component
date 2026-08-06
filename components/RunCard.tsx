@@ -20,6 +20,7 @@ import {ObservableValue, IObservableValue} from 'azure-devops-ui/Core/Observable
 import {IHeaderCommandBarItem} from 'azure-devops-ui/HeaderCommandBar'
 import {MenuItemType} from 'azure-devops-ui/Menu'
 import {Pill, PillSize} from "azure-devops-ui/Pill"
+import {SortOrder} from 'azure-devops-ui/Table'
 import {Tree, ITreeColumn} from 'azure-devops-ui/TreeEx'
 import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
 import {Tooltip} from 'azure-devops-ui/TooltipEx'
@@ -36,6 +37,7 @@ import {ResultColumnHeader} from './ResultColumnHeader'
 		const sortRuleBy = untracked(() => runStore.sortRuleBy)
 		const onActivate = menuItem => {
 			runStore.sortRuleBy = menuItem.data
+			if (menuItem.data === SortRuleBy.Name) runStore.sortRuleOrder = SortOrder.ascending
 			this.sortRuleByMenuItems.forEach(item => (item.checked as IObservableValue<boolean>).value = item.id === menuItem.id)
 		}
 		return [
@@ -138,8 +140,9 @@ import {ResultColumnHeader} from './ResultColumnHeader'
 				}
 			}
 			runInAction(() => {
-				this.props.runStore.sortColumnIndex = columnIndex
-				this.props.runStore.sortOrder = proposedSortOrder
+				const sortsRules = this.props.runStore.setColumnSort(columnIndex, proposedSortOrder)
+				if (sortsRules) this.sortRuleByMenuItems.forEach(item =>
+					(item.checked as IObservableValue<boolean>).value = item.id === 'sortByRuleName')
 			})
 		}
 	)
