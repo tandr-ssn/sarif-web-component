@@ -334,3 +334,31 @@ test('uses audit origin to highlight an input and matching identifier inside a t
 	expect(childDocument.querySelectorAll('.trace-badge')).toHaveLength(1)
 	open.mockRestore()
 })
+
+test('does not propagate an identifier that occupies a declaration type position', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const source = [
+		'void read(File file) {',
+		'  File next = file;',
+		'}',
+	].join('\n')
+	const reader = async () => ({name: 'src/Reader.java', text: source})
+	const locations: any[] = [
+		{artifactLocation: {uri: 'src/Reader.java'}, region: {startLine: 1, startColumn: 11, endColumn: 15}},
+		{artifactLocation: {uri: 'src/Reader.java'}, region: {startLine: 2}},
+	]
+
+	await openSourceFile(
+		locations[0].artifactLocation,
+		{} as any,
+		locations[0].region,
+		reader,
+		{locations, activeIndex: 0, label: 'Code flow', inferIdentifiers: true},
+	)
+
+	expect(Array.from(childDocument.querySelectorAll('.trace-identifier-highlight')).map(mark => mark.textContent))
+		.not.toContain('File')
+	open.mockRestore()
+})

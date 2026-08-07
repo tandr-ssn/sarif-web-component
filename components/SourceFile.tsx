@@ -755,6 +755,12 @@ function identifierOccurrences(text: string, start: number, end: number, identif
 	return occurrences
 }
 
+function likelyDeclarationTypeOccurrence(text: string, end: number): boolean {
+	let next = end
+	while (next < text.length && /[ \t]/.test(text[next])) next++
+	return next !== end && /[A-Za-z_$]/.test(text[next] ?? '')
+}
+
 function exactIdentifierRegion(text: string, region: Region): IdentifierRegion | undefined {
 	if (region.endColumn === undefined || (region.endLine ?? region.startLine) !== region.startLine) return undefined
 	const offsets = regionOffsets(text, region)
@@ -764,6 +770,7 @@ function exactIdentifierRegion(text: string, region: Region): IdentifierRegion |
 	const identifier = selected.trim()
 	if (!/^[A-Za-z_$][\w$]*$/.test(identifier)) return undefined
 	const start = offsets[0] + leading
+	if (likelyDeclarationTypeOccurrence(text, start + identifier.length)) return undefined
 	return {identifier, region: regionFromOffsets(text, start, start + identifier.length)}
 }
 
@@ -771,6 +778,7 @@ function uniqueIdentifierInRegion(text: string, region: Region, identifier: stri
 	const offsets = regionOffsets(text, region)
 	if (!offsets) return undefined
 	const occurrences = identifierOccurrences(text, offsets[0], offsets[1], identifier)
+		.filter(([, end]) => !likelyDeclarationTypeOccurrence(text, end))
 	return occurrences.length === 1 ? regionFromOffsets(text, occurrences[0][0], occurrences[0][1]) : undefined
 }
 
@@ -972,9 +980,9 @@ export async function openSourceFile(
 			if (resolvedOrigin?.key === view.key && resolvedOrigin.region) {
 				const source = sourceFilesByKey.get(view.key)
 				const originRegion = source && resolvedOrigin.name
-					? uniqueIdentifierInRegion(source.text, resolvedOrigin.region, resolvedOrigin.name) ?? resolvedOrigin.region
+					? uniqueIdentifierInRegion(source.text, resolvedOrigin.region, resolvedOrigin.name)
 					: resolvedOrigin.region
-				view.highlights.push({
+				if (originRegion) view.highlights.push({
 					region: originRegion,
 					color: identifierColor,
 					isIdentifier: !!resolvedOrigin.name,
