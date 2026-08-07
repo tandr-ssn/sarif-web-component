@@ -1,5 +1,6 @@
-import {Location, PhysicalLocation, Result, Stack} from 'sarif'
+import {Result} from 'sarif'
 import {RunStore} from './RunStore'
+import {resultCallStackText, resultCodeFlowText} from './ResultTraceText'
 
 export type ResultExportScope = 'filtered' | 'all'
 
@@ -9,63 +10,6 @@ function spreadsheetSafe(value: string): string {
 
 function csvCell(value: unknown): string {
 	return `"${spreadsheetSafe(String(value ?? '')).replace(/"/g, '""')}"`
-}
-
-function messageText(message): string {
-	return message?.text ?? message?.markdown ?? ''
-}
-
-function physicalLocationText(result: Result, physicalLocation: PhysicalLocation | undefined): string {
-	if (!physicalLocation) return ''
-	const artifact = physicalLocation.artifactLocation
-	const path = artifact?.uri ?? (artifact?.index === undefined ? '' : result.run?.artifacts?.[artifact.index]?.location?.uri) ?? ''
-	const line = physicalLocation.region?.startLine
-	return path && line ? `${path}:${line}` : path || (line ? `Line ${line}` : '')
-}
-
-function traceLocationText(result: Result, location: Location | undefined, index: number, module?: string): string {
-	const physicalLocation = location?.physicalLocation
-	const logicalLocation = location?.logicalLocations?.[0]
-	const description = [
-		messageText(location?.message),
-		logicalLocation?.fullyQualifiedName ?? logicalLocation?.name ?? module ?? '',
-		physicalLocationText(result, physicalLocation),
-	].filter(Boolean).join(' — ')
-	const snippet = physicalLocation?.contextRegion?.snippet?.text ?? physicalLocation?.region?.snippet?.text ?? ''
-	return [`${index + 1}. ${description}`.trimEnd(), snippet].filter(Boolean).join('\n')
-}
-
-function stackText(result: Result, stack: Stack, index: number, total: number): string {
-	const heading = [total > 1 ? `Call stack ${index + 1}` : '', messageText(stack.message)].filter(Boolean).join(': ')
-	const frames = stack.frames?.map((frame, frameIndex) =>
-		traceLocationText(result, frame.location, frameIndex, frame.module)).filter(Boolean).join('\n') ?? ''
-	return [heading, frames].filter(Boolean).join('\n')
-}
-
-function resultCallStackText(result: Result): string {
-	return result.stacks?.map((stack, index, stacks) => stackText(result, stack, index, stacks.length))
-		.filter(Boolean).join('\n\n') ?? ''
-}
-
-function resultCodeFlowText(result: Result): string {
-	return result.codeFlows?.map((codeFlow, codeFlowIndex, codeFlows) => {
-		const flowHeading = [codeFlows.length > 1 ? `Code flow ${codeFlowIndex + 1}` : '', messageText(codeFlow.message)]
-			.filter(Boolean).join(': ')
-		const threads = codeFlow.threadFlows?.map((threadFlow, threadIndex, threadFlows) => {
-			const threadHeading = [
-				threadFlows.length > 1 ? `Thread ${threadIndex + 1}` : '',
-				messageText(threadFlow.message) || threadFlow.id || '',
-			].filter(Boolean).join(': ')
-			const locations = threadFlow.locations?.map((threadFlowLocation, locationIndex) => {
-				const resolved = threadFlowLocation.index === undefined
-					? threadFlowLocation
-					: result.run?.threadFlowLocations?.[threadFlowLocation.index]
-				return traceLocationText(result, resolved?.location, locationIndex, resolved?.module)
-			}).filter(Boolean).join('\n') ?? ''
-			return [threadHeading, locations].filter(Boolean).join('\n')
-		}).filter(Boolean).join('\n\n') ?? ''
-		return [flowHeading, threads].filter(Boolean).join('\n')
-	}).filter(Boolean).join('\n\n') ?? ''
 }
 
 export function createResultCsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {

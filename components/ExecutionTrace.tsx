@@ -8,6 +8,7 @@ import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace, traceColor} from './SourceFile'
 import {Snippet} from './Snippet'
 import {getResultAuditOrigin} from './ResultSourceTrace'
+import {codeFlowText, stackText} from './ResultTraceText'
 
 function messageText(message): string | undefined {
 	return message?.text ?? message?.markdown
@@ -69,7 +70,8 @@ function ResultStacks(props: { result: Result, run: Run }) {
 	return <>
 		{props.result.stacks.map((stack, index) => {
 			const label = `Call stack${props.result.stacks.length > 1 ? ` ${index + 1}` : ''}`
-			return <details className="swcTrace" key={index}>
+			return <details className="swcTrace" key={index}
+				data-copy-trace-value={stackText(props.result, stack, index, props.result.stacks.length)}>
 				<summary>{label} ({stack.frames?.length ?? 0} frames)</summary>
 				{messageText(stack.message) && <div className="swcTraceMessage">{messageText(stack.message)}</div>}
 				<StackFrames stack={stack} run={props.run} label={label} origin={getResultAuditOrigin(props.result)} />
@@ -108,7 +110,8 @@ function CodeFlows(props: { result: Result, run: Run }) {
 	return <>
 		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => {
 			const label = `Code flow${props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}`
-			return <details className="swcTrace" key={codeFlowIndex}>
+			return <details className="swcTrace" key={codeFlowIndex}
+				data-copy-trace-value={codeFlowText(props.result, codeFlow, codeFlowIndex, props.result.codeFlows.length)}>
 			<summary>{label}</summary>
 			{messageText(codeFlow.message) && <div className="swcTraceMessage">{messageText(codeFlow.message)}</div>}
 			{codeFlow.threadFlows?.map((threadFlow, threadFlowIndex) => <ThreadFlowTrace

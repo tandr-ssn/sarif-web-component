@@ -54,6 +54,10 @@ test('renders result stacks and code flows', () => {
 		'Call stack (1 frames)',
 		'Code flow',
 	])
+	expect(wrapper.find('details').map(details => details.prop('data-copy-trace-value'))).toEqual([
+		'1. App.Run — src/app.ts:10\n10  Run(path)',
+		'1. Enter handler — src/handler.ts:5\n5  handle(request)',
+	])
 	expect(wrapper.text()).toContain('App.Run')
 	expect(wrapper.text()).toContain('src/app.ts:10')
 	expect(wrapper.text()).toContain('Enter handler')

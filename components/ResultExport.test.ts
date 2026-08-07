@@ -26,7 +26,7 @@ test('exports all findings using the selected fields', () => {
 	expect(createResultCsv([runStore], 'all')).toBe(
 		'\ufeff"Path","Details","Code flow"\r\n' +
 		'"src/one.ts","First, finding\nconst value = ""quoted""","1. Input received — src/input.ts:4\n' +
-		'const value = input;\nuse(value);"\r\n' +
+		'4  const value = input;\n5  use(value);"\r\n' +
 		'"src/two.ts","\'=unsafe formula",""')
 })
 
