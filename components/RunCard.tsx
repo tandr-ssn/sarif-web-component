@@ -66,12 +66,12 @@ import {copySelectedTableCells} from './TableClipboard'
 	@computed private get columns() {
 		const {runStore} = this.props
 		return runStore.columns.map((col, i) => {
-			const {id, width} = col
+			const {id, name, width} = col
 			if (!this.columnCache.has(id)) {
 				const observableWidth = new ObservableValue(width)
 				this.columnCache.set(id, {
 					id,
-					name: id,
+					name,
 					width: observableWidth,
 					onSize: (e, i, newWidth) => observableWidth.value = newWidth,
 					renderCell: renderCell, // Normally renderTreeCell
@@ -86,6 +86,7 @@ import {copySelectedTableCells} from './TableClipboard'
 				} as ITreeColumn<ResultOrRuleOrMore>)
 			}
 			const column = this.columnCache.get(id)
+			column.name = name
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {copyString: typeof col.filterString}).copyString = col.filterString
 			column.sortProps.sortOrder = i === runStore.sortColumnIndex ? runStore.sortOrder : undefined
 			return column

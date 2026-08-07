@@ -11,7 +11,7 @@ import {MobxFilter} from './FilterBar'
 import {SortOrder} from 'azure-devops-ui/Table'
 import { getRepoUri } from './getRepoUri'
 import {tryOr} from './try'
-import {DEFAULT_RESULT_FIELDS, getResultFieldValue} from './ResultFields'
+import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} from './ResultFields'
 
 declare module 'sarif' {
     interface Run {
@@ -306,8 +306,11 @@ export class RunStore {
 			Age: {filterString: (result: Result) => result.sla ?? '', sortString: (result: Result) => result.sla ?? '', width: -1},
 			'First Observed': {filterString: (result: Result) => result.firstDetection?.toLocaleDateString() ?? '', sortString: (result: Result) => result.firstDetection?.getTime().toString() ?? '', width: -1},
 		}
-		return this.selectedFields.get().map(id => ({
+		const selectedFields = this.selectedFields.get()
+		const displayNames = getResultFieldDisplayNames(selectedFields)
+		return selectedFields.map(id => ({
 			id,
+			name: displayNames.get(id) ?? id,
 			...(definitions[id] ?? {
 				filterString: (result: Result) => getResultFieldValue(result, id),
 				sortString: (result: Result) => getResultFieldValue(result, id),

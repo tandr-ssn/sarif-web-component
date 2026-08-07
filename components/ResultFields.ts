@@ -9,6 +9,30 @@ export const BUILT_IN_RESULT_FIELDS = new Set([
 	'Rule', 'Actions', 'Baseline', 'Bug', 'Age', 'First Observed',
 ])
 
+function capitalize(value: string): string {
+	return value ? value[0].toUpperCase() + value.slice(1) : value
+}
+
+/** Returns readable shortest-unique-suffix labels while leaving built-in names unchanged. */
+export function getResultFieldDisplayNames(paths: string[]): Map<string, string> {
+	return new Map(paths.map(path => {
+		if (BUILT_IN_RESULT_FIELDS.has(path)) return [path, path]
+		const segments = path.split('.')
+		let suffix = path
+		for (let length = 1; length <= segments.length; length++) {
+			const candidate = segments.slice(-length).join('.')
+			const normalized = candidate.toLowerCase()
+			const conflicts = paths.some(other => other !== path && (
+				other.toLowerCase() === normalized || other.toLowerCase().endsWith(`.${normalized}`)))
+			if (!conflicts) {
+				suffix = candidate
+				break
+			}
+		}
+		return [path, suffix.split('.').map(capitalize).join(' ')]
+	}))
+}
+
 export interface ResultFieldNode {
 	name: string
 	path?: string

@@ -43,9 +43,9 @@ export class ResultColumnHeader extends React.Component<{
 		const active = typeof value === 'string' ? !!value.trim() : !!value?.length
 		return <TableHeaderCell column={column} columnIndex={columnIndex} focuszoneId={focuszoneId} isFirstActionableHeader={isFirstActionableHeader}>
 			<div className="swcColumnHeader">
-				<span className="text-ellipsis" title={column.name}>{column.name}</span>
+				<span className="text-ellipsis" title={column.id}>{column.name}</span>
 				<button type="button" className={active ? 'active' : ''} aria-label={`Filter ${column.name}`}
-					aria-expanded={this.open} aria-haspopup="menu" title={`Filter ${column.name}`}
+					aria-expanded={this.open} aria-haspopup="menu" title={`Filter ${column.id}`}
 					ref={element => this.anchor = element ?? undefined}
 					onMouseDown={this.stop} onClick={event => { this.stop(event); this.open = !this.open }}>⋮</button>
 			</div>
