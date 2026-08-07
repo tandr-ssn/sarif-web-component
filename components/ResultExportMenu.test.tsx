@@ -6,16 +6,22 @@ import {ResultExportMenu} from './ResultExportMenu'
 
 Enzyme.configure({adapter: new Adapter()})
 
-test('offers filtered and complete report exports', () => {
+test('exports the filtered report directly when filters are active', () => {
 	const onExport = jest.fn()
-	const wrapper = mount(<ResultExportMenu filteredCount={3} allCount={8} onExport={onExport} />)
-	wrapper.find('.swcResultExport > button').simulate('click')
-	wrapper.update()
+	const wrapper = mount(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
+	const button = wrapper.find('.swcResultExport > button')
+	expect(button.text()).toBe('Export filtered')
+	button.simulate('click')
+	expect(onExport).toHaveBeenCalledWith('filtered')
+	wrapper.unmount()
+})
 
-	expect(document.body.textContent).toContain('Export filtered findings (3)')
-	expect(document.body.textContent).toContain('Export all findings (8)')
-	const buttons = document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button')
-	buttons[1].click()
+test('exports the complete report directly when no filters are active', () => {
+	const onExport = jest.fn()
+	const wrapper = mount(<ResultExportMenu filteredCount={8} allCount={8} filtered={false} onExport={onExport} />)
+	const button = wrapper.find('.swcResultExport > button')
+	expect(button.text()).toBe('Export all')
+	button.simulate('click')
 	expect(onExport).toHaveBeenCalledWith('all')
 	wrapper.unmount()
 })

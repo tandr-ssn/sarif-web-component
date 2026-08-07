@@ -1,4 +1,4 @@
-import {createResultCsv} from './ResultExport'
+import {createResultCsv, hasActiveResultFilter} from './ResultExport'
 import {RunStore} from './RunStore'
 
 const first = {path: 'src/one.ts', message: 'First, finding'}
@@ -23,4 +23,12 @@ test('exports only currently filtered findings', () => {
 	expect(createResultCsv([runStore], 'filtered')).toBe(
 		'\ufeff"Path","Details"\r\n' +
 		'"src/two.ts","\'=unsafe formula"')
+})
+
+test('detects whether a result filter has a value', () => {
+	expect(hasActiveResultFilter({})).toBe(false)
+	expect(hasActiveResultFilter({Keywords: {value: '  '}})).toBe(false)
+	expect(hasActiveResultFilter({Keywords: {value: 'path'}})).toBe(true)
+	expect(hasActiveResultFilter({Level: {value: []}})).toBe(false)
+	expect(hasActiveResultFilter({Level: {value: ['error']}})).toBe(true)
 })

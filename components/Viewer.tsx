@@ -33,7 +33,7 @@ import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileS
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
-import {createResultCsv, downloadResultCsv, ResultExportScope} from './ResultExport'
+import {createResultCsv, downloadResultCsv, hasActiveResultFilter, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
 
 export interface ViewerProps {
@@ -338,7 +338,8 @@ export interface ViewerProps {
 							{renderedSourcePicker}
 							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
 								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
-								resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount} onExport={this.exportResults} />} />
+								resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
+									filtered={hasActiveResultFilter(currentfilterState)} onExport={this.exportResults} />} />
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
 								onDismiss={() => this.warnOldVersion = false}>
