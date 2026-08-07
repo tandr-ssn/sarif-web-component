@@ -355,6 +355,9 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		if (activation) {
 			event.preventDefault()
 			activateTrace(+(activation.getAttribute('data-activate-trace') ?? -1), true)
+			// Preserve focus visibility for keyboard activation, but do not let a mouse click
+			// keep this badge's hover-only arrows pinned open through :focus-within.
+			if (event.detail > 0) activation.blur()
 			return
 		}
 		const action = element?.closest('[data-trace-action]')?.getAttribute('data-trace-action')

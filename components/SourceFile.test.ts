@@ -272,6 +272,10 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(arrows.map(arrow => arrow.getAttribute('aria-label'))).toEqual([
 		'Next trace entry', 'Previous trace entry', 'Next trace entry', 'Previous trace entry',
 	])
+	const firstNextArrow = arrows[0] as HTMLElement
+	const blur = jest.spyOn(firstNextArrow, 'blur')
+	firstNextArrow.dispatchEvent(new MouseEvent('click', {bubbles: true, detail: 1}))
+	expect(blur).toHaveBeenCalled()
 	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
 	expect(sourceStyles).toContain('.trace-badge:hover > a, .trace-badge:focus-within > a')
 	expect(sourceStyles).toContain('pointer-events: none')
