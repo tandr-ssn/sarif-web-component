@@ -12,6 +12,7 @@ import {SortOrder} from 'azure-devops-ui/Table'
 import { getRepoUri } from './getRepoUri'
 import {tryOr} from './try'
 import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} from './ResultFields'
+import {resultDetailsCopyText} from './ResultTraceText'
 
 declare module 'sarif' {
     interface Run {
@@ -296,7 +297,7 @@ export class RunStore {
 		const ruleValue = (result: Result) => `${result._rule?.id || result._rule?.guid || ''} ${result._rule?.name ?? ''}`
 		const definitions = {
 			Path: {filterString: pathValue, sortString: pathValue, width: -3},
-			Details: {filterString: detailsValue, sortString: (result: Result) => result.message?.text ?? '', width: -5},
+			Details: {filterString: detailsValue, copyString: resultDetailsCopyText, sortString: (result: Result) => result.message?.text ?? '', width: -5},
 			Level: {filterString: (result: Result) => result.level ?? 'warning', sortString: (result: Result) => result.level ?? 'warning', width: -1},
 			Kind: {filterString: (result: Result) => result.kind ?? 'fail', sortString: (result: Result) => result.kind ?? 'fail', width: -1},
 			Rule: {filterString: ruleValue, sortString: ruleValue, width: -2},

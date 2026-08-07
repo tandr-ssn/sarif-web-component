@@ -88,7 +88,8 @@ export function renderCell<T extends ISimpleTableCell>(
 		const result = data
 		const rule = result._rule
 		const copyString = (treeColumn as ITreeColumn<T> & {copyString?: (result: Result) => string}).copyString
-		const copyMarker = <span hidden data-copy-value={copyString?.(result) ?? ''} />
+		const copyMarker = <span hidden data-copy-value={copyString?.(result) ?? ''}
+			data-copy-always={treeColumn.id === 'Details' ? 'true' : undefined} />
 		const status = {
 			none: result.kind === 'pass' ? Statuses.Success : Statuses.Queued,
 			note: Statuses.Information,

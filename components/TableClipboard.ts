@@ -1,6 +1,11 @@
 function normalizedCellText(cell: HTMLElement): string {
-	const copyValue = cell.querySelector<HTMLElement>('[data-copy-value]')?.dataset.copyValue
-	return (copyValue ?? (cell.innerText || cell.textContent || ''))
+	const marker = cell.querySelector<HTMLElement>('[data-copy-value]')
+	const copyValue = marker?.dataset.copyValue
+	const openTraces = Array.from(cell.querySelectorAll<HTMLDetailsElement>('details[open][data-copy-trace-value]'))
+		.map(trace => trace.dataset.copyTraceValue ?? '')
+		.filter(Boolean)
+	return [copyValue ?? (cell.innerText || cell.textContent || ''), ...openTraces]
+		.filter(Boolean).join('\n\n')
 		.replace(/\t/g, ' ')
 		.replace(/\r\n?/g, '\n')
 		.trim()
@@ -33,6 +38,12 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 		.filter(cell => ranges.some(range => intersects(range, cell)))
 	if (!cells.length) return
 	if (cells.length === 1) {
+		const alwaysCopy = cells[0].querySelector<HTMLElement>('[data-copy-always]') !== null
+		if (alwaysCopy) {
+			event.clipboardData.setData('text/plain', tsvCell(normalizedCellText(cells[0])))
+			event.preventDefault()
+			return
+		}
 		const selectedText = selection.toString()
 		const renderedText = cells[0].innerText || cells[0].textContent || ''
 		if (comparableText(selectedText) !== comparableText(renderedText)) return
