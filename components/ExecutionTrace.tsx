@@ -3,7 +3,7 @@
 
 import './ExecutionTrace.scss'
 import * as React from 'react'
-import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow} from 'sarif'
+import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow, ThreadFlowLocation} from 'sarif'
 import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace, traceColor} from './SourceFile'
 import {Snippet} from './Snippet'
@@ -20,6 +20,7 @@ function TraceLocation(props: {
 	run: Run
 	index?: number
 	traceLocations?: Array<PhysicalLocation | undefined>
+	traceSteps?: Array<ThreadFlowLocation | undefined>
 	traceLabel?: string
 	showSnippet?: boolean
 	identifierHints?: Array<string | undefined>
@@ -27,7 +28,7 @@ function TraceLocation(props: {
 	traceCount?: number
 	origin?: SourceTrace['origin']
 }) {
-	const {location, module, run, index, traceLocations, traceLabel, showSnippet, identifierHints, inferIdentifiers, traceCount, origin} = props
+	const {location, module, run, index, traceLocations, traceSteps, traceLabel, showSnippet, identifierHints, inferIdentifiers, traceCount, origin} = props
 	const logicalName = getLogicalLocationText(location)
 	const message = messageText(location?.message)
 	const prefix = index === undefined ? undefined : <span className="swcTraceIndex">{index + 1}</span>
@@ -39,6 +40,7 @@ function TraceLocation(props: {
 			locations: traceLocations,
 			activeIndex: index,
 			label: traceLabel,
+			...(traceSteps ? {steps: traceSteps} : {}),
 			...(identifierHints?.some(Boolean) ? {identifierHints} : {}),
 			...(inferIdentifiers ? {inferIdentifiers: true} : {}),
 			...(origin ? {origin} : {}),
@@ -97,7 +99,7 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 		<ol className="swcTraceLocations">
 			{resolvedLocations.map((resolved, locationIndex) => <React.Fragment key={locationIndex}>
 				<TraceLocation location={resolved?.location} module={resolved?.module} run={run}
-					index={locationIndex} traceLocations={traceLocations} traceLabel={label} showSnippet={true}
+					index={locationIndex} traceLocations={traceLocations} traceSteps={resolvedLocations} traceLabel={label} showSnippet={true}
 					identifierHints={identifierHints} inferIdentifiers={true} traceCount={traceLocations.length} origin={props.origin} />
 				{resolved?.stack && <li className="swcNestedStack"><StackFrames stack={resolved.stack} run={run} label="Nested stack" origin={props.origin} /></li>}
 			</React.Fragment>)}

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import {PhysicalLocation, Region, Result, Run} from 'sarif'
+import {PhysicalLocation, Region, Result, Run, ThreadFlowLocation} from 'sarif'
 import {getArtifactLocation, SourceTrace} from './SourceFile'
 
 export function getResultAuditOrigin(result: Result): SourceTrace['origin'] | undefined {
@@ -59,7 +59,13 @@ function sameSourceLocation(left: PhysicalLocation | undefined, right: PhysicalL
 	return leftKey !== undefined && leftKey === artifactKey(right, run) && regionsOverlap(left?.region, right.region)
 }
 
-function withPrimaryLocation(locations: Array<PhysicalLocation | undefined>, primary: PhysicalLocation, run: Run, identifierHints?: Array<string | undefined>): SourceTrace {
+function withPrimaryLocation(
+	locations: Array<PhysicalLocation | undefined>,
+	primary: PhysicalLocation,
+	run: Run,
+	identifierHints?: Array<string | undefined>,
+	steps?: Array<ThreadFlowLocation | undefined>,
+): SourceTrace {
 	let activeIndex = -1
 	for (let index = locations.length - 1; index >= 0; index--) {
 		if (sameSourceLocation(locations[index], primary, run)) {
@@ -70,9 +76,15 @@ function withPrimaryLocation(locations: Array<PhysicalLocation | undefined>, pri
 	if (activeIndex < 0) {
 		locations = [...locations, primary]
 		if (identifierHints) identifierHints = [...identifierHints, undefined]
+		if (steps) steps = [...steps, undefined]
 		activeIndex = locations.length - 1
 	}
-	return {locations, activeIndex, ...(identifierHints?.some(Boolean) ? {identifierHints} : {})}
+	return {
+		locations,
+		activeIndex,
+		...(steps ? {steps} : {}),
+		...(identifierHints?.some(Boolean) ? {identifierHints} : {}),
+	}
 }
 
 /** Returns the first code flow, or first call stack, leading to a result's primary location. */
@@ -92,7 +104,13 @@ export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 			return identifiers.length === 1 ? identifiers[0] : undefined
 		})
 		return {
-			...withPrimaryLocation(resolvedLocations.map(resolved => resolved?.location?.physicalLocation), primary, result.run, identifierHints),
+			...withPrimaryLocation(
+				resolvedLocations.map(resolved => resolved?.location?.physicalLocation),
+				primary,
+				result.run,
+				identifierHints,
+				resolvedLocations,
+			),
 			label: 'Code flow',
 			inferIdentifiers: true,
 			...(origin ? {origin} : {}),

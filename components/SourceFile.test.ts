@@ -223,19 +223,42 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 		{artifactLocation: {uri: 'src/app.ts'}, region: {startLine: 2}},
 		{artifactLocation: {uri: 'src/app.ts'}, region: {startLine: 3, startColumn: 11, endColumn: 15}},
 	]
+	const steps: any[] = [
+		{
+			location: {...locations[0], message: {text: 'Recognized input source'}, logicalLocations: [{fullyQualifiedName: 'send'}]},
+			importance: 'essential',
+			properties: {audit: {role: 'source', symbol: 'path', resolution: 'semantic'}},
+			state: {path: {text: 'tainted request value'}},
+		},
+		{location: {...locations[1], message: {text: 'Value passes through clean'}}, nestingLevel: 1},
+		{location: {...locations[2], message: {text: 'Value reaches sink'}}, properties: {audit: {role: 'sink'}}},
+	]
 
 	await openSourceFile(
 		locations[1].artifactLocation,
 		{} as any,
 		locations[1].region,
 		reader,
-		{locations, activeIndex: 1, label: 'Code flow', inferIdentifiers: true},
+		{locations, steps, activeIndex: 1, label: 'Code flow', inferIdentifiers: true},
 	)
 
 	const identifiers = Array.from(childDocument.querySelectorAll<HTMLElement>('.trace-identifier-highlight'))
 	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path', 'path'])
 	const badges = Array.from(childDocument.querySelectorAll<HTMLElement>('.trace-badge'))
 	expect(badges.map(badge => badge.querySelector('button')?.textContent)).toEqual(['1', '2', '3'])
+	expect(badges[0].title).toBe([
+		'Step 1 of 3 · Source',
+		'Recognized input source',
+		'src/app.ts:1:10',
+		'Symbol location: send',
+		'Value: path — tainted request value',
+		'Importance: Essential',
+		'Resolution: semantic',
+	].join('\n'))
+	expect(badges[1].title).toContain('Step 2 of 3')
+	expect(badges[1].title).toContain('Call depth: 1')
+	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.title)
+		.toContain('Value passes through clean')
 	expect(identifiers[1].style.backgroundColor).toBe(badges[1].style.backgroundColor)
 	expect(identifiers[2].style.backgroundColor).toBe(badges[2].style.backgroundColor)
 	expect(identifiers.slice(1).map(mark => mark.style.getPropertyValue('--trace-identifier-color')))

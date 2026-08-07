@@ -32,6 +32,7 @@ test('uses a code flow and appends the primary result location', () => {
 	expect(getResultSourceTrace(result)).toEqual({
 		locations: [flowLocation, primary],
 		activeIndex: 1,
+		steps: [result.run.threadFlowLocations[0], undefined],
 		label: 'Code flow',
 		inferIdentifiers: true,
 	})

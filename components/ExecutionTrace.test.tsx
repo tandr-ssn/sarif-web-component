@@ -75,6 +75,7 @@ test('renders result stacks and code flows', () => {
 		locations: [run.threadFlowLocations[0].location.physicalLocation],
 		activeIndex: 0,
 		label: 'Code flow',
+		steps: [run.threadFlowLocations[0]],
 		inferIdentifiers: true,
 		origin,
 	})

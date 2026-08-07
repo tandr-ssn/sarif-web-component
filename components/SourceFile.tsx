@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import * as React from 'react'
-import {ArtifactLocation, PhysicalLocation, Region, Run} from 'sarif'
+import {ArtifactLocation, PhysicalLocation, Region, Run, ThreadFlowLocation} from 'sarif'
 import {highlightSourceSegment} from './SyntaxHighlight'
 
 export interface SourceFile {
@@ -16,6 +16,7 @@ export interface SourceTrace {
 	locations: Array<PhysicalLocation | undefined>
 	activeIndex: number
 	label?: string
+	steps?: Array<ThreadFlowLocation | undefined>
 	identifierHints?: Array<string | undefined>
 	inferIdentifiers?: boolean
 	origin?: {
@@ -79,6 +80,7 @@ interface SourceHighlight {
 	isActive?: boolean
 	previousEntry?: SourceNavigationTarget
 	nextEntry?: SourceNavigationTarget
+	tooltip?: string
 }
 
 interface SourceFileView {
@@ -167,7 +169,9 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 		const identifierStyle = identifierHighlights.length && locationHighlights.length
 			? `; --trace-identifier-color: ${identifierHighlights[0].highlight.color}`
 			: ''
-		return `<mark class="trace-highlight${identifierClass}${locationClass}"${traceData}${locationTraceData}${locationColorData} data-default-highlight-color="${backgroundColor}" style="background-color: ${backgroundColor}${identifierStyle}">${segment}</mark>`
+		const tooltip = Array.from(new Set(active.map(value => value.highlight.tooltip).filter(Boolean))).join('\n\n')
+		const titleData = tooltip ? ` title="${escapeHtml(tooltip)}"` : ''
+		return `<mark class="trace-highlight${identifierClass}${locationClass}"${traceData}${locationTraceData}${locationColorData}${titleData} data-default-highlight-color="${backgroundColor}" style="background-color: ${backgroundColor}${identifierStyle}">${segment}</mark>`
 	}).join('')
 }
 
@@ -182,14 +186,14 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 	const position = highlight.isStart && highlight.isEnd ? 'start and end'
 		: highlight.isStart ? 'start'
 			: highlight.isEnd ? 'end' : undefined
-	const title = `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
+	const title = highlight.tooltip ?? `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
 	const previous = highlight.previousEntry
 		? `<a class="trace-previous" href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" title="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
 		: ''
 	const next = highlight.nextEntry
 		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
-	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${title}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
+	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${escapeHtml(title)}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
 function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
@@ -596,6 +600,8 @@ interface ResolvedTraceLocation {
 	key?: string
 	region?: Region
 	identifierHint?: string
+	step?: ThreadFlowLocation
+	tooltip?: string
 }
 
 interface ResolvedTraceOrigin {
@@ -605,6 +611,90 @@ interface ResolvedTraceOrigin {
 	region?: Region
 	name?: string
 	kind?: string
+}
+
+function multiformatText(message: any): string | undefined {
+	return message?.text ?? message?.markdown
+}
+
+function readableName(value: string): string {
+	const words = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ')
+	return words ? words[0].toUpperCase() + words.slice(1) : words
+}
+
+function traceStepRole(step: ThreadFlowLocation | undefined, index: number, count: number): string | undefined {
+	const auditRole = (step?.properties as any)?.audit?.role
+	if (typeof auditRole === 'string' && auditRole) return readableName(auditRole)
+	const kinds = step?.kinds?.map(kind => kind.toLowerCase()) ?? []
+	if (kinds.includes('analysisboundary')) return 'Boundary'
+	if (kinds.includes('source')) return 'Source'
+	if (kinds.includes('sink')) return 'Sink'
+	if (kinds.includes('passthrough')) return 'Propagation'
+	if (index === 0) return 'Start'
+	if (index === count - 1) return 'End'
+	return undefined
+}
+
+function resolvedTraceLocationText(location: ResolvedTraceLocation): string | undefined {
+	const path = location.artifactLocation?.uri
+	const line = location.region?.startLine
+	const column = location.region?.startColumn
+	if (!path) return line ? `Line ${line}${column ? `:${column}` : ''}` : undefined
+	return line ? `${path}:${line}${column ? `:${column}` : ''}` : path
+}
+
+function traceLocationTooltip(location: ResolvedTraceLocation, count: number, run: Run): string {
+	const step = location.step
+	const audit = (step?.properties as any)?.audit
+	const role = traceStepRole(step, location.traceIndex, count)
+	const heading = `Step ${location.traceIndex + 1} of ${count}${role ? ` · ${role}` : ''}`
+	const message = multiformatText(step?.location?.message)
+	const directLogicalLocation = step?.location?.logicalLocations?.[0]
+	const logicalLocation = directLogicalLocation?.index === undefined
+		? directLogicalLocation
+		: (run as any).logicalLocations?.[directLogicalLocation.index] ?? directLogicalLocation
+	const logicalName = logicalLocation?.fullyQualifiedName ?? logicalLocation?.decoratedName
+		?? logicalLocation?.name ?? step?.module
+	const stateEntries = Object.entries(step?.state ?? {}).map(([name, value]) => {
+		const description = multiformatText(value)
+		return {name, text: description && description !== name ? `${name} — ${description}` : name}
+	})
+	const state = stateEntries.length
+		? `${stateEntries.length === 1 ? 'Value' : 'State'}: ${stateEntries.map(entry => entry.text).join('; ')}`
+		: undefined
+	const symbol = typeof audit?.symbol === 'string' && audit.symbol && !stateEntries.some(entry => entry.name === audit.symbol)
+		? `Symbol: ${audit.symbol}`
+		: undefined
+	const importance = step?.importance && step.importance !== 'important'
+		? `Importance: ${readableName(step.importance)}`
+		: undefined
+	const nesting = typeof step?.nestingLevel === 'number' && step.nestingLevel > 0
+		? `Call depth: ${step.nestingLevel}`
+		: undefined
+	const resolution = typeof audit?.resolution === 'string' && audit.resolution
+		? `Resolution: ${audit.resolution}`
+		: undefined
+	const reason = typeof audit?.reason === 'string' && audit.reason
+		? `Reason: ${audit.reason}`
+		: undefined
+	return [
+		heading,
+		message,
+		resolvedTraceLocationText(location),
+		logicalName ? `Symbol location: ${logicalName}` : undefined,
+		state,
+		symbol,
+		importance,
+		nesting,
+		resolution,
+		reason,
+	].filter(Boolean).join('\n')
+}
+
+function originTooltip(origin: ResolvedTraceOrigin): string {
+	const role = origin.kind ? readableName(origin.kind) : 'Origin'
+	const location = resolvedTraceLocationText({...origin, traceIndex: -1})
+	return [`Origin · ${role}`, origin.name ? `Value: ${origin.name}` : undefined, location].filter(Boolean).join('\n')
 }
 
 interface IdentifierRegion {
@@ -787,13 +877,16 @@ export async function openSourceFile(
 		const activeKey = sourceViewKey(artifactLocation) ?? 'active-source-file'
 		const resolvedTrace: ResolvedTraceLocation[] = trace?.locations.map((physicalLocation, traceIndex) => {
 			const resolvedArtifactLocation = getArtifactLocation(physicalLocation, run)
-			return {
+			const resolved: ResolvedTraceLocation = {
 				traceIndex,
 				artifactLocation: resolvedArtifactLocation,
 				key: resolvedArtifactLocation && sourceViewKey(resolvedArtifactLocation),
 				region: physicalLocation?.region,
 				identifierHint: trace.identifierHints?.[traceIndex],
+				step: trace.steps?.[traceIndex],
 			}
+			resolved.tooltip = traceLocationTooltip(resolved, trace.locations.length, run)
+			return resolved
 		}) ?? []
 		const resolvedOrigin: ResolvedTraceOrigin | undefined = trace?.origin && (() => {
 			const originArtifactLocation = getArtifactLocation(trace.origin.location, run)
@@ -861,6 +954,7 @@ export async function openSourceFile(
 					isActive: location.traceIndex === trace?.activeIndex,
 					previousEntry: adjacentEntry(location.traceIndex, -1),
 					nextEntry: adjacentEntry(location.traceIndex, 1),
+					tooltip: location.tooltip,
 				}))
 			resolvedTrace
 				.filter(location => location.key === view.key && identifierHighlights.has(location.traceIndex))
@@ -872,6 +966,7 @@ export async function openSourceFile(
 						color: inferred.color,
 						isIdentifier: true,
 						isActive: location.traceIndex === trace?.activeIndex,
+						tooltip: location.tooltip,
 					})
 				})
 			if (resolvedOrigin?.key === view.key && resolvedOrigin.region) {
@@ -883,6 +978,7 @@ export async function openSourceFile(
 					region: originRegion,
 					color: identifierColor,
 					isIdentifier: !!resolvedOrigin.name,
+					tooltip: originTooltip(resolvedOrigin),
 				})
 			}
 		})
