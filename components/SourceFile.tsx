@@ -200,6 +200,10 @@ function renderSourceLine(text: string, lineNumber: number, highlights: SourceHi
 	const traceBadges = highlights
 		.filter(highlight => highlight.region.startLine === lineNumber && highlight.traceIndex !== undefined)
 		.filter((highlight, index, lineHighlights) => lineHighlights.findIndex(candidate => candidate.traceIndex === highlight.traceIndex) === index)
+		.sort((left, right) =>
+			(left.region.startColumn ?? 1) - (right.region.startColumn ?? 1)
+			|| (left.region.endColumn ?? Number.MAX_SAFE_INTEGER) - (right.region.endColumn ?? Number.MAX_SAFE_INTEGER)
+			|| left.traceIndex - right.traceIndex)
 		.map(renderTraceBadge)
 		.join('')
 	const traceColumn = showTraceColumn ? `<span class="trace-column">${traceBadges}</span>` : ''

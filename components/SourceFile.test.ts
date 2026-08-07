@@ -91,6 +91,31 @@ test('uses one color when trace regions overlap', async () => {
 	open.mockRestore()
 })
 
+test('orders same-line gutter markers by source position while preserving trace numbers', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const reader = async () => ({name: 'src/file.ts', text: 'seed\nthird(second)'})
+	const locations: any[] = [
+		{artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 1, startColumn: 1, endColumn: 5}},
+		{artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 2, startColumn: 7, endColumn: 13}},
+		{artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 2, startColumn: 1, endColumn: 6}},
+	]
+
+	await openSourceFile(
+		locations[2].artifactLocation,
+		{} as any,
+		locations[2].region,
+		reader,
+		{locations, activeIndex: 2, label: 'Code flow'},
+	)
+
+	const secondLineBadges = Array.from(childDocument.querySelectorAll('[data-line="2"] .trace-badge'))
+	expect(secondLineBadges.map(badge => badge.querySelector('button')?.textContent)).toEqual(['3', '2'])
+	expect(secondLineBadges[1].querySelector('.trace-next')?.getAttribute('data-activate-trace')).toBe('2')
+	open.mockRestore()
+})
+
 test('caps the trace gutter at four badges and wraps additional entries', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
