@@ -184,10 +184,10 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 			: highlight.isEnd ? 'end' : undefined
 	const title = `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
 	const previous = highlight.previousEntry
-		? `<a href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" title="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
+		? `<a class="trace-previous" href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" title="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
 		: ''
 	const next = highlight.nextEntry
-		? `<a href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
+		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
 	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${title}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
@@ -412,7 +412,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		:root { color-scheme: light dark; }
 		body { background: #ffffff; color: #202020; margin: 0; }
 		button { font: inherit; }
-		.source-toolbar { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; font: 13px sans-serif; padding: 7px 10px; position: sticky; top: 0; z-index: 1; }
+		.source-toolbar { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; font: 13px sans-serif; padding: 7px 10px; position: sticky; top: 0; z-index: 10; }
 		.source-toolbar-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
 		.source-toolbar button { background: #ffffff; border: 1px solid #b3b3b3; border-radius: 3px; color: #202020; cursor: pointer; padding: 3px 7px; }
 		.source-toolbar button:disabled { cursor: default; opacity: .45; }
@@ -448,8 +448,34 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			justify-content: center;
 			min-width: 3ch;
 			padding: 0 3px;
+			position: relative;
 		}
-		.trace-badge a { color: #202020; font-size: 1.35em; font-weight: bold; line-height: .8; text-decoration: none; }
+		.trace-badge:hover, .trace-badge:focus-within { z-index: 2; }
+		.trace-badge a {
+			align-items: center;
+			background-color: inherit;
+			border: 1px solid rgb(32 32 32 / 45%);
+			border-radius: 3px;
+			box-sizing: border-box;
+			color: #202020;
+			display: inline-flex;
+			font-size: 1.35em;
+			font-weight: bold;
+			height: calc(100% + 2px);
+			justify-content: center;
+			line-height: .8;
+			min-width: 2ch;
+			opacity: 0;
+			pointer-events: none;
+			position: absolute;
+			text-decoration: none;
+			top: 50%;
+			transform: translateY(-50%);
+			z-index: 3;
+		}
+		.trace-badge:hover > a, .trace-badge:focus-within > a { opacity: 1; pointer-events: auto; }
+		.trace-badge > .trace-previous { right: calc(100% - 1px); }
+		.trace-badge > .trace-next { left: calc(100% - 1px); }
 		.trace-badge a:hover { text-decoration: underline; }
 		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
 		.trace-start { border-left: 4px solid #107c10; }

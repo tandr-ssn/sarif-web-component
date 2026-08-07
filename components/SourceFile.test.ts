@@ -241,6 +241,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(identifiers.slice(1).map(mark => mark.style.getPropertyValue('--trace-identifier-color')))
 		.toEqual(['#c7e9c0', '#c7e9c0'])
 	const arrows = Array.from(childDocument.querySelectorAll('.trace-badge > a'))
+	expect(arrows.map(arrow => arrow.className)).toEqual(['trace-next', 'trace-previous', 'trace-next', 'trace-previous'])
 	expect(arrows.map(arrow => arrow.getAttribute('data-activate-trace'))).toEqual(['1', '0', '2', '1'])
 	expect(arrows.map(arrow => arrow.getAttribute('href'))).toEqual([
 		'#src/app.ts', '#src/app.ts', '#src/app.ts', '#src/app.ts',
@@ -248,6 +249,9 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(arrows.map(arrow => arrow.getAttribute('aria-label'))).toEqual([
 		'Next trace entry', 'Previous trace entry', 'Next trace entry', 'Previous trace entry',
 	])
+	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
+	expect(sourceStyles).toContain('.trace-badge:hover > a, .trace-badge:focus-within > a')
+	expect(sourceStyles).toContain('pointer-events: none')
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList
