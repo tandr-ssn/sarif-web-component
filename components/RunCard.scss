@@ -6,8 +6,30 @@
 .swcRunTitle {
 	display: flex;
 	align-items: center;
+	gap: 8px;
 
-	.bolt-pill { margin-left: 8px; }
+	.bolt-pill { margin-left: 0; }
+}
+
+.swcRunAuditBadge {
+	background-color: var(--palette-black-alpha-6);
+	border: 1px solid var(--palette-black-alpha-20, rgba(0, 0, 0, 0.2));
+	border-radius: 10px;
+	font-size: 0.85em;
+	font-weight: 400;
+	line-height: 18px;
+	padding: 0 7px;
+}
+
+.swcRunAuditIncomplete {
+	border-color: $status-warning-text;
+	color: $status-warning-text;
+}
+
+.swcRunAuditDetails {
+	border-top: 1px solid var(--palette-black-alpha-20, rgba(0, 0, 0, 0.2));
+	margin-top: 6px;
+	padding-top: 6px;
 }
 
 .bolt-table-cell .bolt-dropdown-expandable {
