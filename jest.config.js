@@ -9,7 +9,7 @@ module.exports = {
 		'\\.(png|s?css)$': 'identity-obj-proxy'
 	},
 	transform: {
-		'^.+\\.tsx?$': 'ts-jest',
+		'^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
 		'^.+\\.js?$': 'babel-jest',
 	},
 	transformIgnorePatterns: [

@@ -8,8 +8,8 @@
 		"noImplicitAny": false,
 		"noUncheckedSideEffectImports": false,
 		"target": "ES6",
-		"module": "ESNext",
-		"moduleResolution": "Bundler",
+		"module": "Node16", // Preserve CommonJS initialization order for the circular viewer modules in the Webpack bundle.
+		"moduleResolution": "Node16",
 		"esModuleInterop": true,
 		"jsx": "react",
 		"skipLibCheck": true,
