@@ -119,9 +119,9 @@ function selectionOnLine(text: string, lineNumber: number, region: Region): [num
 	return end > start ? [start, end] : undefined
 }
 
-function highlightBackground(highlights: SourceHighlight[]): string {
+function highlightColor(highlights: SourceHighlight[]): string {
 	const highlight = highlights.find(candidate => candidate.isActive) ?? highlights[0]
-	return `background-color: ${highlight.color}`
+	return highlight.color
 }
 
 function renderSyntaxSegment(text: string, fileName: string): string {
@@ -142,15 +142,32 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 		const end = boundaries[index + 1]
 		const segment = renderSyntaxSegment(text.slice(start, end), fileName)
 		const active = selections.filter(value => value.selection[0] <= start && value.selection[1] >= end)
+		if (!active.length) return segment
 		const identifierHighlights = active.filter(value => value.highlight.isIdentifier)
-		const colorHighlights = identifierHighlights.length ? identifierHighlights : active
+		const locationHighlights = active.filter(value => !value.highlight.isIdentifier)
+		const colorHighlights = locationHighlights.length ? locationHighlights : identifierHighlights
 		const identifierClass = identifierHighlights.length ? ' trace-identifier-highlight' : ''
+		const locationClass = locationHighlights.length ? ' trace-location-highlight' : ''
 		const traceIndices = active
 			.map(value => value.highlight.traceIndex)
 			.filter(index => index !== undefined)
 			.join(' ')
 		const traceData = traceIndices ? ` data-trace-indices="${traceIndices}"` : ''
-		return active.length ? `<mark class="trace-highlight${identifierClass}"${traceData} style="${highlightBackground(colorHighlights.map(value => value.highlight))}">${segment}</mark>` : segment
+		const locationTraceIndices = locationHighlights
+			.map(value => value.highlight.traceIndex)
+			.filter(index => index !== undefined)
+			.join(' ')
+		const locationTraceData = locationTraceIndices ? ` data-location-trace-indices="${locationTraceIndices}"` : ''
+		const locationTraceColors = locationHighlights
+			.filter(value => value.highlight.traceIndex !== undefined)
+			.map(value => `${value.highlight.traceIndex}:${value.highlight.color}`)
+			.join(' ')
+		const locationColorData = locationTraceColors ? ` data-location-trace-colors="${locationTraceColors}"` : ''
+		const backgroundColor = highlightColor(colorHighlights.map(value => value.highlight))
+		const identifierStyle = identifierHighlights.length && locationHighlights.length
+			? `; --trace-identifier-color: ${identifierHighlights[0].highlight.color}`
+			: ''
+		return `<mark class="trace-highlight${identifierClass}${locationClass}"${traceData}${locationTraceData}${locationColorData} data-default-highlight-color="${backgroundColor}" style="background-color: ${backgroundColor}${identifierStyle}">${segment}</mark>`
 	}).join('')
 }
 
@@ -244,10 +261,17 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		document.querySelectorAll('.trace-active').forEach(element => element.classList.remove('trace-active'))
 		document.querySelectorAll('.trace-active-highlight, .trace-active-highlight-start, .trace-active-highlight-end')
 			.forEach(element => element.classList.remove('trace-active-highlight', 'trace-active-highlight-start', 'trace-active-highlight-end'))
+		document.querySelectorAll<HTMLElement>('mark[data-default-highlight-color]').forEach(mark => {
+			mark.style.backgroundColor = mark.dataset.defaultHighlightColor ?? ''
+		})
 		badge.classList.add('trace-active')
-		const activeMarks = Array.from(document.querySelectorAll(`mark[data-trace-indices~="${index}"]`))
+		let activeMarks = Array.from(document.querySelectorAll<HTMLElement>(`mark[data-location-trace-indices~="${index}"]`))
+		if (!activeMarks.length) activeMarks = Array.from(document.querySelectorAll<HTMLElement>(`mark[data-trace-indices~="${index}"]`))
 		const marksByLine = new Map<Element, Element[]>()
 		activeMarks.forEach(mark => {
+			const selectedColor = mark.dataset.locationTraceColors?.split(' ')
+				.find(value => value.startsWith(`${index}:`))?.slice(String(index).length + 1)
+			if (selectedColor) mark.style.backgroundColor = selectedColor
 			mark.classList.add('trace-active-highlight')
 			const line = mark.closest('.source-line')
 			if (!line) return
@@ -448,6 +472,12 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		}
 		.trace-active-highlight-start::before { left: -3px; }
 		.trace-active-highlight-end::after { right: -3px; }
+		.trace-location-highlight.trace-identifier-highlight {
+			text-decoration-color: var(--trace-identifier-color);
+			text-decoration-line: underline;
+			text-decoration-thickness: 2px;
+			text-underline-offset: 2px;
+		}
 		.line-number {
 			box-sizing: border-box;
 			color: #767676;

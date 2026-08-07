@@ -80,6 +80,9 @@ test('uses one color when trace regions overlap', async () => {
 	const overlap = childDocument.querySelector('mark[data-trace-indices="0 1"]') as HTMLElement
 	expect(overlap.style.backgroundColor).toBe('rgb(245, 181, 176)')
 	expect(overlap.style.backgroundImage).toBe('')
+	const firstBadge = childDocument.querySelector<HTMLElement>('[data-trace-index="0"]')
+	firstBadge?.querySelector('button')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))
+	expect(overlap.style.backgroundColor).toBe(firstBadge?.style.backgroundColor)
 	open.mockRestore()
 })
 
@@ -224,10 +227,14 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 		{locations, activeIndex: 1, label: 'Code flow', inferIdentifiers: true},
 	)
 
-	const identifiers = Array.from(childDocument.querySelectorAll('.trace-identifier-highlight'))
+	const identifiers = Array.from(childDocument.querySelectorAll<HTMLElement>('.trace-identifier-highlight'))
 	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path', 'path'])
-	expect(new Set(identifiers.map(mark => mark.getAttribute('style'))).size).toBe(1)
-	expect(Array.from(childDocument.querySelectorAll('.trace-badge > button')).map(button => button.textContent)).toEqual(['1', '2', '3'])
+	const badges = Array.from(childDocument.querySelectorAll<HTMLElement>('.trace-badge'))
+	expect(badges.map(badge => badge.querySelector('button')?.textContent)).toEqual(['1', '2', '3'])
+	expect(identifiers[1].style.backgroundColor).toBe(badges[1].style.backgroundColor)
+	expect(identifiers[2].style.backgroundColor).toBe(badges[2].style.backgroundColor)
+	expect(identifiers.slice(1).map(mark => mark.style.getPropertyValue('--trace-identifier-color')))
+		.toEqual(['#c7e9c0', '#c7e9c0'])
 	const arrows = Array.from(childDocument.querySelectorAll('.trace-badge > a'))
 	expect(arrows.map(arrow => arrow.getAttribute('data-activate-trace'))).toEqual(['1', '0', '2', '1'])
 	expect(arrows.map(arrow => arrow.getAttribute('href'))).toEqual([
@@ -245,6 +252,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	const thirdBadge = childDocument.querySelector('[data-trace-index="2"]') as HTMLElement
 	thirdBadge.querySelector('button')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))
 	expect(thirdBadge.classList.contains('trace-active')).toBe(true)
+	expect(identifiers[2].style.backgroundColor).toBe(thirdBadge.style.backgroundColor)
 	expect(childDocument.querySelector('[data-trace-index="1"]')?.classList.contains('trace-active')).toBe(false)
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).toBeNull()
 	expect(Array.from(childDocument.querySelectorAll('.trace-active-highlight'))
