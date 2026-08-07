@@ -12,13 +12,17 @@ Enzyme.configure({ adapter: new Adapter() })
 test('explains local folder access before asking for a source folder', () => {
 	const selectSourceFiles = jest.fn()
 	const run: any = {}
-	const ploc: any = { artifactLocation: { uri: 'src/file.ts' } }
+	const ploc: any = {
+		artifactLocation: { uri: 'src/file.ts' },
+		region: {startLine: 12, startColumn: 7},
+	}
 	const wrapper = mount(
 		<SourceFileSelectionContext.Provider value={selectSourceFiles}>
 			<SourceLocationLink ploc={ploc} run={run} />
 		</SourceFileSelectionContext.Provider>,
 	)
 
+	expect(wrapper.find('a').prop('title')).toBe('src/file.ts:12:7')
 	wrapper.find('a').simulate('click')
 	expect(selectSourceFiles).not.toHaveBeenCalled()
 	expect(wrapper.find(Dialog).text()).toContain('Files stay on your computer and are not uploaded')

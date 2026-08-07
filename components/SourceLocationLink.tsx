@@ -7,11 +7,12 @@ import {Dialog} from 'azure-devops-ui/Dialog'
 import {getRepoUri} from './getRepoUri'
 import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourceTrace} from './SourceFile'
 
-function locationText(ploc: PhysicalLocation | undefined, run: Run): string | undefined {
+export function getSourceLocationText(ploc: PhysicalLocation | undefined, run: Run): string | undefined {
 	const artifactLocation = getArtifactLocation(ploc, run)
 	if (!artifactLocation?.uri) return undefined
 	const line = ploc?.region?.startLine
-	return line ? `${artifactLocation.uri}:${line}` : artifactLocation.uri
+	const column = ploc?.region?.startColumn
+	return line ? `${artifactLocation.uri}:${line}${column ? `:${column}` : ''}` : artifactLocation.uri
 }
 
 function SourceLocationLinkWithReader(props: {
@@ -26,7 +27,8 @@ function SourceLocationLinkWithReader(props: {
 	const [confirmSourceSelection, setConfirmSourceSelection] = React.useState(false)
 	const {ploc, run, reader, selectSourceFiles, trace} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
-	const text = props.children ?? locationText(ploc, run)
+	const sourceLocationText = getSourceLocationText(ploc, run)
+	const text = props.children ?? sourceLocationText
 	if (!text) return null
 	if (!artifactLocation) return <>{text}</>
 
@@ -36,19 +38,19 @@ function SourceLocationLinkWithReader(props: {
 			event.preventDefault()
 			event.stopPropagation()
 			void openSourceFile(artifactLocation, run, ploc.region, reader, trace)
-		}} title="View source file">{text}</a>
+		}} title={sourceLocationText}>{text}</a>
 	}
 
 	const explicitHref = artifactLocation.properties?.['href'] as string | undefined
 	const remoteHref = explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region)
-	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer">{text}</a>
+	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer" title={sourceLocationText}>{text}</a>
 	if (selectSourceFiles) {
 		return <>
 			<a href="#" className={props.className} onClick={event => {
 				event.preventDefault()
 				event.stopPropagation()
 				setConfirmSourceSelection(true)
-			}} title="Choose a source folder to view this file">{text}</a>
+			}} title={sourceLocationText}>{text}</a>
 			{confirmSourceSelection && <Dialog
 				titleProps={{text: 'Local source folder required'}}
 				onDismiss={() => setConfirmSourceSelection(false)}
