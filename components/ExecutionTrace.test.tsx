@@ -52,7 +52,7 @@ test('renders result stacks and code flows', () => {
 	const wrapper = mount(<ExecutionTrace result={result} />)
 	expect(wrapper.find('summary').map(summary => summary.text())).toEqual([
 		'Call stack (1 frames)',
-		'Code flow',
+		'Code flow (1 step)',
 	])
 	expect(wrapper.find('details').map(details => details.prop('data-copy-trace-value'))).toEqual([
 		'1. App.Run — src/app.ts:10\n10  Run(path)',

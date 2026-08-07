@@ -110,9 +110,10 @@ function CodeFlows(props: { result: Result, run: Run }) {
 	return <>
 		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => {
 			const label = `Code flow${props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}`
+			const stepCount = codeFlow.threadFlows?.reduce((total, threadFlow) => total + (threadFlow.locations?.length ?? 0), 0) ?? 0
 			return <details className="swcTrace" key={codeFlowIndex}
 				data-copy-trace-value={codeFlowText(props.result, codeFlow, codeFlowIndex, props.result.codeFlows.length)}>
-			<summary>{label}</summary>
+			<summary>{label} ({stepCount} {stepCount === 1 ? 'step' : 'steps'})</summary>
 			{messageText(codeFlow.message) && <div className="swcTraceMessage">{messageText(codeFlow.message)}</div>}
 			{codeFlow.threadFlows?.map((threadFlow, threadFlowIndex) => <ThreadFlowTrace
 				key={threadFlowIndex}
