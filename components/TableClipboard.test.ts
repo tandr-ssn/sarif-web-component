@@ -25,12 +25,34 @@ test('copies selected finding cells as tab-separated rows with multiline cells',
 	root.remove()
 })
 
-test('leaves ordinary text copied within one cell unchanged', () => {
+test('copies a completely selected single cell', () => {
 	const root = document.createElement('div')
 	root.innerHTML = '<table><tbody><tr><td class="bolt-table-cell" data-column-index="0">one cell</td></tr></tbody></table>'
 	document.body.appendChild(root)
 	const range = document.createRange()
 	range.selectNodeContents(root.querySelector('td'))
+	const selection = window.getSelection()
+	selection.removeAllRanges()
+	selection.addRange(range)
+	const setData = jest.fn()
+	const preventDefault = jest.fn()
+
+	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
+
+	expect(setData).toHaveBeenCalledWith('text/plain', 'one cell')
+	expect(preventDefault).toHaveBeenCalled()
+	selection.removeAllRanges()
+	root.remove()
+})
+
+test('leaves a partial text selection within one cell unchanged', () => {
+	const root = document.createElement('div')
+	root.innerHTML = '<table><tbody><tr><td class="bolt-table-cell" data-column-index="0">one cell</td></tr></tbody></table>'
+	document.body.appendChild(root)
+	const text = root.querySelector('td')?.firstChild as Text
+	const range = document.createRange()
+	range.setStart(text, 0)
+	range.setEnd(text, 3)
 	const selection = window.getSelection()
 	selection.removeAllRanges()
 	selection.addRange(range)

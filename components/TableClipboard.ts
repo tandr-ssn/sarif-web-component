@@ -18,7 +18,11 @@ function intersects(range: Range, cell: HTMLElement): boolean {
 	}
 }
 
-/** Copies a multi-cell browser selection as tab-separated rows for spreadsheets. */
+function comparableText(value: string): string {
+	return value.replace(/\s+/g, ' ').trim()
+}
+
+/** Copies complete selected table cells as tab-separated rows for spreadsheets. */
 export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>): void {
 	const selection = event.currentTarget.ownerDocument.defaultView?.getSelection()
 	if (!selection || selection.isCollapsed || !selection.rangeCount) return
@@ -27,7 +31,15 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 	const cells = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
 		'tbody td.bolt-table-cell[data-column-index]:not([colspan])'))
 		.filter(cell => ranges.some(range => intersects(range, cell)))
-	if (cells.length < 2) return
+	if (!cells.length) return
+	if (cells.length === 1) {
+		const selectedText = selection.toString()
+		const renderedText = cells[0].innerText || cells[0].textContent || ''
+		if (comparableText(selectedText) !== comparableText(renderedText)) return
+		event.clipboardData.setData('text/plain', tsvCell(selectedText.replace(/\r\n?/g, '\n').trim()))
+		event.preventDefault()
+		return
+	}
 
 	const rows = new Map<Element, HTMLElement[]>()
 	for (const cell of cells) {
