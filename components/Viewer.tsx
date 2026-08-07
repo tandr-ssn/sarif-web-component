@@ -247,10 +247,10 @@ export interface ViewerProps {
 				}}
 				onClick={this.selectSourceDirectory} />
 			{compactSourcePicker
-				? sourceFolderDisplayName && <span>Source: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</span>
+				? sourceFolderDisplayName && <span>Sources root: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</span>
 				: <span>
 					{sourceFolderDisplayName
-						? <>Source folder: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</>
+						? <>Sources root: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</>
 						: commonSourceRoot
 							? <>Choose the local folder corresponding to <code>{commonSourceRoot}</code>.</>
 							: <>Choose the top-level folder containing the source files referenced by SARIF.</>}

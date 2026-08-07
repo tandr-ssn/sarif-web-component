@@ -54,3 +54,10 @@ button, input { font: inherit; } // Override user agent.
 .demoSourcePicker {
 	display: inline-flex;
 }
+
+.demoSarifName {
+	max-width: 32vw;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}

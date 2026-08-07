@@ -42,6 +42,7 @@ const demoLog = {
 
 const docsSessionKey = 'sarif-web-component:docs'
 const sarifSessionKey = `${docsSessionKey}:sarif`
+const sarifNameSessionKey = `${sarifSessionKey}:name`
 
 function loadSessionLog(): Log | undefined {
 	try {
@@ -62,6 +63,13 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 
 @observer export class Index extends React.Component {
 	@observable.ref sample = loadSessionLog() ?? demoLog
+	@observable currentSarifFileName = (() => {
+		try {
+			return window.sessionStorage.getItem(sarifNameSessionKey) ?? undefined
+		} catch (_) {
+			return undefined
+		}
+	})()
 	private sourcePickerContainer?: HTMLSpanElement
 	private sarifFileHandle?: FileSystemFileHandleLike
 	private currentSarifFile?: File
@@ -76,11 +84,13 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 			return
 		}
 		this.currentSarifFile = file
+		this.currentSarifFileName = file.name
 		this.sarifFileHandle = handle
 		const text = await readAsText(file)
 		this.sample = JSON.parse(text)
 		try {
 			window.sessionStorage.setItem(sarifSessionKey, text)
+			window.sessionStorage.setItem(sarifNameSessionKey, file.name)
 		} catch (_) { }
 	}
 	private openInputFilePicker = () => (this.refs.inputFile as any).click()
@@ -132,6 +142,9 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 				<Button className="demoOpen" text="Open..." onClick={() => void this.openFile()} />
 				{this.sarifFileHandle && <Button text="Reload" tooltipProps={{text: 'Re-read the current SARIF file from disk.'}}
 					onClick={() => void this.reloadFile()} />}
+				{this.currentSarifFileName && <span className="demoSarifName" title={this.currentSarifFileName}>
+					SARIF: <strong>{this.currentSarifFileName}</strong>
+				</span>}
 				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>
 				<span style={{ flexGrow: 1 }}></span>
 			</div>
