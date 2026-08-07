@@ -163,7 +163,7 @@ export function createLocalSourceFileReader(
 					directory = await directory.getDirectoryHandle(segment)
 				}
 				const file = await (await directory.getFileHandle(segments[segments.length - 1])).getFile()
-				return { name: file.name, text: await file.text() }
+				return { name: segments.join('/'), text: await file.text() }
 			} catch (error) {
 				lastError = error
 			}
@@ -195,7 +195,10 @@ export function createSelectedFilesSourceFileReader(
 	return async (artifactLocation: ArtifactLocation) => {
 		if (!artifactLocation.uri) return undefined
 		const candidates = artifactSegmentCandidates(artifactLocation.uri, commonAbsoluteRoot, selectedRootName)
-		const file = candidates.map(segments => filesByPath.get(segments.join('/'))).find(candidate => candidate !== undefined)
-		return file ? { name: file.name, text: await file.text() } : undefined
+		for (const segments of candidates) {
+			const file = filesByPath.get(segments.join('/'))
+			if (file) return { name: segments.join('/'), text: await file.text() }
+		}
+		return undefined
 	}
 }

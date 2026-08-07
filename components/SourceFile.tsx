@@ -55,6 +55,10 @@ function escapeHtml(value: string): string {
 		.replace(/'/g, '&#039;')
 }
 
+function fragmentHref(id: string): string {
+	return `#${encodeURIComponent(id).replace(/%2F/gi, '/')}`
+}
+
 function sourceLines(text: string): string[] {
 	return text.match(/[^\n]*\n|[^\n]+$/g) ?? ['']
 }
@@ -163,10 +167,10 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 			: highlight.isEnd ? 'end' : undefined
 	const title = `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
 	const previous = highlight.previousFile
-		? `<a href="#${highlight.previousFile.id}" data-activate-trace="${highlight.previousFile.traceIndex}" title="Previous source file: ${escapeHtml(highlight.previousFile.name)}" aria-label="Previous source file">&#x2190;</a>`
+		? `<a href="${escapeHtml(fragmentHref(highlight.previousFile.id))}" data-activate-trace="${highlight.previousFile.traceIndex}" title="Previous source file: ${escapeHtml(highlight.previousFile.name)}" aria-label="Previous source file">&#x2190;</a>`
 		: ''
 	const next = highlight.nextFile
-		? `<a href="#${highlight.nextFile.id}" data-activate-trace="${highlight.nextFile.traceIndex}" title="Next source file: ${escapeHtml(highlight.nextFile.name)}" aria-label="Next source file">&#x2192;</a>`
+		? `<a href="${escapeHtml(fragmentHref(highlight.nextFile.id))}" data-activate-trace="${highlight.nextFile.traceIndex}" title="Next source file: ${escapeHtml(highlight.nextFile.name)}" aria-label="Next source file">&#x2192;</a>`
 		: ''
 	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${title}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
@@ -255,7 +259,7 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 			lineMarks[0]?.classList.add('trace-active-highlight-start')
 			lineMarks[lineMarks.length - 1]?.classList.add('trace-active-highlight-end')
 		})
-		if (target.location) target.location.hash = section.id
+		if (target.location) target.location.hash = fragmentHref(section.id)
 		const fileName = section.getAttribute('data-file-name') ?? 'Source file'
 		const lineNumber = line.getAttribute('data-line') ?? '1'
 		toolbar.setAttribute('data-active-line', lineNumber)
@@ -355,7 +359,7 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 	if (activeTraceIndex !== undefined && traceBadge(activeTraceIndex)) {
 		activateTrace(activeTraceIndex, false)
 	} else if (target.location && activeSection) {
-		target.location.hash = activeSection.id
+		target.location.hash = fragmentHref(activeSection.id)
 	}
 }
 
@@ -766,15 +770,17 @@ export async function openSourceFile(
 			}
 		}))
 
+		const usedViewIds = new Set<string>()
 		const views: SourceFileView[] = Array.from(artifactsByKey.keys())
 			.filter(key => sourceFilesByKey.has(key))
-			.map((key, index) => ({
-				id: `source-file-${index + 1}`,
-				key,
-				name: artifactsByKey.get(key)?.uri ?? sourceFilesByKey.get(key).name,
-				sourceFile: sourceFilesByKey.get(key),
-				highlights: [],
-			}))
+			.map((key, index) => {
+				const sourceFile = sourceFilesByKey.get(key)
+				const name = sourceFile.name || `source-file-${index + 1}`
+				let id = name
+				for (let duplicate = 2; usedViewIds.has(id); duplicate++) id = `${name} (${duplicate})`
+				usedViewIds.add(id)
+				return {id, key, name, sourceFile, highlights: []}
+			})
 		const viewsByKey = new Map(views.map(view => [view.key, view] as [string, SourceFileView]))
 		const adjacentFile = (traceIndex: number, direction: -1 | 1, currentKey: string): SourceNavigationTarget | undefined => {
 			for (let index = traceIndex + direction; index >= 0 && index < resolvedTrace.length; index += direction) {

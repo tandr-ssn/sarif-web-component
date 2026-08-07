@@ -40,7 +40,7 @@ function selectedFile(path: string, text: string): File {
 test('reads a relative artifact beneath the selected source root', async () => {
 	const read = createLocalSourceFileReader(sourceTree())
 	await expect(read({ uri: 'src/file.ts' }, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 })
@@ -48,7 +48,7 @@ test('reads a relative artifact beneath the selected source root', async () => {
 test('maps an absolute artifact path from the detected root', async () => {
 	const read = createLocalSourceFileReader(sourceTree(), '/home/user/repo')
 	await expect(read({ uri: 'file:///home/user/repo/src/file.ts' }, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 })
@@ -56,11 +56,11 @@ test('maps an absolute artifact path from the detected root', async () => {
 test('maps an absolute artifact path from the selected ancestor folder name', async () => {
 	const read = createLocalSourceFileReader(sourceTree(), '/home/user/repo/src')
 	await expect(read({uri: '/home/user/repo/src/file.ts'}, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 	await expect(read({uri: 'C:\\work\\REPO\\src\\file.ts'}, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 })
@@ -80,16 +80,16 @@ test('reads relative and absolute artifacts from a cross-browser folder selectio
 	const read = createSelectedFilesSourceFileReader(files, '/home/user/repo')
 
 	await expect(read({ uri: 'src/file.ts' }, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 	await expect(read({ uri: 'file:///home/user/repo/src/file.ts' }, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 	const readWithDeepDetectedRoot = createSelectedFilesSourceFileReader(files, '/home/user/repo/src')
 	await expect(readWithDeepDetectedRoot({uri: '/home/user/repo/src/file.ts'}, {} as any)).resolves.toEqual({
-		name: 'file.ts',
+		name: 'src/file.ts',
 		text: 'source text',
 	})
 	await expect(read({ uri: '../secret.txt' }, {} as any)).resolves.toBeUndefined()

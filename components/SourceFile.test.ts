@@ -45,6 +45,20 @@ test('adds line numbers and preserves multi-line region highlighting', async () 
 	open.mockRestore()
 })
 
+test('uses the root-relative source path as an encoded browser fragment', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const reader = async () => ({name: 'src/My file#1.ts', text: 'source'})
+
+	await openSourceFile({uri: '/original/root/src/My file#1.ts'}, {} as any, undefined, reader)
+
+	expect(childWindow.location.hash).toBe('#src/My%20file%231.ts')
+	expect(childDocument.getElementById('src/My file#1.ts')).not.toBeNull()
+	expect(childDocument.title).toBe('src/My file#1.ts')
+	open.mockRestore()
+})
+
 test('uses one color when trace regions overlap', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
@@ -130,8 +144,8 @@ test('highlights every trace entry in a file and links between trace files', asy
 	)
 
 	expect(childDocument.querySelectorAll('.source-file')).toHaveLength(3)
-	expect(childWindow.location.hash).toBe('source-file-1')
-	const appSection = childDocument.getElementById('source-file-1')
+	expect(childWindow.location.hash).toBe('#src/app.ts')
+	const appSection = childDocument.getElementById('src/app.ts')
 	expect(Array.from(appSection.querySelectorAll('.trace-badge > button')).map(badge => badge.textContent)).toEqual(['1', '4'])
 	expect(appSection.querySelector('.trace-start')).not.toBeNull()
 	expect(appSection.querySelector('[data-line="3"] .trace-active')).not.toBeNull()
@@ -139,19 +153,19 @@ test('highlights every trace entry in a file and links between trace files', asy
 	const appMarkStyles = Array.from(appSection.querySelectorAll('mark')).map(mark => mark.getAttribute('style'))
 	expect(new Set(appMarkStyles).size).toBe(2)
 	expect(Array.from(appSection.querySelectorAll('a')).map(link => link.getAttribute('href'))).toEqual([
-		'#source-file-2',
-		'#source-file-2',
-		'#source-file-3',
+		'#src/lib.ts',
+		'#src/lib.ts',
+		'#src/end.ts',
 	])
-	expect(childDocument.getElementById('source-file-3').querySelector('.trace-end')).not.toBeNull()
+	expect(childDocument.getElementById('src/end.ts').querySelector('.trace-end')).not.toBeNull()
 	expect(childDocument.querySelector('.trace-missing')?.textContent).toContain('4 of 5 trace locations readable')
 	expect(childDocument.querySelector('.trace-missing')?.textContent).toContain('src/missing.ts')
 	expect(childDocument.querySelector('[data-trace-position]')?.textContent).toBe('Entry 4 of 5 · File 1 of 3')
 	;(childDocument.querySelector('[data-trace-action="next"]') as HTMLButtonElement).click()
-	expect(childWindow.location.hash).toBe('source-file-3')
-	expect(childDocument.getElementById('source-file-3').querySelector('.trace-active')).not.toBeNull()
+	expect(childWindow.location.hash).toBe('#src/end.ts')
+	expect(childDocument.getElementById('src/end.ts').querySelector('.trace-active')).not.toBeNull()
 	childDocument.dispatchEvent(new KeyboardEvent('keydown', { key: '[' }))
-	expect(childWindow.location.hash).toBe('source-file-1')
+	expect(childWindow.location.hash).toBe('#src/app.ts')
 	appSection.querySelector('[data-activate-trace="0"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 	const copyPathAndLine = childDocument.querySelector('[data-copy="path-line"]') as HTMLButtonElement
 	expect(copyPathAndLine).not.toBeNull()
