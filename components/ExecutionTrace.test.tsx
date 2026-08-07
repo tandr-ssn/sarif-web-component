@@ -24,11 +24,18 @@ test('renders result stacks and code flows', () => {
 	const result = {
 		run,
 		message: { text: 'Finding' },
-		properties: {audit: {origin: {
+	properties: {audit: {
+		origin: {
 			kind: 'method-parameter',
 			name: 'request',
 			location: {path: 'src/handler.ts', line: 5, column: 8},
-		}}},
+		},
+		trace: {
+			status: 'partial',
+			scope: 'construction-to-sink',
+			reason: 'Caller origin is unresolved',
+		},
+	}},
 		stacks: [{
 			frames: [{
 				module: 'app',
@@ -52,8 +59,12 @@ test('renders result stacks and code flows', () => {
 	const wrapper = mount(<ExecutionTrace result={result} />)
 	expect(wrapper.find('summary').map(summary => summary.text())).toEqual([
 		'Call stack (1 frames)',
-		'Code flow (1 step)',
+		'Code flow (1 step) · Partial',
 	])
+	expect(wrapper.find('.swcTraceStatus').prop('title')).toBe([
+		'Partial trace · Construction to sink',
+		'Caller origin is unresolved',
+	].join('\n'))
 	expect(wrapper.find('details').map(details => details.prop('data-copy-trace-value'))).toEqual([
 		'1. App.Run — src/app.ts:10\n10  Run(path)',
 		'1. Enter handler — src/handler.ts:5\n5  handle(request)',
@@ -82,4 +93,15 @@ test('renders result stacks and code flows', () => {
 	const snippetLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') === 'swcSnippetLink')
 	expect(snippetLinks).toHaveLength(2)
 	expect(snippetLinks.at(1).prop('trace')).toEqual(sourceLinks.at(1).prop('trace'))
+})
+
+test('labels a complete AuditScan trace', () => {
+	const result = {
+		run: {},
+		properties: {audit: {trace: {status: 'complete', scope: 'modeled-source-to-sink'}}},
+		codeFlows: [{threadFlows: [{locations: []}]}],
+	} as unknown as Result
+	const wrapper = mount(<ExecutionTrace result={result} />)
+	expect(wrapper.find('summary').text()).toBe('Code flow (0 steps) · Complete')
+	expect(wrapper.find('.swcTraceStatus').prop('title')).toBe('Complete trace · Modeled source to sink')
 })

@@ -14,6 +14,20 @@ function messageText(message): string | undefined {
 	return message?.text ?? message?.markdown
 }
 
+function readableAuditValue(value: string): string {
+	const words = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ')
+	return words ? words[0].toUpperCase() + words.slice(1) : words
+}
+
+function auditTraceSummary(result: Result): {label: string, title: string} | undefined {
+	const trace = (result.properties as any)?.audit?.trace
+	if (typeof trace?.status !== 'string' || !trace.status) return undefined
+	const label = readableAuditValue(trace.status)
+	const scope = typeof trace.scope === 'string' && trace.scope ? readableAuditValue(trace.scope) : undefined
+	const reason = typeof trace.reason === 'string' && trace.reason ? trace.reason : undefined
+	return {label, title: [`${label} trace${scope ? ` · ${scope}` : ''}`, reason].filter(Boolean).join('\n')}
+}
+
 function TraceLocation(props: {
 	location?: Location
 	module?: string
@@ -109,13 +123,16 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 
 function CodeFlows(props: { result: Result, run: Run }) {
 	if (!props.result.codeFlows?.length) return null
+	const traceSummary = auditTraceSummary(props.result)
 	return <>
 		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => {
 			const label = `Code flow${props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}`
 			const stepCount = codeFlow.threadFlows?.reduce((total, threadFlow) => total + (threadFlow.locations?.length ?? 0), 0) ?? 0
 			return <details className="swcTrace" key={codeFlowIndex}
 				data-copy-trace-value={codeFlowText(props.result, codeFlow, codeFlowIndex, props.result.codeFlows.length)}>
-			<summary>{label} ({stepCount} {stepCount === 1 ? 'step' : 'steps'})</summary>
+			<summary>{label} ({stepCount} {stepCount === 1 ? 'step' : 'steps'})
+				{traceSummary && <span className="swcTraceStatus" title={traceSummary.title}> · {traceSummary.label}</span>}
+			</summary>
 			{messageText(codeFlow.message) && <div className="swcTraceMessage">{messageText(codeFlow.message)}</div>}
 			{codeFlow.threadFlows?.map((threadFlow, threadFlowIndex) => <ThreadFlowTrace
 				key={threadFlowIndex}
