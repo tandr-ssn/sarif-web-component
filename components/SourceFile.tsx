@@ -140,14 +140,13 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 		const active = selections.filter(value => value.selection[0] <= start && value.selection[1] >= end)
 		const identifierHighlights = active.filter(value => value.highlight.isIdentifier)
 		const colorHighlights = identifierHighlights.length ? identifierHighlights : active
-		const activeClass = active.some(value => value.highlight.isActive) ? ' trace-active-highlight' : ''
 		const identifierClass = identifierHighlights.length ? ' trace-identifier-highlight' : ''
 		const traceIndices = active
 			.map(value => value.highlight.traceIndex)
 			.filter(index => index !== undefined)
 			.join(' ')
 		const traceData = traceIndices ? ` data-trace-indices="${traceIndices}"` : ''
-		return active.length ? `<mark class="trace-highlight${activeClass}${identifierClass}"${traceData} style="${highlightBackground(colorHighlights.map(value => value.highlight))}">${segment}</mark>` : segment
+		return active.length ? `<mark class="trace-highlight${identifierClass}"${traceData} style="${highlightBackground(colorHighlights.map(value => value.highlight))}">${segment}</mark>` : segment
 	}).join('')
 }
 
@@ -239,9 +238,23 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		activeTraceIndex = index
 		activeFileId = section.id
 		document.querySelectorAll('.trace-active').forEach(element => element.classList.remove('trace-active'))
-		document.querySelectorAll('.trace-active-highlight').forEach(element => element.classList.remove('trace-active-highlight'))
+		document.querySelectorAll('.trace-active-highlight, .trace-active-highlight-start, .trace-active-highlight-end')
+			.forEach(element => element.classList.remove('trace-active-highlight', 'trace-active-highlight-start', 'trace-active-highlight-end'))
 		badge.classList.add('trace-active')
-		document.querySelectorAll(`mark[data-trace-indices~="${index}"]`).forEach(element => element.classList.add('trace-active-highlight'))
+		const activeMarks = Array.from(document.querySelectorAll(`mark[data-trace-indices~="${index}"]`))
+		const marksByLine = new Map<Element, Element[]>()
+		activeMarks.forEach(mark => {
+			mark.classList.add('trace-active-highlight')
+			const line = mark.closest('.source-line')
+			if (!line) return
+			const lineMarks = marksByLine.get(line) ?? []
+			lineMarks.push(mark)
+			marksByLine.set(line, lineMarks)
+		})
+		marksByLine.forEach(lineMarks => {
+			lineMarks[0]?.classList.add('trace-active-highlight-start')
+			lineMarks[lineMarks.length - 1]?.classList.add('trace-active-highlight-end')
+		})
 		if (target.location) target.location.hash = section.id
 		const fileName = section.getAttribute('data-file-name') ?? 'Source file'
 		const lineNumber = line.getAttribute('data-line') ?? '1'
@@ -415,10 +428,22 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-end { border-right: 4px solid #c50f1f; }
 		.trace-active { box-shadow: 0 0 0 2px #005fb8; }
 		.trace-active-highlight {
-			border-radius: 2px;
-			outline: 2px solid #005fb8;
-			outline-offset: 1px;
+			border-radius: 0;
+			box-shadow: 0 -2px 0 #005fb8, 0 2px 0 #005fb8;
+			position: relative;
 		}
+		.trace-active-highlight-start { border-radius: 2px 0 0 2px; }
+		.trace-active-highlight-end { border-radius: 0 2px 2px 0; }
+		.trace-active-highlight-start::before, .trace-active-highlight-end::after {
+			background: #005fb8;
+			bottom: -2px;
+			content: '';
+			position: absolute;
+			top: -2px;
+			width: 2px;
+		}
+		.trace-active-highlight-start::before { left: -3px; }
+		.trace-active-highlight-end::after { right: -3px; }
 		.line-number {
 			box-sizing: border-box;
 			color: #767676;

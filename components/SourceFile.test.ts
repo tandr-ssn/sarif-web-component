@@ -216,6 +216,17 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(Array.from(childDocument.querySelectorAll('.trace-badge > button')).map(button => button.textContent)).toEqual(['1', '2', '3'])
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
+	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList
+		.contains('trace-active-highlight-start')).toBe(false)
+	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList
+		.contains('trace-active-highlight-end')).toBe(false)
+	const thirdBadge = childDocument.querySelector('[data-trace-index="2"]') as HTMLElement
+	thirdBadge.querySelector('button')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))
+	expect(thirdBadge.classList.contains('trace-active')).toBe(true)
+	expect(childDocument.querySelector('[data-trace-index="1"]')?.classList.contains('trace-active')).toBe(false)
+	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).toBeNull()
+	expect(Array.from(childDocument.querySelectorAll('.trace-active-highlight'))
+		.every(mark => mark.getAttribute('data-trace-indices')?.split(' ').includes('2'))).toBe(true)
 	open.mockRestore()
 })
 
