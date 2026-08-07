@@ -24,14 +24,22 @@
 
 // Keep sort direction readable in the offline file:// build even if Firefox
 // declines the embedded Azure DevOps icon font.
+.bolt-table-header-sort-icon {
+	color: var(--text-primary-color, #202020);
+	font-size: 1.15rem;
+	font-weight: 700;
+	line-height: 1;
+	opacity: 1;
+	padding: 0 6px;
+}
 .bolt-table-header-sort-icon.ms-Icon--SortUp::before,
 .bolt-table-header-sort-icon.ms-Icon--SortDown::before {
 	font-family: Arial, sans-serif;
-	font-size: .9rem;
+	font-size: 1.05rem;
 	font-weight: bold;
 }
-.bolt-table-header-sort-icon.ms-Icon--SortUp::before { content: "↑"; }
-.bolt-table-header-sort-icon.ms-Icon--SortDown::before { content: "↓"; }
+.bolt-table-header-sort-icon.ms-Icon--SortUp::before { content: "▲"; }
+.bolt-table-header-sort-icon.ms-Icon--SortDown::before { content: "▼"; }
 
 .swcColumnFilter {
 	background: $neutral-4;
