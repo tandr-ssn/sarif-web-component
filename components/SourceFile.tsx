@@ -557,7 +557,7 @@ async function readSourceFile(
 }
 
 export function traceColor(index: number, count: number): string {
-	const accessiblePalette = ['#bde3f4', '#f6d39b', '#e8bad7', '#a8dbc9', '#f7ee9f', '#aecce5', '#efb49e']
+	const accessiblePalette = ['#bde3f4', '#f6d39b', '#e8bad7', '#a8dbc9', '#f7ee9f', '#aecce5', '#d8c4eb']
 	if (count === 1) return '#bde3f4'
 	if (index === 0) return '#c7e9c0'
 	if (index === count - 1) return '#f5b5b0'

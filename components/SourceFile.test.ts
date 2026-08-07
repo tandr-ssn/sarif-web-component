@@ -1,4 +1,9 @@
-import {openSourceFile} from './SourceFile'
+import {openSourceFile, traceColor} from './SourceFile'
+
+test('keeps the seventh trace color distinct from the final marker', () => {
+	expect(traceColor(6, 8)).toBe('#d8c4eb')
+	expect(traceColor(7, 8)).toBe('#f5b5b0')
+})
 
 test('renders embedded source as text in a new tab', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
