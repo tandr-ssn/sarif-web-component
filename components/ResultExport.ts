@@ -1,17 +1,7 @@
 import {Result} from 'sarif'
-import {IFilterState} from 'azure-devops-ui/Utilities/Filter'
 import {RunStore} from './RunStore'
 
 export type ResultExportScope = 'filtered' | 'all'
-
-export function hasActiveResultFilter(state: IFilterState): boolean {
-	return Object.values(state).some(item => {
-		const value = item?.value
-		if (Array.isArray(value)) return value.length > 0
-		if (typeof value === 'string') return value.trim().length > 0
-		return value !== undefined && value !== null && value !== false
-	})
-}
 
 function spreadsheetSafe(value: string): string {
 	return /^\s*[=+\-@]/.test(value) ? `'${value}` : value
