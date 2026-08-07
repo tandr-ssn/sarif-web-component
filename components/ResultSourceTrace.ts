@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import {PhysicalLocation, Result} from 'sarif'
-import {SourceTrace} from './SourceFile'
+import {PhysicalLocation, Region, Result, Run} from 'sarif'
+import {getArtifactLocation, SourceTrace} from './SourceFile'
 
 export function getResultAuditOrigin(result: Result): SourceTrace['origin'] | undefined {
 	const origin = (result.properties as any)?.audit?.origin
@@ -29,16 +29,44 @@ export function getResultAuditOrigin(result: Result): SourceTrace['origin'] | un
 	}
 }
 
-function locationKey(location: PhysicalLocation | undefined): string | undefined {
-	const artifact = location?.artifactLocation
+function artifactKey(location: PhysicalLocation | undefined, run: Run): string | undefined {
+	const artifact = getArtifactLocation(location, run)
 	if (!artifact) return undefined
-	const region = location?.region
-	return [artifact.uriBaseId, artifact.uri, artifact.index, region?.startLine, region?.startColumn, region?.endLine, region?.endColumn].join('\0')
+	if (artifact.uri !== undefined) {
+		let uri = artifact.uri
+		try { uri = decodeURIComponent(uri) } catch (_) { }
+		uri = uri.replace(/\\/g, '/')
+		return /^[a-zA-Z]:\//.test(uri) ? uri.toLowerCase() : uri
+	}
+	return artifact.index === undefined ? undefined : `index:${artifact.index}`
 }
 
-function withPrimaryLocation(locations: Array<PhysicalLocation | undefined>, primary: PhysicalLocation, identifierHints?: Array<string | undefined>): SourceTrace {
-	const primaryKey = locationKey(primary)
-	let activeIndex = locations.findIndex(location => locationKey(location) === primaryKey)
+function regionsOverlap(left: Region | undefined, right: Region | undefined): boolean {
+	if (!left?.startLine || !right?.startLine) return !left?.startLine && !right?.startLine
+	const leftEndLine = left.endLine ?? left.startLine
+	const rightEndLine = right.endLine ?? right.startLine
+	const overlapLine = Math.max(left.startLine, right.startLine)
+	const overlapEndLine = Math.min(leftEndLine, rightEndLine)
+	if (overlapLine > overlapEndLine) return false
+	if (overlapLine < overlapEndLine) return true
+	const startColumn = (region: Region) => region.startLine === overlapLine ? region.startColumn ?? 1 : 1
+	const endColumn = (region: Region, endLine: number) => endLine === overlapLine ? region.endColumn ?? Infinity : Infinity
+	return startColumn(left) < endColumn(right, rightEndLine) && startColumn(right) < endColumn(left, leftEndLine)
+}
+
+function sameSourceLocation(left: PhysicalLocation | undefined, right: PhysicalLocation, run: Run): boolean {
+	const leftKey = artifactKey(left, run)
+	return leftKey !== undefined && leftKey === artifactKey(right, run) && regionsOverlap(left?.region, right.region)
+}
+
+function withPrimaryLocation(locations: Array<PhysicalLocation | undefined>, primary: PhysicalLocation, run: Run, identifierHints?: Array<string | undefined>): SourceTrace {
+	let activeIndex = -1
+	for (let index = locations.length - 1; index >= 0; index--) {
+		if (sameSourceLocation(locations[index], primary, run)) {
+			activeIndex = index
+			break
+		}
+	}
 	if (activeIndex < 0) {
 		locations = [...locations, primary]
 		if (identifierHints) identifierHints = [...identifierHints, undefined]
@@ -64,7 +92,7 @@ export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 			return identifiers.length === 1 ? identifiers[0] : undefined
 		})
 		return {
-			...withPrimaryLocation(resolvedLocations.map(resolved => resolved?.location?.physicalLocation), primary, identifierHints),
+			...withPrimaryLocation(resolvedLocations.map(resolved => resolved?.location?.physicalLocation), primary, result.run, identifierHints),
 			label: 'Code flow',
 			inferIdentifiers: true,
 			...(origin ? {origin} : {}),
@@ -74,7 +102,7 @@ export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 	const stack = result.stacks?.find(candidate => candidate.frames?.length)
 	if (stack?.frames?.length) {
 		return {
-			...withPrimaryLocation(stack.frames.map(frame => frame.location?.physicalLocation), primary),
+			...withPrimaryLocation(stack.frames.map(frame => frame.location?.physicalLocation), primary, result.run),
 			label: 'Call stack',
 			...(origin ? {origin} : {}),
 		}
