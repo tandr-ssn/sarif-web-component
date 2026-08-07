@@ -1,7 +1,7 @@
 import {createResultCsv} from './ResultExport'
 import {RunStore} from './RunStore'
 
-const first = {path: 'src/one.ts', message: 'First, finding'}
+const first = {path: 'src/one.ts', message: 'First, finding\nconst value = "quoted"'}
 const second = {path: 'src/two.ts', message: '=unsafe formula'}
 const runStore = {
 	columns: [
@@ -15,7 +15,7 @@ const runStore = {
 test('exports all findings using the selected fields', () => {
 	expect(createResultCsv([runStore], 'all')).toBe(
 		'\ufeff"Path","Details"\r\n' +
-		'"src/one.ts","First, finding"\r\n' +
+		'"src/one.ts","First, finding\nconst value = ""quoted"""\r\n' +
 		'"src/two.ts","\'=unsafe formula"')
 })
 

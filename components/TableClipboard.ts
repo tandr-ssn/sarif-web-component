@@ -2,8 +2,12 @@ function normalizedCellText(cell: HTMLElement): string {
 	const copyValue = cell.querySelector<HTMLElement>('[data-copy-value]')?.dataset.copyValue
 	return (copyValue ?? (cell.innerText || cell.textContent || ''))
 		.replace(/\t/g, ' ')
-		.replace(/\s*\r?\n\s*/g, ' ')
+		.replace(/\r\n?/g, '\n')
 		.trim()
+}
+
+function tsvCell(value: string): string {
+	return /["\r\n\t]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
 }
 
 function intersects(range: Range, cell: HTMLElement): boolean {
@@ -38,7 +42,7 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 	const text = Array.from(rows.values())
 		.map(rowCells => rowCells
 			.sort((left, right) => Number(left.dataset.columnIndex) - Number(right.dataset.columnIndex))
-			.map(normalizedCellText)
+			.map(cell => tsvCell(normalizedCellText(cell)))
 			.join('\t'))
 		.join('\n')
 	event.clipboardData.setData('text/plain', text)
