@@ -77,8 +77,8 @@ interface SourceHighlight {
 	isStart?: boolean
 	isEnd?: boolean
 	isActive?: boolean
-	previousFile?: SourceNavigationTarget
-	nextFile?: SourceNavigationTarget
+	previousEntry?: SourceNavigationTarget
+	nextEntry?: SourceNavigationTarget
 }
 
 interface SourceFileView {
@@ -166,11 +166,11 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 		: highlight.isStart ? 'start'
 			: highlight.isEnd ? 'end' : undefined
 	const title = `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
-	const previous = highlight.previousFile
-		? `<a href="${escapeHtml(fragmentHref(highlight.previousFile.id))}" data-activate-trace="${highlight.previousFile.traceIndex}" title="Previous source file: ${escapeHtml(highlight.previousFile.name)}" aria-label="Previous source file">&#x2190;</a>`
+	const previous = highlight.previousEntry
+		? `<a href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" title="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
 		: ''
-	const next = highlight.nextFile
-		? `<a href="${escapeHtml(fragmentHref(highlight.nextFile.id))}" data-activate-trace="${highlight.nextFile.traceIndex}" title="Next source file: ${escapeHtml(highlight.nextFile.name)}" aria-label="Next source file">&#x2192;</a>`
+	const next = highlight.nextEntry
+		? `<a href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
 	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${title}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
@@ -782,11 +782,11 @@ export async function openSourceFile(
 				return {id, key, name, sourceFile, highlights: []}
 			})
 		const viewsByKey = new Map(views.map(view => [view.key, view] as [string, SourceFileView]))
-		const adjacentFile = (traceIndex: number, direction: -1 | 1, currentKey: string): SourceNavigationTarget | undefined => {
+		const adjacentEntry = (traceIndex: number, direction: -1 | 1): SourceNavigationTarget | undefined => {
 			for (let index = traceIndex + direction; index >= 0 && index < resolvedTrace.length; index += direction) {
 				const location = resolvedTrace[index]
 				const view = location.key && viewsByKey.get(location.key)
-				if (view && view.key !== currentKey) return { id: view.id, name: view.name, traceIndex: location.traceIndex }
+				if (view) return {id: view.id, name: view.name, traceIndex: location.traceIndex}
 			}
 			return undefined
 		}
@@ -803,8 +803,8 @@ export async function openSourceFile(
 					isStart: location.traceIndex === 0,
 					isEnd: location.traceIndex === resolvedTrace.length - 1,
 					isActive: location.traceIndex === trace?.activeIndex,
-					previousFile: adjacentFile(location.traceIndex, -1, view.key),
-					nextFile: adjacentFile(location.traceIndex, 1, view.key),
+					previousEntry: adjacentEntry(location.traceIndex, -1),
+					nextEntry: adjacentEntry(location.traceIndex, 1),
 				}))
 			resolvedTrace
 				.filter(location => location.key === view.key && identifierHighlights.has(location.traceIndex))

@@ -228,6 +228,14 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path', 'path'])
 	expect(new Set(identifiers.map(mark => mark.getAttribute('style'))).size).toBe(1)
 	expect(Array.from(childDocument.querySelectorAll('.trace-badge > button')).map(button => button.textContent)).toEqual(['1', '2', '3'])
+	const arrows = Array.from(childDocument.querySelectorAll('.trace-badge > a'))
+	expect(arrows.map(arrow => arrow.getAttribute('data-activate-trace'))).toEqual(['1', '0', '2', '1'])
+	expect(arrows.map(arrow => arrow.getAttribute('href'))).toEqual([
+		'#src/app.ts', '#src/app.ts', '#src/app.ts', '#src/app.ts',
+	])
+	expect(arrows.map(arrow => arrow.getAttribute('aria-label'))).toEqual([
+		'Next trace entry', 'Previous trace entry', 'Next trace entry', 'Previous trace entry',
+	])
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList
