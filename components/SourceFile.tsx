@@ -170,8 +170,8 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 			? `; --trace-identifier-color: ${identifierHighlights[0].highlight.color}`
 			: ''
 		const tooltip = Array.from(new Set(active.map(value => value.highlight.tooltip).filter(Boolean))).join('\n\n')
-		const titleData = tooltip ? ` title="${escapeHtml(tooltip)}"` : ''
-		return `<mark class="trace-highlight${identifierClass}${locationClass}"${traceData}${locationTraceData}${locationColorData}${titleData} data-default-highlight-color="${backgroundColor}" style="background-color: ${backgroundColor}${identifierStyle}">${segment}</mark>`
+		const tooltipData = tooltip ? ` data-source-tooltip="${escapeHtml(tooltip)}"` : ''
+		return `<mark class="trace-highlight${identifierClass}${locationClass}"${traceData}${locationTraceData}${locationColorData}${tooltipData} data-default-highlight-color="${backgroundColor}" style="background-color: ${backgroundColor}${identifierStyle}">${segment}</mark>`
 	}).join('')
 }
 
@@ -193,7 +193,7 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 	const next = highlight.nextEntry
 		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
-	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" style="background-color: ${highlight.color}" title="${escapeHtml(title)}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}">${highlight.traceIndex + 1}</button>${next}</span>`
+	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" data-source-tooltip="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
 function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
@@ -247,12 +247,56 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefined, activeView: SourceFileView): void {
 	const document = target.document
 	const toolbar = document.querySelector('.source-toolbar') as HTMLElement
+	const sourceTooltip = document.createElement('div')
+	sourceTooltip.className = 'source-tooltip'
+	sourceTooltip.setAttribute('role', 'tooltip')
+	sourceTooltip.hidden = true
+	document.body.appendChild(sourceTooltip)
 	const traceIndices = Array.from(document.querySelectorAll('.trace-badge[data-trace-index]'))
 		.map(badge => +(badge.getAttribute('data-trace-index') ?? -1))
 		.filter((index, position, indices) => index >= 0 && indices.indexOf(index) === position)
 		.sort((a, b) => a - b)
 	let activeTraceIndex = trace?.activeIndex
 	let activeFileId = activeView.id
+	let sourceTooltipAnchor: Element | undefined
+
+	const tooltipOwner = (eventTarget: EventTarget | null): Element | undefined =>
+		(eventTarget as Element | null)?.closest?.('[data-source-tooltip]') ?? undefined
+	const hideSourceTooltip = (owner?: Element) => {
+		if (owner && sourceTooltipAnchor !== owner) return
+		sourceTooltip.hidden = true
+		sourceTooltipAnchor = undefined
+	}
+	const showSourceTooltip = (owner: Element | undefined) => {
+		const value = owner?.getAttribute('data-source-tooltip')
+		if (!owner || !value) return hideSourceTooltip()
+		sourceTooltipAnchor = owner
+		sourceTooltip.textContent = value
+		sourceTooltip.hidden = false
+		const anchorBounds = owner.getBoundingClientRect()
+		const tooltipBounds = sourceTooltip.getBoundingClientRect()
+		const viewportWidth = target.innerWidth || document.documentElement.clientWidth || 1024
+		const viewportHeight = target.innerHeight || document.documentElement.clientHeight || 768
+		const gap = 6
+		const edge = 10
+		const left = Math.max(edge, Math.min(anchorBounds.left, viewportWidth - tooltipBounds.width - edge))
+		const below = anchorBounds.bottom + gap
+		const top = below + tooltipBounds.height <= viewportHeight - edge
+			? below
+			: Math.max(edge, anchorBounds.top - tooltipBounds.height - gap)
+		sourceTooltip.style.left = `${left}px`
+		sourceTooltip.style.top = `${top}px`
+	}
+	document.addEventListener('mouseover', event => showSourceTooltip(tooltipOwner(event.target)))
+	document.addEventListener('mouseout', event => {
+		const owner = tooltipOwner(event.target)
+		if (!owner || !event.relatedTarget || !owner.contains(event.relatedTarget as Node)) hideSourceTooltip(owner)
+	})
+	document.addEventListener('focusin', event => showSourceTooltip(tooltipOwner(event.target)))
+	document.addEventListener('focusout', event => {
+		const owner = tooltipOwner(event.target)
+		if (!owner || !event.relatedTarget || !owner.contains(event.relatedTarget as Node)) hideSourceTooltip(owner)
+	})
 
 	const traceBadge = (index: number) => document.querySelector(`.trace-badge[data-trace-index="${index}"]`) as HTMLElement | null
 	const setButtonDisabled = (action: string, disabled: boolean) => {
@@ -489,6 +533,20 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-badge > .trace-next { left: calc(100% - 1px); }
 		.trace-badge a:hover { text-decoration: underline; }
 		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
+		.source-tooltip {
+			background: #ffffff;
+			border: 1px solid #8a8a8a;
+			border-radius: 4px;
+			box-shadow: 0 3px 10px rgb(0 0 0 / 25%);
+			color: #202020;
+			font: 14px/1.4 Arial, sans-serif;
+			max-width: min(520px, calc(100vw - 20px));
+			padding: 7px 9px;
+			pointer-events: none;
+			position: fixed;
+			white-space: pre-wrap;
+			z-index: 30;
+		}
 		.trace-start { border-left: 4px solid #107c10; }
 		.trace-end { border-right: 4px solid #c50f1f; }
 		.trace-active { box-shadow: 0 0 0 2px #005fb8; }
@@ -537,6 +595,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			body { background: #1e1e1e; color: #dddddd; }
 			.source-toolbar { background: #292929; border-color: #4a4a4a; }
 			.source-toolbar button { background: #383838; border-color: #666666; color: #f0f0f0; }
+			.source-tooltip { background: #333333; border-color: #777777; color: #f0f0f0; }
 			.line-number { color: #a0a0a0; }
 			.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section, .hljs-link { color: #569cd6; }
 			.hljs-string, .hljs-attr, .hljs-template-variable { color: #ce9178; }

@@ -271,7 +271,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path', 'path'])
 	const badges = Array.from(childDocument.querySelectorAll<HTMLElement>('.trace-badge'))
 	expect(badges.map(badge => badge.querySelector('button')?.textContent)).toEqual(['1', '2', '3'])
-	expect(badges[0].title).toBe([
+	expect(badges[0].dataset.sourceTooltip).toBe([
 		'Step 1 of 3 · Source',
 		'Recognized input source',
 		'src/app.ts:1:10',
@@ -280,10 +280,16 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 		'Importance: Essential',
 		'Resolution: semantic',
 	].join('\n'))
-	expect(badges[1].title).toContain('Step 2 of 3')
-	expect(badges[1].title).toContain('Call depth: 1')
-	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.title)
+	expect(badges[1].dataset.sourceTooltip).toContain('Step 2 of 3')
+	expect(badges[1].dataset.sourceTooltip).toContain('Call depth: 1')
+	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.dataset.sourceTooltip)
 		.toContain('Value passes through clean')
+	badges[1].dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))
+	const sourceTooltip = childDocument.querySelector<HTMLElement>('.source-tooltip')
+	expect(sourceTooltip?.hidden).toBe(false)
+	expect(sourceTooltip?.textContent).toContain('Step 2 of 3')
+	badges[1].dispatchEvent(new MouseEvent('mouseout', {bubbles: true}))
+	expect(sourceTooltip?.hidden).toBe(true)
 	expect(identifiers[1].style.backgroundColor).toBe(badges[1].style.backgroundColor)
 	expect(identifiers[2].style.backgroundColor).toBe(badges[2].style.backgroundColor)
 	expect(identifiers.slice(1).map(mark => mark.style.getPropertyValue('--trace-identifier-color')))
@@ -304,6 +310,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
 	expect(sourceStyles).toContain('.trace-badge:hover > a, .trace-badge:focus-within > a')
 	expect(sourceStyles).toContain('pointer-events: none')
+	expect(sourceStyles).toContain('font: 14px/1.4 Arial, sans-serif')
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList
