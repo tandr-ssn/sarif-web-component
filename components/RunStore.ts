@@ -331,6 +331,16 @@ export class RunStore {
 		}))
 	}
 
+	/** Columns rendered by the table. A selected Path is embedded in Details when both are present. */
+	@computed get displayColumns() {
+		const columns = this.columns
+		const embedPath = columns.some(column => column.id === 'Path')
+			&& columns.some(column => column.id === 'Details')
+		return columns
+			.filter(column => !embedPath || column.id !== 'Path')
+			.map(column => column.id === 'Details' ? {...column, embedPath} : column)
+	}
+
 	columnFilterOptions(id: string): string[] {
 		const column = this.columns.find(candidate => candidate.id === id)
 		if (!column) return []

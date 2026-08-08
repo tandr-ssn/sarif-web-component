@@ -65,7 +65,8 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 
 	@computed private get columns() {
 		const {runStore} = this.props
-		return runStore.columns.map((col, i) => {
+		const sortedColumnId = runStore.columns[Math.min(runStore.sortColumnIndex, runStore.columns.length - 1)]?.id
+		return runStore.displayColumns.map((col, i) => {
 			const {id, name, width} = col
 			if (!this.columnCache.has(id)) {
 				const observableWidth = new ObservableValue(width)
@@ -81,14 +82,15 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 					sortProps: {
 						ariaLabelAscending: "Sorted A to Z", // Need to change for date values.
 						ariaLabelDescending: "Sorted Z to A",
-						sortOrder: i === runStore.sortColumnIndex ? runStore.sortOrder : undefined
+						sortOrder: id === sortedColumnId ? runStore.sortOrder : undefined
 					},
 				} as ITreeColumn<ResultOrRuleOrMore>)
 			}
 			const column = this.columnCache.get(id)
 			column.name = name
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {copyString: typeof col.filterString}).copyString = col.copyString ?? col.filterString
-			column.sortProps.sortOrder = i === runStore.sortColumnIndex ? runStore.sortOrder : undefined
+			;(column as ITreeColumn<ResultOrRuleOrMore> & {embedPath?: boolean}).embedPath = col.embedPath
+			column.sortProps.sortOrder = id === sortedColumnId ? runStore.sortOrder : undefined
 			return column
 		})
 	}
@@ -145,7 +147,8 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 				}
 			}
 			runInAction(() => {
-				const sortsRules = this.props.runStore.setColumnSort(columnIndex, proposedSortOrder)
+			const selectedColumnIndex = this.props.runStore.columns.findIndex(column => column.id === this.columns[columnIndex]?.id)
+			const sortsRules = this.props.runStore.setColumnSort(selectedColumnIndex, proposedSortOrder)
 				if (sortsRules) this.sortRuleByMenuItems.forEach(item =>
 					(item.checked as IObservableValue<boolean>).value = item.id === 'sortByRuleName')
 			})

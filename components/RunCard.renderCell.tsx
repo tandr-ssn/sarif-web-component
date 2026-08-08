@@ -114,6 +114,7 @@ export function renderCell<T extends ISimpleTableCell>(
 		const copyString = (treeColumn as ITreeColumn<T> & {copyString?: (result: Result) => string}).copyString
 		const copyMarker = <span hidden data-copy-value={copyString?.(result) ?? ''}
 			data-copy-always={treeColumn.id === 'Details' ? 'true' : undefined} />
+		const embedPath = (treeColumn as ITreeColumn<T> & {embedPath?: boolean}).embedPath === true
 		const status = {
 			none: result.kind === 'pass' ? Statuses.Success : Statuses.Queued,
 			note: Statuses.Information,
@@ -136,7 +137,8 @@ export function renderCell<T extends ISimpleTableCell>(
 							const messageFromRule = result._rule?.messageStrings?.[result.message.id ?? -1] ?? result.message;
 							const formattedMessage = format(messageFromRule.text || result.message?.text, result.message.arguments) ?? '';
 							const formattedMarkdown = format(messageFromRule.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
-							return <>
+							return <div className="swcFindingDetails">
+								{embedPath && renderPathCell(result, true)}
 								{formattedMarkdown
 									? <div className="swcMarkDown">
 										<ReactMarkdown source={formattedMarkdown}
@@ -144,9 +146,9 @@ export function renderCell<T extends ISimpleTableCell>(
 									</div> // Div to cancel out containers display flex row.
 									: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span>}
 									<AcahSummary result={result} />
-									<Snippet ploc={result.locations?.[0]?.physicalLocation} run={result.run} trace={getResultSourceTrace(result)} />
-									<ExecutionTrace result={result} />
-								</>
+								<Snippet ploc={result.locations?.[0]?.physicalLocation} run={result.run} trace={getResultSourceTrace(result)} />
+								<ExecutionTrace result={result} />
+							</div>
 						case 'Rule':
 							return <>
 								{tryLink(() => rule.helpUri, <Hi>{rule.id || rule.guid}</Hi>)}

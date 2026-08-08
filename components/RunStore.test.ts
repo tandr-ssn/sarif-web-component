@@ -12,6 +12,7 @@ import { MobxFilter } from './FilterBar'
 import {observable} from 'mobx'
 import {SortOrder} from 'azure-devops-ui/Table'
 import {isResultVariantGroup} from './ResultVariantGroup'
+import {createResultCsv} from './ResultExport'
 jest.mock('./FilterBar')
 
 it('does not explode', () => { // Bare bones perf is 0.2s
@@ -24,6 +25,16 @@ it('does not explode', () => { // Bare bones perf is 0.2s
 
 	const runStore = new RunStore(run, 0, new MobxFilter())
 	expect(runStore.columns.map(column => column.id)).toEqual(['Path', 'Details', 'Level', 'Kind'])
+	expect(runStore.displayColumns.map(column => column.id)).toEqual(['Details', 'Level', 'Kind'])
+	expect(runStore.displayColumns[0].embedPath).toBe(true)
+	expect(createResultCsv([runStore], 'all').split('\r\n')[0]).toBe('\ufeff"Path","Details","Level","Kind"')
+})
+
+it('keeps Path as a visible fallback when Details is not selected', () => {
+	const run = {tool: {driver: {name: 'Sample Tool'}}, results: [{message: {text: 'Finding'}}]} as unknown as Run
+	const selected = observable.box(['Path', 'Level'])
+	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
+	expect(runStore.displayColumns.map(column => column.id)).toEqual(['Path', 'Level'])
 })
 
 it('uses selected nested result fields as columns', () => {

@@ -53,6 +53,29 @@
 	:last-child { flex: 0 0 auto; }
 }
 
+.swcFindingPath {
+	color: var(--palette-neutral-70, #505050);
+	font-size: 0.9em;
+	margin-bottom: 8px;
+	max-width: 100%;
+	min-width: 0;
+
+	a {
+		display: block;
+		max-width: 100%;
+		min-width: 0;
+		overflow: hidden;
+	}
+}
+
+.swcFindingDetails {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	max-width: 100%;
+	min-width: 0;
+}
+
 .action {
 	display: flex;
 }

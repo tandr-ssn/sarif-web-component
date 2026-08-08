@@ -12,7 +12,7 @@ import { tryOr } from './try'
 // TODO:
 // Unify runArt vs resultArt.
 // Distinguish uri and text.
-export function renderPathCell(result: Result) {
+export function renderPathCell(result: Result, embedded = false) {
 	const ploc = result.locations?.[0]?.physicalLocation
 	const resArtLoc
 	    =  ploc?.artifactLocation
@@ -32,12 +32,16 @@ export function renderPathCell(result: Result) {
 			? [uri.slice(0, index), uri.slice(index + 1)]
 			: [uri]
 	})()
+	const region = ploc?.region
+	const position = region?.startLine
+		? `:${region.startLine}${region.startColumn ? `:${region.startColumn}` : ''}`
+		: ''
 	const uriWithEllipsis = fileName // This is what ultimately gets displayed
 		? <span className="midEllipsis">
 			<span><Hi>{path}</Hi></span>
-			<span><Hi>/{fileName}</Hi></span>
+			<span><Hi>/{fileName}{position}</Hi></span>
 		</span>
-		: <Hi>{uri ?? '—'}</Hi>
+		: <Hi>{uri ? `${uri}${position}` : '—'}</Hi>
 	
 	// Example of href scenario:
 	// uri  = src\Prototypes\README.md
@@ -48,6 +52,13 @@ export function renderPathCell(result: Result) {
 		: undefined)
 	const sourceLocationText = getSourceLocationText(sourcePhysicalLocation, result.run)
 	const sourceTrace = getResultSourceTrace(result)
+	if (embedded) {
+		return <div className="swcFindingPath" data-swc-tooltip={sourceLocationText ?? uri}>
+			<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>
+				{uriWithEllipsis}
+			</SourceLocationLink>
+		</div>
+	}
 
 	const rowClasses = 'bolt-table-two-line-cell-item flex-row scroll-hidden'
 
