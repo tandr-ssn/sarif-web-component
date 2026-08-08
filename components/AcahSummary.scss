@@ -1,14 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-.swcAuditSummary {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin: 6px 0;
-}
-
-.swcAuditBadge {
+.swcAcahSummary { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+.swcAcahBadge {
 	background-color: var(--palette-black-alpha-6);
 	border: 1px solid var(--palette-black-alpha-20, rgba(0, 0, 0, 0.2));
 	border-radius: 10px;

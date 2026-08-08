@@ -26,7 +26,7 @@ import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemP
 import {Tooltip} from 'azure-devops-ui/TooltipEx'
 import {ResultColumnHeader} from './ResultColumnHeader'
 import {copySelectedTableCells} from './TableClipboard'
-import {getRunAuditSummary, RunAuditBadge, RunAuditDetails} from './RunAuditSummary'
+import {getRunAcahSummary, RunAcahBadge, RunAcahDetails} from './RunAcahSummary'
 
 @observer export class RunCard extends Component<{ runStore: RunStore, index: number, runCount: number }> {
 	@observable private show = true
@@ -160,7 +160,7 @@ import {getRunAuditSummary, RunAuditBadge, RunAuditDetails} from './RunAuditSumm
 		return <Observer renderChildren={itemProvider}>
 			{(observedProps: { itemProvider }) => {
 				const qualityDomain = tryOr(() => runStore.run.tool.driver.properties['microsoft/qualityDomain'])
-				const auditSummary = getRunAuditSummary(runStore.run)
+				const acahSummary = getRunAcahSummary(runStore.run)
 				return <Card
 					titleProps={{
 						ariaLevel: 2,
@@ -174,12 +174,12 @@ import {getRunAuditSummary, RunAuditBadge, RunAuditDetails} from './RunAuditSumm
 									() => <div>{runStore.run.tool.driver.fullDescription.text}</div>,
 									() => <div>{runStore.run.tool.driver.shortDescription.text}</div>,
 								)}
-								{auditSummary && <RunAuditDetails summary={auditSummary} />}
+								{acahSummary && <RunAcahDetails summary={acahSummary} />}
 							</> as any}>
 							<span className={'swcRunTitle'}>
 								<Hi>{runStore.driverName}</Hi>{qualityDomain && ` (${qualityDomain})`}
 								<Pill size={PillSize.compact}>{runStore.filteredCount}</Pill>
-								{auditSummary && <RunAuditBadge summary={auditSummary} />}
+								{acahSummary && <RunAcahBadge summary={acahSummary} />}
 							</span>{/* Tooltip marked as React.Children.only thus extra span. */}
 						</Tooltip> as any
 					}}
