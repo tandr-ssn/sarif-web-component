@@ -32,6 +32,24 @@ test('prefers an exact ACAH step symbol over inferred state', () => {
 	expect(getResultSourceTrace(result)?.identifierHints).toEqual(['path'])
 })
 
+test('can resolve a selected code-flow branch', () => {
+	const first: any = {artifactLocation: {uri: 'src/input.ts'}, region: {startLine: 2}}
+	const second: any = {artifactLocation: {uri: 'src/db.ts'}, region: {startLine: 12}}
+	const result = {
+		run: {threadFlowLocations: [
+			{location: {physicalLocation: first}},
+			{location: {physicalLocation: second}},
+		]},
+		locations: [{physicalLocation: second}],
+		codeFlows: [
+			{threadFlows: [{locations: [{index: 0}]}]},
+			{threadFlows: [{locations: [{index: 1}]}]},
+		],
+	} as Result
+
+	expect(getResultSourceTrace(result, 1)?.locations).toEqual([second])
+})
+
 test('uses a code flow and appends the primary result location', () => {
 	const flowLocation: any = {artifactLocation: {uri: 'src/start.ts'}, region: {startLine: 2}}
 	const primary: any = {artifactLocation: {uri: 'src/end.ts'}, region: {startLine: 9}}

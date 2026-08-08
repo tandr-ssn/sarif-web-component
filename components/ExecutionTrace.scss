@@ -30,6 +30,28 @@
 	font-weight: 400;
 }
 
+.swcTraceBranches {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 6px 0;
+}
+
+.swcTraceBranch {
+	background: transparent;
+	border: 1px solid rgba(0, 120, 212, 0.45);
+	border-radius: 3px;
+	color: inherit;
+	cursor: pointer;
+	padding: 3px 8px;
+	text-align: left;
+}
+
+.swcTraceBranchSelected {
+	background: rgba(0, 120, 212, 0.14);
+	font-weight: 600;
+}
+
 .swcTraceMessage,
 .swcTraceLocationMessage {
 	font-size: 12pt;

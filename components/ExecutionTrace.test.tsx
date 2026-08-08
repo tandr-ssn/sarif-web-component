@@ -112,3 +112,24 @@ test('labels a complete ACAH trace without implying runtime proof', () => {
 	expect(wrapper.find('.swcTraceStatus').prop('title')).toContain("Complete trace within ACAH's bounded static model")
 	expect(wrapper.find('.swcTraceStatus').prop('title')).toContain('does not prove runtime reachability')
 })
+
+test('selects one sink branch while retaining every branch for copy', () => {
+	const run: any = {threadFlowLocations: [
+		{location: {message: {text: 'Shared source'}, physicalLocation: {artifactLocation: {uri: 'src/input.ts'}, region: {startLine: 2, snippet: {text: 'request.path'}}}}},
+		{location: {message: {text: 'Write file'}, physicalLocation: {artifactLocation: {uri: 'src/files.ts'}, region: {startLine: 8, snippet: {text: 'write(path)'}}}}},
+		{location: {message: {text: 'Run query'}, physicalLocation: {artifactLocation: {uri: 'src/db.ts'}, region: {startLine: 12, snippet: {text: 'query(sql)'}}}}},
+	]}
+	const result = {run, locations: [{physicalLocation: run.threadFlowLocations[1].location.physicalLocation}], codeFlows: [
+		{message: {text: 'File write'}, threadFlows: [{locations: [{index: 0}, {index: 1}]}]},
+		{message: {text: 'SQL execution'}, threadFlows: [{locations: [{index: 0}, {index: 2}]}]},
+	]} as unknown as Result
+	const wrapper = mount(<ExecutionTrace result={result} />)
+	expect(wrapper.find('[role="tab"]').map(tab => tab.text())).toEqual(['File write', 'SQL execution'])
+	expect(wrapper.text()).toContain('write(path)')
+	expect(wrapper.text()).not.toContain('query(sql)')
+	expect(wrapper.find('details').prop('data-copy-trace-value')).toContain('File write')
+	expect(wrapper.find('details').prop('data-copy-trace-value')).toContain('SQL execution')
+	wrapper.find('[role="tab"]').at(1).simulate('click')
+	expect(wrapper.text()).toContain('query(sql)')
+	expect(wrapper.text()).not.toContain('write(path)')
+})

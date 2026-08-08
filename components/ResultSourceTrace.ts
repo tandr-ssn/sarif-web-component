@@ -88,13 +88,14 @@ function withPrimaryLocation(
 	}
 }
 
-/** Returns the first code flow, or first call stack, leading to a result's primary location. */
-export function getResultSourceTrace(result: Result): SourceTrace | undefined {
+/** Returns a selected code flow, or the first call stack, leading to a result's primary location. */
+export function getResultSourceTrace(result: Result, codeFlowIndex = 0): SourceTrace | undefined {
 	const primary = result.locations?.[0]?.physicalLocation
 	if (!primary) return undefined
 	const origin = getResultAcahOrigin(result)
 
-	const threadFlow = result.codeFlows?.find(codeFlow => codeFlow.threadFlows?.length)?.threadFlows?.[0]
+	const codeFlow = result.codeFlows?.filter(candidate => candidate.threadFlows?.length)[codeFlowIndex]
+	const threadFlow = codeFlow?.threadFlows?.[0]
 	if (threadFlow?.locations?.length) {
 		const resolvedLocations = threadFlow.locations.map(location => {
 			const resolved = location.index === undefined ? location : result.run.threadFlowLocations?.[location.index]

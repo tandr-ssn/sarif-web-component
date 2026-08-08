@@ -3,6 +3,7 @@
 
 import './ExecutionTrace.scss'
 import * as React from 'react'
+import {useState} from 'react'
 import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow, ThreadFlowLocation} from 'sarif'
 import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace, traceColor} from './SourceFile'
@@ -129,28 +130,38 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 }
 
 function CodeFlows(props: { result: Result, run: Run }) {
+	const [selectedIndex, setSelectedIndex] = useState(0)
 	if (!props.result.codeFlows?.length) return null
 	const traceSummary = acahTraceSummary(props.result)
-	return <>
-		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => {
-			const label = `Code flow${props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}`
-			const stepCount = codeFlow.threadFlows?.reduce((total, threadFlow) => total + (threadFlow.locations?.length ?? 0), 0) ?? 0
-			return <details className="swcTrace" key={codeFlowIndex}
-				data-copy-trace-value={codeFlowText(props.result, codeFlow, codeFlowIndex, props.result.codeFlows.length)}>
-			<summary>{label} ({stepCount} {stepCount === 1 ? 'step' : 'steps'})
-				{traceSummary && <span className="swcTraceStatus" title={traceSummary.title}> · {traceSummary.label}</span>}
-			</summary>
-			{messageText(codeFlow.message) && <div className="swcTraceMessage">{messageText(codeFlow.message)}</div>}
-			{codeFlow.threadFlows?.map((threadFlow, threadFlowIndex) => <ThreadFlowTrace
-				key={threadFlowIndex}
-				threadFlow={threadFlow}
-				threadFlowCount={codeFlow.threadFlows.length}
-				threadFlowIndex={threadFlowIndex}
-				label={codeFlow.threadFlows.length > 1 ? `${label} · Thread ${threadFlowIndex + 1}` : label}
-				run={props.run}
-				origin={getResultAcahOrigin(props.result)} />)}
-		</details>})}
-	</>
+	const codeFlows = props.result.codeFlows
+	const selectedFlow = codeFlows[Math.min(selectedIndex, codeFlows.length - 1)]
+	const selectedLabel = messageText(selectedFlow.message) ?? (codeFlows.length > 1
+		? `Code flow ${Math.min(selectedIndex, codeFlows.length - 1) + 1}`
+		: 'Code flow')
+	const stepCount = selectedFlow.threadFlows?.reduce((total, threadFlow) => total + (threadFlow.locations?.length ?? 0), 0) ?? 0
+	const allFlowText = codeFlows.map((flow, index) => codeFlowText(props.result, flow, index, codeFlows.length)).filter(Boolean).join('\n\n')
+	return <details className="swcTrace" data-copy-trace-value={allFlowText}>
+		<summary>Code flow{codeFlows.length > 1 ? `s (${codeFlows.length} branches)` : ''} ({stepCount} {stepCount === 1 ? 'step' : 'steps'})
+			{traceSummary && <span className="swcTraceStatus" title={traceSummary.title}> · {traceSummary.label}</span>}
+		</summary>
+		{codeFlows.length > 1 && <div className="swcTraceBranches" role="tablist" aria-label="Sink branches">
+			{codeFlows.map((flow, index) => {
+				const label = messageText(flow.message) ?? `Code flow ${index + 1}`
+				return <button type="button" role="tab" key={index} aria-selected={index === selectedIndex}
+					className={index === selectedIndex ? 'swcTraceBranch swcTraceBranchSelected' : 'swcTraceBranch'}
+					onClick={() => setSelectedIndex(index)}>{label}</button>
+			})}
+		</div>}
+		{messageText(selectedFlow.message) && <div className="swcTraceMessage">{messageText(selectedFlow.message)}</div>}
+		{selectedFlow.threadFlows?.map((threadFlow, threadFlowIndex) => <ThreadFlowTrace
+			key={threadFlowIndex}
+			threadFlow={threadFlow}
+			threadFlowCount={selectedFlow.threadFlows.length}
+			threadFlowIndex={threadFlowIndex}
+			label={selectedFlow.threadFlows.length > 1 ? `${selectedLabel} · Thread ${threadFlowIndex + 1}` : selectedLabel}
+			run={props.run}
+			origin={getResultAcahOrigin(props.result)} />)}
+	</details>
 }
 
 export function ExecutionTrace(props: { result: Result }) {
