@@ -230,8 +230,10 @@ export interface ViewerProps {
 		const sourceFolderDisplayName = selectedSourceFolderName ?? this.rememberedSourceFolderName
 		const sourceFolderNeedsReconnect = !selectedSourceFolderName && !!this.rememberedSourceFolderName
 		const compactSourcePicker = !!localSourcePickerContainer
-		const sourcePicker = showLocalSourcePicker && <div className={`swcLocalSourceBar${compactSourcePicker ? ' swcLocalSourceHeader' : ''}`}
-			title={compactSourcePicker && commonSourceRoot ? `Select the local folder corresponding to ${commonSourceRoot}` : undefined}>
+		const sourceFolderTooltip = `${compactSourcePicker && commonSourceRoot
+			? `Select the local folder corresponding to ${commonSourceRoot}. `
+			: ''}Files from this folder are read locally in your browser. Nothing is uploaded or sent over the network.`
+		const sourcePicker = showLocalSourcePicker && <div className={`swcLocalSourceBar${compactSourcePicker ? ' swcLocalSourceHeader' : ''}`}>
 			<input
 				type="file"
 				multiple
@@ -243,7 +245,7 @@ export interface ViewerProps {
 				text={selectedSourceFolderName ? 'Change source folder...' : sourceFolderNeedsReconnect ? 'Reconnect source folder...' : 'Choose source folder...'}
 				tooltipProps={{
 					addAriaDescribedBy: true,
-					text: 'Files from this folder are read locally in your browser. Nothing is uploaded or sent over the network.',
+					text: sourceFolderTooltip,
 				}}
 				onClick={this.selectSourceDirectory} />
 			{compactSourcePicker

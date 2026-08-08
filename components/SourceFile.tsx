@@ -192,10 +192,10 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 			: highlight.isEnd ? 'end' : undefined
 	const title = highlight.tooltip ?? `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
 	const previous = highlight.previousEntry
-		? `<a class="trace-previous" href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" title="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
+		? `<a class="trace-previous" href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" data-source-tooltip="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
 		: ''
 	const next = highlight.nextEntry
-		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
+		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" data-source-tooltip="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
 	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" data-source-tooltip="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
@@ -551,7 +551,7 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			border-radius: 4px;
 			box-shadow: 0 3px 10px rgb(0 0 0 / 25%);
 			color: #202020;
-			font: 14px/1.4 Arial, sans-serif;
+			font: 12pt/1.4 Arial, sans-serif;
 			max-width: min(520px, calc(100vw - 20px));
 			padding: 7px 9px;
 			pointer-events: none;

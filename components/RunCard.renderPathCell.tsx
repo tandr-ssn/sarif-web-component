@@ -68,7 +68,7 @@ export function renderPathCell(result: Result) {
 					{/* TODO: Enable tooltip if a) inner !== href, or b) inner === href and inner is clipped (aka overflowing) */}
 					<TooltipSpan overflowOnly={true} text={sourceLocationText ?? uri}>
 						<span className="fontSize font-size secondary-text swcColorUnset swcWidth100">
-							<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
+							<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace} showNativeTitle={false}>{uriWithEllipsis}</SourceLocationLink>
 						</span>
 					</TooltipSpan>
 				</div>
@@ -79,7 +79,7 @@ export function renderPathCell(result: Result) {
 			{/* Consider overflowOnly=false for the other branch above. */}
 			<TooltipSpan text={sourceLocationText ?? uri}>
 				<span className="swcColorUnset">
-					<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
+					<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace} showNativeTitle={false}>{uriWithEllipsis}</SourceLocationLink>
 				</span>
 			</TooltipSpan>
 		</div>

@@ -310,6 +310,8 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(arrows.map(arrow => arrow.getAttribute('aria-label'))).toEqual([
 		'Next trace entry', 'Previous trace entry', 'Next trace entry', 'Previous trace entry',
 	])
+	expect(arrows.every(arrow => arrow.hasAttribute('data-source-tooltip'))).toBe(true)
+	expect(arrows.every(arrow => !arrow.hasAttribute('title'))).toBe(true)
 	const firstNextArrow = arrows[0] as HTMLElement
 	const blur = jest.spyOn(firstNextArrow, 'blur')
 	firstNextArrow.dispatchEvent(new MouseEvent('click', {bubbles: true, detail: 1}))
@@ -317,7 +319,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
 	expect(sourceStyles).toContain('.trace-badge:hover > a, .trace-badge:focus-within > a')
 	expect(sourceStyles).toContain('pointer-events: none')
-	expect(sourceStyles).toContain('font: 14px/1.4 Arial, sans-serif')
+	expect(sourceStyles).toContain('font: 12pt/1.4 Arial, sans-serif')
 	expect(sourceStyles).toContain('.trace-boundary')
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()

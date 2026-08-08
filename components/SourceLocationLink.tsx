@@ -23,11 +23,13 @@ function SourceLocationLinkWithReader(props: {
 	trace?: SourceTrace
 	children?: React.ReactNode
 	className?: string
+	showNativeTitle?: boolean
 }) {
 	const [confirmSourceSelection, setConfirmSourceSelection] = React.useState(false)
 	const {ploc, run, reader, selectSourceFiles, trace} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
 	const sourceLocationText = getSourceLocationText(ploc, run)
+	const nativeTitle = props.showNativeTitle === false ? undefined : sourceLocationText
 	const text = props.children ?? sourceLocationText
 	if (!text) return null
 	if (!artifactLocation) return <>{text}</>
@@ -38,19 +40,19 @@ function SourceLocationLinkWithReader(props: {
 			event.preventDefault()
 			event.stopPropagation()
 			void openSourceFile(artifactLocation, run, ploc.region, reader, trace)
-		}} title={sourceLocationText}>{text}</a>
+		}} title={nativeTitle}>{text}</a>
 	}
 
 	const explicitHref = artifactLocation.properties?.['href'] as string | undefined
 	const remoteHref = explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region)
-	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer" title={sourceLocationText}>{text}</a>
+	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer" title={nativeTitle}>{text}</a>
 	if (selectSourceFiles) {
 		return <>
 			<a href="#" className={props.className} onClick={event => {
 				event.preventDefault()
 				event.stopPropagation()
 				setConfirmSourceSelection(true)
-			}} title={sourceLocationText}>{text}</a>
+			}} title={nativeTitle}>{text}</a>
 			{confirmSourceSelection && <Dialog
 				titleProps={{text: 'Local source folder required'}}
 				onDismiss={() => setConfirmSourceSelection(false)}
@@ -76,7 +78,7 @@ function SourceLocationLinkWithReader(props: {
 	return <>{text}</>
 }
 
-export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, trace?: SourceTrace, children?: React.ReactNode, className?: string }) {
+export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, trace?: SourceTrace, children?: React.ReactNode, className?: string, showNativeTitle?: boolean }) {
 	if (!props.ploc) return props.children ? <>{props.children}</> : null
 	return <SourceFileReaderContext.Consumer>
 		{reader => <SourceFileSelectionContext.Consumer>
@@ -87,7 +89,8 @@ export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, t
 				selectSourceFiles={selectSourceFiles}
 				trace={props.trace}
 				children={props.children}
-				className={props.className} />}
+				className={props.className}
+				showNativeTitle={props.showNativeTitle} />}
 		</SourceFileSelectionContext.Consumer>}
 	</SourceFileReaderContext.Consumer>
 }
