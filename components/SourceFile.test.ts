@@ -274,7 +274,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(identifiers.map(mark => mark.textContent)).toEqual(['path', 'path', 'path'])
 	const badges = Array.from(childDocument.querySelectorAll<HTMLElement>('.trace-badge'))
 	expect(badges.map(badge => badge.querySelector('button')?.textContent)).toEqual(['1', '2', '3'])
-	expect(badges[0].dataset.sourceTooltip).toBe([
+	expect(badges[0].title).toBe([
 		'Step 1 of 3 · Source',
 		'Recognized input source',
 		'src/app.ts:1:10',
@@ -287,16 +287,11 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(badges[2].classList.contains('trace-sink')).toBe(true)
 	expect(childDocument.querySelector('.legend-source')).not.toBeNull()
 	expect(childDocument.querySelector('.legend-sink')).not.toBeNull()
-	expect(badges[1].dataset.sourceTooltip).toContain('Step 2 of 3')
-	expect(badges[1].dataset.sourceTooltip).toContain('Call depth: 1')
-	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.dataset.sourceTooltip)
+	expect(badges[1].title).toContain('Step 2 of 3')
+	expect(badges[1].title).toContain('Call depth: 1')
+	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.title)
 		.toContain('Value passes through clean')
-	badges[1].dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))
-	const sourceTooltip = childDocument.querySelector<HTMLElement>('.source-tooltip')
-	expect(sourceTooltip?.hidden).toBe(false)
-	expect(sourceTooltip?.textContent).toContain('Step 2 of 3')
-	badges[1].dispatchEvent(new MouseEvent('mouseout', {bubbles: true}))
-	expect(sourceTooltip?.hidden).toBe(true)
+	expect(childDocument.querySelector('.source-tooltip')).toBeNull()
 	expect(identifiers[1].style.backgroundColor).toBe(badges[1].style.backgroundColor)
 	expect(identifiers[2].style.backgroundColor).toBe(badges[2].style.backgroundColor)
 	expect(identifiers.slice(1).map(mark => mark.style.getPropertyValue('--trace-identifier-color')))
@@ -310,8 +305,8 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(arrows.map(arrow => arrow.getAttribute('aria-label'))).toEqual([
 		'Next trace entry', 'Previous trace entry', 'Next trace entry', 'Previous trace entry',
 	])
-	expect(arrows.every(arrow => arrow.hasAttribute('data-source-tooltip'))).toBe(true)
-	expect(arrows.every(arrow => !arrow.hasAttribute('title'))).toBe(true)
+	expect(arrows.every(arrow => arrow.hasAttribute('title'))).toBe(true)
+	expect(arrows.every(arrow => !arrow.hasAttribute('data-source-tooltip'))).toBe(true)
 	const firstNextArrow = arrows[0] as HTMLElement
 	const blur = jest.spyOn(firstNextArrow, 'blur')
 	firstNextArrow.dispatchEvent(new MouseEvent('click', {bubbles: true, detail: 1}))
@@ -319,7 +314,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
 	expect(sourceStyles).toContain('.trace-badge:hover > a, .trace-badge:focus-within > a')
 	expect(sourceStyles).toContain('pointer-events: none')
-	expect(sourceStyles).toContain('font: 12pt/1.4 Arial, sans-serif')
+	expect(sourceStyles).not.toContain('.source-tooltip')
 	expect(sourceStyles).toContain('.trace-boundary')
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
@@ -328,7 +323,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList
 		.contains('trace-active-highlight-end')).toBe(false)
 	const thirdBadge = childDocument.querySelector('[data-trace-index="2"]') as HTMLElement
-	thirdBadge.querySelector('button')?.dispatchEvent(new MouseEvent('click', {bubbles: true}))
+	identifiers[2].dispatchEvent(new MouseEvent('click', {bubbles: true}))
 	expect(thirdBadge.classList.contains('trace-active')).toBe(true)
 	expect(identifiers[2].style.backgroundColor).toBe(thirdBadge.style.backgroundColor)
 	expect(childDocument.querySelector('[data-trace-index="1"]')?.classList.contains('trace-active')).toBe(false)

@@ -83,8 +83,3 @@ export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
 export function RunAcahBadge(props: {summary: RunAcahSummaryData}) {
 	return <span className={`swcRunAcahBadge${props.summary.incomplete ? ' swcRunAcahIncomplete' : ''}`}>{props.summary.label}</span>
 }
-
-export function RunAcahDetails(props: {summary: RunAcahSummaryData}) {
-	return <div className="swcRunAcahDetails"><strong>ACAH analysis</strong>
-		{props.summary.lines.map((line, index) => <div key={index}>{line}</div>)}</div>
-}

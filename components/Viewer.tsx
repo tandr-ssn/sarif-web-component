@@ -241,13 +241,11 @@ export interface ViewerProps {
 				ref={input => this.sourceDirectoryInput = input ?? undefined}
 				onChange={this.selectSourceFiles}
 				style={{ display: 'none' }} />
-			<Button
-				text={selectedSourceFolderName ? 'Change source folder...' : sourceFolderNeedsReconnect ? 'Reconnect source folder...' : 'Choose source folder...'}
-				tooltipProps={{
-					addAriaDescribedBy: true,
-					text: sourceFolderTooltip,
-				}}
-				onClick={this.selectSourceDirectory} />
+			<span title={sourceFolderTooltip}>
+				<Button
+					text={selectedSourceFolderName ? 'Change source folder...' : sourceFolderNeedsReconnect ? 'Reconnect source folder...' : 'Choose source folder...'}
+					onClick={this.selectSourceDirectory} />
+			</span>
 			{compactSourcePicker
 				? sourceFolderDisplayName && <span>Sources root: <strong>{sourceFolderDisplayName}</strong>{sourceFolderNeedsReconnect && ' (reconnect required)'}</span>
 				: <span>

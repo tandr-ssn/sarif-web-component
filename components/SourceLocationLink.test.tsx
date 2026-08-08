@@ -30,16 +30,3 @@ test('explains local folder access before asking for a source folder', () => {
 	act(() => chooseButton.onClick({} as any))
 	expect(selectSourceFiles).toHaveBeenCalledTimes(1)
 })
-
-test('can omit its native title when a styled tooltip owns the location text', () => {
-	const wrapper = mount(
-		<SourceFileSelectionContext.Provider value={jest.fn()}>
-			<SourceLocationLink
-				ploc={{artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 12}}}
-				run={{} as any}
-				showNativeTitle={false} />
-		</SourceFileSelectionContext.Provider>,
-	)
-
-	expect(wrapper.find('a').prop('title')).toBeUndefined()
-})

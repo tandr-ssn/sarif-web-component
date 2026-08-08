@@ -1,14 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import { Tooltip } from 'azure-devops-ui/TooltipEx'
 import * as React from 'react'
 import { PhysicalLocation, Result } from 'sarif'
 import { Hi } from './Hi'
 import './RunCard.renderCell.scss'
 import { getSourceLocationText, SourceLocationLink } from './SourceLocationLink'
 import { getResultSourceTrace } from './ResultSourceTrace'
-import { TooltipSpan } from './TooltipSpan'
 import { tryOr } from './try'
 
 // TODO:
@@ -56,32 +54,23 @@ export function renderPathCell(result: Result) {
 	return tryOr(
 		() => <div className="flex-column scroll-hidden">
 			<div className={rowClasses}>
-				<div className="fontsize font-size swcWidth100">{/* Constraining width to 100% to play well with the Tooltip. */}
-					<Tooltip overflowOnly={true}>
-						<pre style={{ margin: 0 }}><code><Hi>{result.locations[0].logicalLocations[0].fullyQualifiedName}</Hi></code></pre>
-					</Tooltip>
+				<div className="fontsize font-size swcWidth100" title={result.locations[0].logicalLocations[0].fullyQualifiedName}>
+					<pre style={{ margin: 0 }}><code><Hi>{result.locations[0].logicalLocations[0].fullyQualifiedName}</Hi></code></pre>
 				</div>
 			</div>
 			{tryOr(() => {
 				if (!uri) throw undefined
 				return <div className={rowClasses}>
-					{/* TODO: Enable tooltip if a) inner !== href, or b) inner === href and inner is clipped (aka overflowing) */}
-					<TooltipSpan overflowOnly={true} text={sourceLocationText ?? uri}>
-						<span className="fontSize font-size secondary-text swcColorUnset swcWidth100">
-							<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace} showNativeTitle={false}>{uriWithEllipsis}</SourceLocationLink>
-						</span>
-					</TooltipSpan>
+					<span className="fontSize font-size secondary-text swcColorUnset swcWidth100" title={sourceLocationText ?? uri}>
+						<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
+					</span>
 				</div>
 			})}
 		</div>,
 		() => <div className="flex-row scroll-hidden">{/* From Advanced table demo. */}
-			{/* Since we don't know when the ellipsis text is in effect, thus TooltipSpan.overflowOnly=false/default */}
-			{/* Consider overflowOnly=false for the other branch above. */}
-			<TooltipSpan text={sourceLocationText ?? uri}>
-				<span className="swcColorUnset">
-					<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace} showNativeTitle={false}>{uriWithEllipsis}</SourceLocationLink>
-				</span>
-			</TooltipSpan>
+			<span className="swcColorUnset" title={sourceLocationText ?? uri}>
+				<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
+			</span>
 		</div>
 	)
 }

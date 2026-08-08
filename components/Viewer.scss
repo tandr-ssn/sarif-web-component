@@ -32,12 +32,6 @@
 	font-weight: bold;
 }
 
-// Azure DevOps UI tooltips otherwise use body-m (14px), smaller than the viewer text.
-.bolt-tooltip-content {
-	font-size: 12pt;
-	line-height: 1.4;
-}
-
 .bolt-page { // Parent is #app which is display block.
 	height: 100%;
 

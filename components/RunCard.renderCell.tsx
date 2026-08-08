@@ -96,8 +96,7 @@ export function renderCell<T extends ISimpleTableCell>(
 			? ExpandableTreeCell({
 				children: <div className="swcRowRule">
 					<span>Public review variants at&nbsp;</span>
-					<SourceLocationLink ploc={physicalLocation} run={result.run}
-						showNativeTitle={false}>{locationText}</SourceLocationLink>
+					<SourceLocationLink ploc={physicalLocation} run={result.run}>{locationText}</SourceLocationLink>
 					<Pill size={PillSize.compact}>{data.results.length}</Pill>
 				</div>,
 				colspan,

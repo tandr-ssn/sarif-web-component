@@ -23,10 +23,9 @@ import {Pill, PillSize} from "azure-devops-ui/Pill"
 import {SortOrder} from 'azure-devops-ui/Table'
 import {Tree, ITreeColumn} from 'azure-devops-ui/TreeEx'
 import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
-import {Tooltip} from 'azure-devops-ui/TooltipEx'
 import {ResultColumnHeader} from './ResultColumnHeader'
 import {copySelectedTableCells} from './TableClipboard'
-import {getRunAcahSummary, RunAcahBadge, RunAcahDetails} from './RunAcahSummary'
+import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 
 @observer export class RunCard extends Component<{ runStore: RunStore, index: number, runCount: number }> {
 	@observable private show = true
@@ -161,27 +160,25 @@ import {getRunAcahSummary, RunAcahBadge, RunAcahDetails} from './RunAcahSummary'
 			{(observedProps: { itemProvider }) => {
 				const qualityDomain = tryOr(() => runStore.run.tool.driver.properties['microsoft/qualityDomain'])
 				const acahSummary = getRunAcahSummary(runStore.run)
+				const runTitle = [
+					tryOr(
+						() => runStore.run.tool.driver.fullName,
+						() => `${runStore.run.tool.driver.name} ${runStore.run.tool.driver.semanticVersion || ''}`.trim(),
+					),
+					tryOr(
+						() => runStore.run.tool.driver.fullDescription.text,
+						() => runStore.run.tool.driver.shortDescription.text,
+					),
+					...(acahSummary ? ['ACAH analysis', ...acahSummary.lines] : []),
+				].filter(Boolean).join('\n')
 				return <Card
 					titleProps={{
 						ariaLevel: 2,
-						text: <Tooltip
-							text={<>
-								<div>{tryOr(
-									() => runStore.run.tool.driver.fullName,
-									() => `${runStore.run.tool.driver.name} ${runStore.run.tool.driver.semanticVersion || ''}`,
-								)}</div>
-								{tryOr(
-									() => <div>{runStore.run.tool.driver.fullDescription.text}</div>,
-									() => <div>{runStore.run.tool.driver.shortDescription.text}</div>,
-								)}
-								{acahSummary && <RunAcahDetails summary={acahSummary} />}
-							</> as any}>
-							<span className={'swcRunTitle'}>
+						text: <span className={'swcRunTitle'} title={runTitle}>
 								<Hi>{runStore.driverName}</Hi>{qualityDomain && ` (${qualityDomain})`}
 								<Pill size={PillSize.compact}>{runStore.filteredCount}</Pill>
 								{acahSummary && <RunAcahBadge summary={acahSummary} />}
-							</span>{/* Tooltip marked as React.Children.only thus extra span. */}
-						</Tooltip> as any
+							</span> as any
 					}}
 					contentProps={{ contentPadding: false }}
 					headerCommandBarItems={[
