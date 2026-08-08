@@ -48,7 +48,7 @@ class FieldTreeNode extends React.Component<{
 			<input type="checkbox" checked={checkedCount === paths.length} ref={this.setChecked}
 				onClick={event => event.stopPropagation()}
 				onChange={event => this.toggle(event.currentTarget.checked)} />
-			{node.name}
+			{node.displayName ?? node.name}
 		</label>
 		return <li>
 			{node.children.length

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 import {Log, Result} from 'sarif'
+import {getResultAcah} from './Acah'
 
 export const DEFAULT_RESULT_FIELDS = ['Path', 'Details', 'Level', 'Kind']
 export const BUILT_IN_RESULT_FIELDS = new Set([
@@ -9,8 +10,10 @@ export const BUILT_IN_RESULT_FIELDS = new Set([
 	'Rule', 'Actions', 'Baseline', 'Bug', 'Age', 'First Observed',
 ])
 
-function capitalize(value: string): string {
-	return value ? value[0].toUpperCase() + value.slice(1) : value
+function readableFieldSegment(value: string): string {
+	if (value.toLowerCase() === 'acah') return 'ACAH'
+	const words = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ')
+	return words ? words[0].toUpperCase() + words.slice(1) : words
 }
 
 /** Returns readable shortest-unique-suffix labels while leaving built-in names unchanged. */
@@ -29,12 +32,13 @@ export function getResultFieldDisplayNames(paths: string[]): Map<string, string>
 				break
 			}
 		}
-		return [path, suffix.split('.').map(capitalize).join(' ')]
+		return [path, suffix.split('.').map(readableFieldSegment).join(' ')]
 	}))
 }
 
 export interface ResultFieldNode {
 	name: string
+	displayName?: string
 	path?: string
 	children: ResultFieldNode[]
 }
@@ -58,9 +62,23 @@ function collectLeafPaths(value: unknown, segments: string[], paths: Set<string>
 	})
 }
 
+function resultForFieldDiscovery(result: Result, run, rule): Result {
+	const properties = {...result.properties} as any
+	const acah = getResultAcah(result, run, rule)
+	if (acah) properties.acah = acah
+	else delete properties.acah
+	return {...result, properties} as Result
+}
+
 export function discoverResultFieldPaths(logs: Log[] | undefined): string[] {
 	const paths = new Set<string>()
-	logs?.forEach(log => log.runs?.forEach(run => run.results?.forEach(result => collectLeafPaths(result, [], paths, new Set(), 0))))
+	logs?.forEach(log => log.runs?.forEach(run => {
+		const rules = run.tool?.driver?.rules ?? []
+		run.results?.forEach(result => {
+			const rule = result.ruleIndex === undefined ? rules.find(candidate => candidate.id === result.ruleId) : rules[result.ruleIndex]
+			collectLeafPaths(resultForFieldDiscovery(result, run, rule), [], paths, new Set(), 0)
+		})
+	}))
 	return Array.from(paths)
 		.filter(path => !['level', 'kind'].includes(path))
 		.sort((left, right) => left.localeCompare(right))
@@ -73,7 +91,7 @@ export function buildResultFieldTree(paths: string[]): ResultFieldNode[] {
 		path.split('.').forEach((name, index, segments) => {
 			let node = nodes.find(candidate => candidate.name === name)
 			if (!node) {
-				node = {name, children: []}
+				node = {name, displayName: readableFieldSegment(name), children: []}
 				nodes.push(node)
 			}
 			if (index === segments.length - 1) node.path = path
@@ -92,7 +110,10 @@ function valuesAtPath(value: unknown, segments: string[]): unknown[] {
 }
 
 export function getResultFieldValue(result: Result, path: string): string {
-	const values = valuesAtPath(result, path.split('.'))
+	const segments = path.split('.')
+	const values = path.startsWith('properties.acah.')
+		? valuesAtPath(getResultAcah(result), segments.slice(2))
+		: valuesAtPath(result, segments)
 		.filter(value => value !== undefined && value !== null)
 		.map(value => typeof value === 'object' ? JSON.stringify(value) : String(value))
 	return Array.from(new Set(values)).join(', ')

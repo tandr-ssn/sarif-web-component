@@ -4,21 +4,24 @@ import {buildResultFieldTree, discoverResultFieldPaths, getResultFieldDisplayNam
 test('discovers nested scalar fields and ignores viewer back-links', () => {
 	const result: any = {
 		message: {text: 'Finding'},
-		properties: {audit: {selection: {status: 'reviewed'}}},
+		properties: {acah: {classification: 'taint-unverified', status: 'review', resolution: 'native', sink: {selection: {status: 'confirmed'}}}},
 		locations: [{physicalLocation: {artifactLocation: {uri: 'src/app.ts'}}}],
 	}
-	result.run = {results: [result]}
+	result.run = {properties: {acah: {formatVersion: 3}}, results: [result]}
 	result._rule = {id: 'internal'}
-	const logs = [{runs: [{results: [result]}]}] as Log[]
+	const logs = [{runs: [{...result.run, results: [result]}]}] as Log[]
 
 	const paths = discoverResultFieldPaths(logs)
-	expect(paths).toContain('properties.audit.selection.status')
+	expect(paths).toContain('properties.acah.sink.selection.status')
 	expect(paths).toContain('locations.physicalLocation.artifactLocation.uri')
 	expect(paths.some(path => path.startsWith('run.'))).toBe(false)
 	expect(paths.some(path => path.startsWith('_rule.'))).toBe(false)
 
 	const properties = buildResultFieldTree(paths).find(node => node.name === 'properties')
-	expect(properties.children[0].children[0].children[0].path).toBe('properties.audit.selection.status')
+	expect(properties.displayName).toBe('Properties')
+	expect(properties.children.find(node => node.name === 'acah')?.displayName).toBe('ACAH')
+	expect(properties.children.find(node => node.name === 'acah')?.children.find(node => node.name === 'sink')
+		?.children.find(node => node.name === 'selection')?.children[0].path).toBe('properties.acah.sink.selection.status')
 })
 
 test('combines values from arrays into one field value', () => {
@@ -27,16 +30,16 @@ test('combines values from arrays into one field value', () => {
 })
 
 test('uses shortest unique field suffixes as display names', () => {
-	expect(getResultFieldDisplayNames(['properties.audit.confidence'])
-		.get('properties.audit.confidence')).toBe('Confidence')
+	expect(getResultFieldDisplayNames(['properties.acah.sinkFamily'])
+		.get('properties.acah.sinkFamily')).toBe('Sink Family')
 	const names = getResultFieldDisplayNames([
 		'Path',
-		'properties.audit.confidence',
+		'properties.acah.confidence',
 		'properties.analysis.confidence',
-		'properties.audit.status',
+		'properties.acah.status',
 	])
 	expect(names.get('Path')).toBe('Path')
-	expect(names.get('properties.audit.confidence')).toBe('Audit Confidence')
+	expect(names.get('properties.acah.confidence')).toBe('ACAH Confidence')
 	expect(names.get('properties.analysis.confidence')).toBe('Analysis Confidence')
-	expect(names.get('properties.audit.status')).toBe('Status')
+	expect(names.get('properties.acah.status')).toBe('Status')
 })

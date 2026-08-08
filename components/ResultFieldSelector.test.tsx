@@ -10,17 +10,17 @@ Enzyme.configure({adapter: new Adapter()})
 test('renders a nested field tree and updates the selection', () => {
 	const selected = observable.box(['Path', 'Details', 'Level', 'Kind'])
 	const wrapper = mount(<ResultFieldSelector
-		fieldPaths={['Path', 'Details', 'Level', 'Kind', 'properties.audit.selection.status']}
+		fieldPaths={['Path', 'Details', 'Level', 'Kind', 'properties.acah.sink.selection.status']}
 		selected={selected} />)
 	wrapper.find('.swcResultFieldSelector > button').simulate('click')
 	wrapper.update()
 
-	expect(document.body.textContent).toContain('properties')
-	expect(document.body.textContent).toContain('audit')
-	expect(document.body.textContent).toContain('selection')
-	expect(document.body.textContent).toContain('status')
-	const status = document.querySelector('label[title="properties.audit.selection.status"] input') as HTMLInputElement
+	expect(document.body.textContent).toContain('Properties')
+	expect(document.body.textContent).toContain('ACAH')
+	expect(document.body.textContent).toContain('Selection')
+	expect(document.body.textContent).toContain('Status')
+	const status = document.querySelector('label[title="properties.acah.sink.selection.status"] input') as HTMLInputElement
 	status.click()
-	expect(selected.get()).toContain('properties.audit.selection.status')
+	expect(selected.get()).toContain('properties.acah.sink.selection.status')
 	wrapper.unmount()
 })
