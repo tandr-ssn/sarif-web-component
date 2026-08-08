@@ -40,9 +40,9 @@ test('shows context without exposing value previews', () => {
 	expect(wrapper.html()).not.toContain('private source text')
 })
 
-test('does not render old or unknown formats', () => {
-	const old = {run: {properties: {auditscan: {format_version: 2}}}, properties: {audit: {status: 'review'}}} as unknown as Result
+test('does not render missing or unknown formats', () => {
+	const missing = {run: {properties: {}}, properties: {otherTool: {status: 'review'}}} as unknown as Result
 	const future = {run: {properties: {acah: {formatVersion: 4}}}, properties: {acah: {status: 'review'}}} as unknown as Result
-	expect(mount(<AcahSummary result={old} />).isEmptyRender()).toBe(true)
+	expect(mount(<AcahSummary result={missing} />).isEmptyRender()).toBe(true)
 	expect(mount(<AcahSummary result={future} />).isEmptyRender()).toBe(true)
 })

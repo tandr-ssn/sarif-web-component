@@ -36,7 +36,9 @@ Call stacks in `result.stacks` and execution paths in `result.codeFlows` are dis
 
 The opened source toolbar supports previous/next readable trace navigation (`[` and `]`), reports unavailable locations, and can copy the current path, path with line number, or the trace summary. Source reads are cached for the current reader and SARIF run. Supported C#, Go, Java, JavaScript/TypeScript, JSON, and XML-family files receive offline syntax coloring; other file types remain escaped plain text.
 
-The Fields menu controls the result-table columns. Path, Details, Level, and Kind are selected by default. Other scalar SARIF values are shown in a searchable tree and may be selected at any depth, for example `properties.audit.selection.status`. Values found in arrays are combined into one column rather than exposed as numeric array indices.
+The Fields menu controls the result-table columns. Path, Details, Level, and Kind are selected by default. Other scalar SARIF values are shown in a searchable tree and may be selected at any depth, for example `properties.acah.sink.selection.status`. Values found in arrays are combined into one column rather than exposed as numeric array indices.
+
+ACAH SARIF format v3 receives additional offline presentation when `run.properties.acah.formatVersion` is `3`. Finding summaries merge rule defaults with result metadata, while result values remain authoritative. Trace roles and exact symbols drive source, propagation, boundary, and sink presentation; an unresolved boundary is not presented as a proven input source. Potentially sensitive `valuePreview` data is never placed in automatic summaries or tooltips.
 
 To build and open the standalone viewer locally, install Node.js 22.15 or newer and npm, then run this from a fresh checkout:
 

@@ -6,7 +6,7 @@ const v3Run = {properties: {acah: {formatVersion: 3}}} as unknown as Run
 test('accepts only ACAH format v3', () => {
 	expect(getRunAcah(v3Run)).toEqual({formatVersion: 3})
 	expect(getRunAcah({properties: {acah: {formatVersion: 2}}} as unknown as Run)).toBeUndefined()
-	expect(getRunAcah({properties: {audit: {formatVersion: 3}}} as unknown as Run)).toBeUndefined()
+	expect(getRunAcah({properties: {otherTool: {formatVersion: 3}}} as unknown as Run)).toBeUndefined()
 })
 
 test('merges rule defaults with authoritative result metadata', () => {

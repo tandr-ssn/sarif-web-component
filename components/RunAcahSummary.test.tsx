@@ -28,7 +28,7 @@ test('marks partial native coverage as incomplete', () => {
 	expect(summary?.incomplete).toBe(true)
 })
 
-test('shows v3 identity without optional analysis metadata and rejects old metadata', () => {
+test('shows v3 identity without optional analysis metadata', () => {
 	expect(getRunAcahSummary(runWithAcah({}))).toEqual({label: 'ACAH v3', lines: ['Format: ACAH SARIF v3'], incomplete: false})
-	expect(getRunAcahSummary({properties: {auditscan: {format_version: 2}}} as unknown as Run)).toBeUndefined()
+	expect(getRunAcahSummary({properties: {otherTool: {formatVersion: 3}}} as unknown as Run)).toBeUndefined()
 })
