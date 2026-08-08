@@ -64,7 +64,7 @@ test('renders result stacks and code flows', () => {
 		'Call stack (1 frames)',
 		'Code flow (1 step) · Partial',
 	])
-	expect(wrapper.find('.swcTraceStatus').prop('title')).toBe([
+	expect(wrapper.find('.swcTraceStatus').prop('data-swc-tooltip')).toBe([
 		"Partial trace within ACAH's bounded static model · Construction to sink",
 		'This does not prove runtime reachability or exploitability.',
 		'Caller origin is unresolved',
@@ -109,8 +109,8 @@ test('labels a complete ACAH trace without implying runtime proof', () => {
 	} as unknown as Result
 	const wrapper = mount(<ExecutionTrace result={result} />)
 	expect(wrapper.find('summary').text()).toBe('Code flow (0 steps) · Complete')
-	expect(wrapper.find('.swcTraceStatus').prop('title')).toContain("Complete trace within ACAH's bounded static model")
-	expect(wrapper.find('.swcTraceStatus').prop('title')).toContain('does not prove runtime reachability')
+	expect(wrapper.find('.swcTraceStatus').prop('data-swc-tooltip')).toContain("Complete trace within ACAH's bounded static model")
+	expect(wrapper.find('.swcTraceStatus').prop('data-swc-tooltip')).toContain('does not prove runtime reachability')
 })
 
 test('selects one sink branch while retaining every branch for copy', () => {
