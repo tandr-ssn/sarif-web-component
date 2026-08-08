@@ -92,6 +92,6 @@ export function AcahSummary(props: {result: Result}) {
 		contextBadge('Verification', 'Verification', acah.verification)].filter(Boolean) as AcahBadge[]
 	if (!badges.length) return null
 	return <div className="swcAcahSummary" aria-label="ACAH finding summary">
-		{badges.map((badge, index) => <span className="swcAcahBadge" title={badge.title} key={index}>{badge.label}</span>)}
+		{badges.map((badge, index) => <span className="swcAcahBadge" data-swc-tooltip={badge.title} key={index}>{badge.label}</span>)}
 	</div>
 }

@@ -35,6 +35,7 @@ import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
 import {createResultCsv, downloadResultCsv, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
+import {installTooltips} from './Tooltip'
 
 export interface ViewerProps {
 	logs?: Log[]
@@ -124,6 +125,10 @@ export interface ViewerProps {
 				.filter(key => key.startsWith('Column:') && !selected.includes(key.slice('Column:'.length)))
 				.forEach(key => this.filter.resetFilterItemState(key))
 		})
+	}
+
+	componentDidMount() {
+		installTooltips(window)
 	}
 
 	@observable warnOldVersion = false
@@ -241,7 +246,7 @@ export interface ViewerProps {
 				ref={input => this.sourceDirectoryInput = input ?? undefined}
 				onChange={this.selectSourceFiles}
 				style={{ display: 'none' }} />
-			<span title={sourceFolderTooltip}>
+			<span data-swc-tooltip={sourceFolderTooltip}>
 				<Button
 					text={selectedSourceFolderName ? 'Change source folder...' : sourceFolderNeedsReconnect ? 'Reconnect source folder...' : 'Choose source folder...'}
 					onClick={this.selectSourceDirectory} />

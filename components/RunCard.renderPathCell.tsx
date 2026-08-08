@@ -54,21 +54,21 @@ export function renderPathCell(result: Result) {
 	return tryOr(
 		() => <div className="flex-column scroll-hidden">
 			<div className={rowClasses}>
-				<div className="fontsize font-size swcWidth100" title={result.locations[0].logicalLocations[0].fullyQualifiedName}>
+				<div className="fontsize font-size swcWidth100" data-swc-tooltip={result.locations[0].logicalLocations[0].fullyQualifiedName}>
 					<pre style={{ margin: 0 }}><code><Hi>{result.locations[0].logicalLocations[0].fullyQualifiedName}</Hi></code></pre>
 				</div>
 			</div>
 			{tryOr(() => {
 				if (!uri) throw undefined
 				return <div className={rowClasses}>
-					<span className="fontSize font-size secondary-text swcColorUnset swcWidth100" title={sourceLocationText ?? uri}>
+					<span className="fontSize font-size secondary-text swcColorUnset swcWidth100" data-swc-tooltip={sourceLocationText ?? uri}>
 						<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
 					</span>
 				</div>
 			})}
 		</div>,
 		() => <div className="flex-row scroll-hidden">{/* From Advanced table demo. */}
-			<span className="swcColorUnset" title={sourceLocationText ?? uri}>
+			<span className="swcColorUnset" data-swc-tooltip={sourceLocationText ?? uri}>
 				<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
 			</span>
 		</div>

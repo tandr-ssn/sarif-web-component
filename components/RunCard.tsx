@@ -174,7 +174,7 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 				return <Card
 					titleProps={{
 						ariaLevel: 2,
-						text: <span className={'swcRunTitle'} title={runTitle}>
+						text: <span className={'swcRunTitle'} data-swc-tooltip={runTitle}>
 								<Hi>{runStore.driverName}</Hi>{qualityDomain && ` (${qualityDomain})`}
 								<Pill size={PillSize.compact}>{runStore.filteredCount}</Pill>
 								{acahSummary && <RunAcahBadge summary={acahSummary} />}

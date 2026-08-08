@@ -19,7 +19,7 @@ test('renders a nested field tree and updates the selection', () => {
 	expect(document.body.textContent).toContain('ACAH')
 	expect(document.body.textContent).toContain('Selection')
 	expect(document.body.textContent).toContain('Status')
-	const status = document.querySelector('label[title="properties.acah.sink.selection.status"] input') as HTMLInputElement
+	const status = document.querySelector('label[data-swc-tooltip="properties.acah.sink.selection.status"] input') as HTMLInputElement
 	status.click()
 	expect(selected.get()).toContain('properties.acah.sink.selection.status')
 	wrapper.unmount()

@@ -38,19 +38,19 @@ function SourceLocationLinkWithReader(props: {
 			event.preventDefault()
 			event.stopPropagation()
 			void openSourceFile(artifactLocation, run, ploc.region, reader, trace)
-		}} title={sourceLocationText}>{text}</a>
+		}} data-swc-tooltip={sourceLocationText}>{text}</a>
 	}
 
 	const explicitHref = artifactLocation.properties?.['href'] as string | undefined
 	const remoteHref = explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region)
-	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer" title={sourceLocationText}>{text}</a>
+	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer" data-swc-tooltip={sourceLocationText}>{text}</a>
 	if (selectSourceFiles) {
 		return <>
 			<a href="#" className={props.className} onClick={event => {
 				event.preventDefault()
 				event.stopPropagation()
 				setConfirmSourceSelection(true)
-			}} title={sourceLocationText}>{text}</a>
+			}} data-swc-tooltip={sourceLocationText}>{text}</a>
 			{confirmSourceSelection && <Dialog
 				titleProps={{text: 'Local source folder required'}}
 				onDismiss={() => setConfirmSourceSelection(false)}

@@ -140,10 +140,10 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 						input.value = ''
 					}} />
 				<Button className="demoOpen" text="Open..." onClick={() => void this.openFile()} />
-				{this.sarifFileHandle && <span title="Re-read the current SARIF file from disk.">
+				{this.sarifFileHandle && <span data-swc-tooltip="Re-read the current SARIF file from disk.">
 					<Button text="Reload" onClick={() => void this.reloadFile()} />
 				</span>}
-				{this.currentSarifFileName && <span className="demoSarifName" title={this.currentSarifFileName}>
+				{this.currentSarifFileName && <span className="demoSarifName" data-swc-tooltip={this.currentSarifFileName}>
 					SARIF: <strong>{this.currentSarifFileName}</strong>
 				</span>}
 				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>

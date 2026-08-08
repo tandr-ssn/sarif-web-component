@@ -25,9 +25,9 @@ test('summarizes ACAH v3 risk metadata and keeps evidence in tooltips', () => {
 	expect(wrapper.find('.swcAcahBadge').map(badge => badge.text())).toEqual([
 		'Review', 'Medium confidence', 'Filesystem operation', 'Partial trace',
 	])
-	expect(wrapper.find('.swcAcahBadge').at(0).prop('title')).toContain('Classification: Taint unverified')
-	expect(wrapper.find('.swcAcahBadge').at(2).prop('title')).toContain('Sensitive parameter: path')
-	expect(wrapper.find('.swcAcahBadge').at(3).prop('title')).toContain('does not prove runtime reachability')
+	expect(wrapper.find('.swcAcahBadge').at(0).prop('data-swc-tooltip')).toContain('Classification: Taint unverified')
+	expect(wrapper.find('.swcAcahBadge').at(2).prop('data-swc-tooltip')).toContain('Sensitive parameter: path')
+	expect(wrapper.find('.swcAcahBadge').at(3).prop('data-swc-tooltip')).toContain('does not prove runtime reachability')
 })
 
 test('shows context without exposing value previews', () => {

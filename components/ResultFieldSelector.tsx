@@ -44,7 +44,7 @@ class FieldTreeNode extends React.Component<{
 		if (!includesSearch(node, search)) return null
 		const paths = leafPaths(node)
 		const checkedCount = paths.filter(path => selected.get().includes(path)).length
-		const label = <label title={node.path} onClick={event => event.stopPropagation()}>
+		const label = <label data-swc-tooltip={node.path} onClick={event => event.stopPropagation()}>
 			<input type="checkbox" checked={checkedCount === paths.length} ref={this.setChecked}
 				onClick={event => event.stopPropagation()}
 				onChange={event => this.toggle(event.currentTarget.checked)} />
@@ -79,7 +79,7 @@ export class ResultFieldSelector extends React.Component<{
 		const search = this.search.trim().toLowerCase()
 		return <div className="swcResultFieldSelector">
 			<button type="button" ref={element => this.anchor = element ?? undefined}
-				title="Choose which SARIF result fields are shown as columns"
+				data-swc-tooltip="Choose which SARIF result fields are shown in findings and exports"
 				aria-expanded={this.open}
 				onClick={() => this.open = !this.open}>Fields ({this.props.selected.get().length}) <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
 			{this.open && this.anchor && <Callout

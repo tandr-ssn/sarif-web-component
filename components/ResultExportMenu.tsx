@@ -14,7 +14,7 @@ export class ResultExportMenu extends React.Component<{
 		const count = filtered ? filteredCount : allCount
 		return <div className="swcResultExport">
 			<button type="button"
-				title={`Export ${count} findings using the selected Fields columns`}
+				data-swc-tooltip={`Export ${count} findings using the selected Fields`}
 				disabled={!count}
 				onClick={() => onExport(scope)}>Export {scope}</button>
 		</div>

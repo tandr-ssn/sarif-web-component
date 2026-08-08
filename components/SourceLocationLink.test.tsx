@@ -22,7 +22,7 @@ test('explains local folder access before asking for a source folder', () => {
 		</SourceFileSelectionContext.Provider>,
 	)
 
-	expect(wrapper.find('a').prop('title')).toBe('src/file.ts:12:7')
+	expect(wrapper.find('a').prop('data-swc-tooltip')).toBe('src/file.ts:12:7')
 	wrapper.find('a').simulate('click')
 	expect(selectSourceFiles).not.toHaveBeenCalled()
 	expect(wrapper.find(Dialog).text()).toContain('Files stay on your computer and are not uploaded')

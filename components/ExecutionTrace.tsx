@@ -143,7 +143,7 @@ function CodeFlows(props: { result: Result, run: Run }) {
 	const allFlowText = codeFlows.map((flow, index) => codeFlowText(props.result, flow, index, codeFlows.length)).filter(Boolean).join('\n\n')
 	return <details className="swcTrace" data-copy-trace-value={allFlowText}>
 		<summary>Code flow{codeFlows.length > 1 ? `s (${codeFlows.length} branches)` : ''} ({stepCount} {stepCount === 1 ? 'step' : 'steps'})
-			{traceSummary && <span className="swcTraceStatus" title={traceSummary.title}> · {traceSummary.label}</span>}
+			{traceSummary && <span className="swcTraceStatus" data-swc-tooltip={traceSummary.title}> · {traceSummary.label}</span>}
 		</summary>
 		{codeFlows.length > 1 && <div className="swcTraceBranches" role="tablist" aria-label="Sink branches">
 			{codeFlows.map((flow, index) => {

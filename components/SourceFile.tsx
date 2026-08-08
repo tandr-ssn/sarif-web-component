@@ -5,6 +5,7 @@ import * as React from 'react'
 import {ArtifactLocation, PhysicalLocation, Region, Run, ThreadFlowLocation} from 'sarif'
 import {highlightSourceSegment} from './SyntaxHighlight'
 import {AcahTraceRole, getTraceStepAcah, getTraceStepRole} from './Acah'
+import {installTooltips} from './Tooltip'
 
 export interface SourceFile {
 	name: string
@@ -173,7 +174,7 @@ function renderHighlightedText(text: string, lineNumber: number, highlights: Sou
 			? `; --trace-identifier-color: ${identifierHighlights[0].highlight.color}`
 			: ''
 		const tooltip = Array.from(new Set(active.map(value => value.highlight.tooltip).filter(Boolean))).join('\n\n')
-		const tooltipData = tooltip ? ` title="${escapeHtml(tooltip)}"` : ''
+		const tooltipData = tooltip ? ` data-swc-tooltip="${escapeHtml(tooltip)}"` : ''
 		return `<mark class="trace-highlight${identifierClass}${locationClass}"${traceData}${locationTraceData}${locationColorData}${tooltipData} data-default-highlight-color="${backgroundColor}" style="background-color: ${backgroundColor}${identifierStyle}">${segment}</mark>`
 	}).join('')
 }
@@ -192,12 +193,12 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 			: highlight.isEnd ? 'end' : undefined
 	const title = highlight.tooltip ?? `Trace entry ${highlight.traceIndex + 1}${position ? ` (${position})` : ''}`
 	const previous = highlight.previousEntry
-		? `<a class="trace-previous" href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" title="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
+		? `<a class="trace-previous" href="${escapeHtml(fragmentHref(highlight.previousEntry.id))}" data-activate-trace="${highlight.previousEntry.traceIndex}" data-swc-tooltip="Previous trace entry: ${escapeHtml(highlight.previousEntry.name)}" aria-label="Previous trace entry">&#x2190;</a>`
 		: ''
 	const next = highlight.nextEntry
-		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" title="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
+		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" data-swc-tooltip="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
-	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" title="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
+	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" data-swc-tooltip="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
 function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
@@ -228,9 +229,9 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 		: '<span class="legend-swatch legend-start"></span>Start\n<span class="legend-swatch legend-active"></span>Active\n<span class="legend-swatch legend-end"></span>End'
 	const traceNavigation = trace ? `
 		<strong>${escapeHtml(trace.label)}</strong>
-		<button type="button" data-trace-action="previous" title="Previous readable trace entry ([)">&#x2190; Previous</button>
+		<button type="button" data-trace-action="previous" data-swc-tooltip="Previous readable trace entry ([)">&#x2190; Previous</button>
 		<span data-trace-position>Entry ${trace.activeIndex + 1} of ${trace.totalEntries} &middot; File ${activeFileIndex + 1} of ${views.length}</span>
-		<button type="button" data-trace-action="next" title="Next readable trace entry (])">Next &#x2192;</button>
+		<button type="button" data-trace-action="next" data-swc-tooltip="Next readable trace entry (])">Next &#x2192;</button>
 		<span class="trace-legend" aria-label="Trace color legend">
 			${traceLegend}
 		</span>` : ''
@@ -255,6 +256,7 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 
 function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefined, activeView: SourceFileView): void {
 	const document = target.document
+	installTooltips(target)
 	const toolbar = document.querySelector('.source-toolbar') as HTMLElement
 	const traceIndices = Array.from(document.querySelectorAll('.trace-badge[data-trace-index]'))
 		.map(badge => +(badge.getAttribute('data-trace-index') ?? -1))
