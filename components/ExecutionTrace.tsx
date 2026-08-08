@@ -134,9 +134,10 @@ function CodeFlows(props: { result: Result, run: Run }) {
 	if (!props.result.codeFlows?.length) return null
 	const traceSummary = acahTraceSummary(props.result)
 	const codeFlows = props.result.codeFlows
-	const selectedFlow = codeFlows[Math.min(selectedIndex, codeFlows.length - 1)]
+	const activeIndex = Math.min(selectedIndex, codeFlows.length - 1)
+	const selectedFlow = codeFlows[activeIndex]
 	const selectedLabel = messageText(selectedFlow.message) ?? (codeFlows.length > 1
-		? `Code flow ${Math.min(selectedIndex, codeFlows.length - 1) + 1}`
+		? `Code flow ${activeIndex + 1}`
 		: 'Code flow')
 	const stepCount = selectedFlow.threadFlows?.reduce((total, threadFlow) => total + (threadFlow.locations?.length ?? 0), 0) ?? 0
 	const allFlowText = codeFlows.map((flow, index) => codeFlowText(props.result, flow, index, codeFlows.length)).filter(Boolean).join('\n\n')
@@ -147,8 +148,8 @@ function CodeFlows(props: { result: Result, run: Run }) {
 		{codeFlows.length > 1 && <div className="swcTraceBranches" role="tablist" aria-label="Sink branches">
 			{codeFlows.map((flow, index) => {
 				const label = messageText(flow.message) ?? `Code flow ${index + 1}`
-				return <button type="button" role="tab" key={index} aria-selected={index === selectedIndex}
-					className={index === selectedIndex ? 'swcTraceBranch swcTraceBranchSelected' : 'swcTraceBranch'}
+				return <button type="button" role="tab" key={index} aria-selected={index === activeIndex}
+					className={index === activeIndex ? 'swcTraceBranch swcTraceBranchSelected' : 'swcTraceBranch'}
 					onClick={() => setSelectedIndex(index)}>{label}</button>
 			})}
 		</div>}
