@@ -11,6 +11,7 @@ import { Viewer } from './Viewer'
 import { MobxFilter } from './FilterBar'
 import {observable} from 'mobx'
 import {SortOrder} from 'azure-devops-ui/Table'
+import {isResultVariantGroup} from './ResultVariantGroup'
 jest.mock('./FilterBar')
 
 it('does not explode', () => { // Bare bones perf is 0.2s
@@ -60,6 +61,31 @@ it('sorts rule groups by ruleId when that column is selected', () => {
 	expect(ruleIds()).toEqual(['rule-a', 'rule-b', 'rule-c'])
 	runStore.setColumnSort(0, SortOrder.descending)
 	expect(ruleIds()).toEqual(['rule-c', 'rule-b', 'rule-a'])
+})
+
+it('groups public review variants while preserving finding counts and exports', () => {
+	const results = ['First interpretation', 'Second interpretation'].map(text => ({
+		ruleId: 'public.rule',
+		message: {text},
+		locations: [{physicalLocation: {
+			artifactLocation: {uri: 'src/service.ts'},
+			region: {startLine: 14, startColumn: 3, endLine: 14, endColumn: 18},
+		}}],
+		properties: {acah: {classification: 'public-rule-review'}},
+	})) as unknown as Run['results']
+	const run = {
+		tool: {driver: {name: 'ACAH'}},
+		properties: {acah: {formatVersion: 3}},
+		results,
+	} as unknown as Run
+	const filter = {getState: () => ({})} as MobxFilter
+	const runStore = new RunStore(run, 0, filter, observable.box(false))
+
+	const group = runStore.rulesFiltered[0].childItemsAll[0]
+	expect(isResultVariantGroup(group.data)).toBe(true)
+	expect(group.childItemsAll).toHaveLength(2)
+	expect(runStore.filteredCount).toBe(2)
+	expect(runStore.filteredResults).toEqual(results)
 })
 
 it('handles multiple logs', () => {

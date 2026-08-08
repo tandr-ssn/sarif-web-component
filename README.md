@@ -40,6 +40,12 @@ The Fields menu controls the result-table columns. Path, Details, Level, and Kin
 
 ACAH SARIF format v3 receives additional offline presentation when `run.properties.acah.formatVersion` is `3`. Finding summaries merge rule defaults with result metadata, while result values remain authoritative. Trace roles and exact symbols drive source, propagation, boundary, and sink presentation; an unresolved boundary is not presented as a proven input source. Potentially sensitive `valuePreview` data is never placed in automatic summaries or tooltips.
 
+Low-confidence ACAH `public-rule-review` results with the same rule and exact
+primary source span are shown as one expandable review site. Every original
+result remains available beneath the site, participates in filtering and
+counts, and is preserved in exports; the viewer does not suppress or merge its
+messages, traces, levels, or metadata.
+
 To build and open the standalone viewer locally, install Node.js 22.15 or newer and npm, then run this from a fresh checkout:
 
 ```

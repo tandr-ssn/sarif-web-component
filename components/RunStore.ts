@@ -3,7 +3,7 @@
 
 import {Artifact, Result, Run} from 'sarif'
 import {IObservableValue, autorun, computed, observable} from 'mobx'
-import {RepositoryDetails, ResultOrRuleOrMore, Rule} from './Viewer.Types'
+import {RepositoryDetails, ResultOrRuleOrMore, ResultVariantGroup, Rule} from './Viewer.Types'
 import { getRepositoryDetailsFromRemoteUrl, isRepositoryDetailsComplete } from './getRepositoryDetailsFromRemoteUrl'
 
 import {ITreeItem} from 'azure-devops-ui/Utilities/TreeItemProvider'
@@ -13,6 +13,7 @@ import { getRepoUri } from './getRepoUri'
 import {tryOr} from './try'
 import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} from './ResultFields'
 import {resultDetailsCopyText} from './ResultTraceText'
+import {groupPublicReviewVariants, isResultVariantGroup, resultVariantCount, variantResults} from './ResultVariantGroup'
 
 declare module 'sarif' {
     interface Run {
@@ -137,7 +138,7 @@ export class RunStore {
 				ruleTreeItem.childItems = !ruleTreeItem.isShowAll && ruleTreeItem.childItemsAll.length > maxLength
 					? [
 						...ruleTreeItem.childItemsAll.slice(0, maxLength),
-						{ data: { count: ruleTreeItem.childItemsAll.length, onClick: () => {
+						{ data: { count: this.resultCount(ruleTreeItem.childItemsAll), onClick: () => {
 							ruleTreeItem.isShowAll = true
 							this.showAllRevision++
 						}}}
@@ -164,7 +165,7 @@ export class RunStore {
 			const isDriverMatch = isMatch(this.driverName.toLowerCase(), filterKeywords)
 
 			const resultContainer = treeItem.data as { results: Result[] }
-			treeItem.childItemsAll = resultContainer.results
+			const filteredResults = resultContainer.results
 				.filter(result => {
 					for (const column of columns) {
 						const value = filter[resultColumnFilterKey(column.id)]?.value as string | string[] | undefined
@@ -200,15 +201,19 @@ export class RunStore {
 
 					return isDriverMatch || isRuleMatch || isKeywordMatch
 				})
-				.map(result => ({ data: result })) // Can cache the result here.
 
-			treeItem.childItemsAll.sort((treeItemLeft, treeItemRight) => {
+			filteredResults.sort((resultLeft, resultRight) => {
 				const resultToValue = columns[sortColumnIndex].sortString
-				const valueLeft = resultToValue(treeItemLeft.data as Result)
-				const valueRight = resultToValue(treeItemRight.data as Result)
+				const valueLeft = resultToValue(resultLeft)
+				const valueRight = resultToValue(resultRight)
 
 				const inverter = sortOrder === SortOrder.ascending ? 1 : -1
 				return inverter * valueLeft.localeCompare(valueRight)
+			})
+			treeItem.childItemsAll = groupPublicReviewVariants(filteredResults).map(value => {
+				if (!isResultVariantGroup(value)) return {data: value}
+				const children = value.results.map(result => ({data: result}))
+				return {data: value, expanded: false, childItems: children, childItemsAll: children}
 			})
 
 			return treeItem as ITreeItem<ResultOrRuleOrMore>
@@ -224,7 +229,7 @@ export class RunStore {
 			groupName(a).localeCompare(groupName(b))
 		const ruleOrder = this.sortRuleOrder === SortOrder.ascending ? 1 : -1
 		treeItemsVisible.sort(this.sortRuleBy === SortRuleBy.Count
-			? (a, b) => b.childItemsAll.length - a.childItemsAll.length || compareNames(a, b)
+			? (a, b) => this.resultCount(b.childItemsAll) - this.resultCount(a.childItemsAll) || compareNames(a, b)
 			: (a, b) => ruleOrder * compareNames(a, b)
 		)
 		
@@ -258,11 +263,17 @@ export class RunStore {
 	}
 
 	@computed get filteredCount() {
-		return this.rulesFiltered.reduce((total, rule) => total + rule.childItemsAll.length, 0)
+		return this.rulesFiltered.reduce((total, rule) => total + this.resultCount(rule.childItemsAll), 0)
 	}
 
 	@computed get filteredResults(): Result[] {
-		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.map(item => item.data as Result))
+		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.flatMap(item =>
+			variantResults(item.data as Result | ResultVariantGroup)))
+	}
+
+	resultCount(items: ITreeItem<ResultOrRuleOrMore>[] = []): number {
+		return items.reduce((total, item) =>
+			total + resultVariantCount(item.data as Result | ResultVariantGroup), 0)
 	}
 
 	@observable showAllRevision = 0

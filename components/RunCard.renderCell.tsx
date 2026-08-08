@@ -28,8 +28,13 @@ import { ExecutionTrace } from './ExecutionTrace'
 import { getResultFieldValue } from './ResultFields'
 import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
+import {isResultVariantGroup} from './ResultVariantGroup'
+import {getSourceLocationText, SourceLocationLink} from './SourceLocationLink'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
+
+const visibleResultCount = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.reduce(
+	(total, item) => total + (isResultVariantGroup(item.data) ? item.data.results.length : 1), 0)
 
 export function renderCell<T extends ISimpleTableCell>(
 	rowIndex: number,
@@ -53,7 +58,7 @@ export function renderCell<T extends ISimpleTableCell>(
 			? ExpandableTreeCell({
 				children: <div className="swcRowRule">{/* Div for flow layout. */}
 					{age.name}
-					<Pill size={PillSize.compact}>{age.treeItem.childItemsAll.length}</Pill>
+					<Pill size={PillSize.compact}>{visibleResultCount(age.treeItem.childItemsAll)}</Pill>
 				</div>,
 				colspan,
 				...commonProps,
@@ -74,7 +79,26 @@ export function renderCell<T extends ISimpleTableCell>(
 						const taxon = rule.run.taxonomies[rel.target.toolComponent.index].taxa[rel.target.index]
 						return <Fragment key={rel.target.id}>{i > 0 ? ',' : ''} {tryLink(() => taxon.helpUri, taxon.name)}</Fragment>
 					}))}
-					<Pill size={PillSize.compact}>{rule.treeItem.childItemsAll.length}</Pill>
+					<Pill size={PillSize.compact}>{visibleResultCount(rule.treeItem.childItemsAll)}</Pill>
+				</div>,
+				colspan,
+				...commonProps,
+			})
+			: null
+	}
+
+	// ROW PUBLIC REVIEW VARIANT GROUP
+	if (isResultVariantGroup(data)) {
+		const result = data.representative
+		const physicalLocation = result.locations?.[0]?.physicalLocation
+		const locationText = getSourceLocationText(physicalLocation, result.run) ?? 'same source location'
+		return columnIndex === 0
+			? ExpandableTreeCell({
+				children: <div className="swcRowRule">
+					<span>Public review variants at&nbsp;</span>
+					<SourceLocationLink ploc={physicalLocation} run={result.run}
+						showNativeTitle={false}>{locationText}</SourceLocationLink>
+					<Pill size={PillSize.compact}>{data.results.length}</Pill>
 				</div>,
 				colspan,
 				...commonProps,
