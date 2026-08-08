@@ -3,9 +3,10 @@
 
 import {PhysicalLocation, Region, Result, Run, ThreadFlowLocation} from 'sarif'
 import {getArtifactLocation, SourceTrace} from './SourceFile'
+import {getResultAcah, getTraceStepSymbol} from './Acah'
 
-export function getResultAuditOrigin(result: Result): SourceTrace['origin'] | undefined {
-	const origin = (result.properties as any)?.audit?.origin
+export function getResultAcahOrigin(result: Result): SourceTrace['origin'] | undefined {
+	const origin = getResultAcah(result)?.origin
 	const originLocation = origin?.location
 	const path = originLocation?.path ?? originLocation?.uri
 	const line = originLocation?.line ?? originLocation?.startLine
@@ -91,7 +92,7 @@ function withPrimaryLocation(
 export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 	const primary = result.locations?.[0]?.physicalLocation
 	if (!primary) return undefined
-	const origin = getResultAuditOrigin(result)
+	const origin = getResultAcahOrigin(result)
 
 	const threadFlow = result.codeFlows?.find(codeFlow => codeFlow.threadFlows?.length)?.threadFlows?.[0]
 	if (threadFlow?.locations?.length) {
@@ -100,6 +101,8 @@ export function getResultSourceTrace(result: Result): SourceTrace | undefined {
 			return resolved
 		})
 		const identifierHints = resolvedLocations.map(resolved => {
+			const acahSymbol = getTraceStepSymbol(resolved, result.run)
+			if (acahSymbol) return acahSymbol
 			const identifiers = Object.keys(resolved?.state ?? {}).filter(key => /^[A-Za-z_$][\w$]*$/.test(key))
 			return identifiers.length === 1 ? identifiers[0] : undefined
 		})

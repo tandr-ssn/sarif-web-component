@@ -4,6 +4,7 @@
 import * as React from 'react'
 import {ArtifactLocation, PhysicalLocation, Region, Run, ThreadFlowLocation} from 'sarif'
 import {highlightSourceSegment} from './SyntaxHighlight'
+import {AcahTraceRole, getTraceStepAcah, getTraceStepRole} from './Acah'
 
 export interface SourceFile {
 	name: string
@@ -77,6 +78,7 @@ interface SourceHighlight {
 	traceIndex?: number
 	isStart?: boolean
 	isEnd?: boolean
+	role?: AcahTraceRole
 	isActive?: boolean
 	previousEntry?: SourceNavigationTarget
 	nextEntry?: SourceNavigationTarget
@@ -102,6 +104,7 @@ interface SourceTraceSummary {
 	readableEntries: number
 	activeIndex: number
 	missing: MissingTraceLocation[]
+	roles?: Array<AcahTraceRole | undefined>
 }
 
 function selectionOnLine(text: string, lineNumber: number, region: Region): [number, number] | undefined {
@@ -179,6 +182,7 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 	if (highlight.traceIndex === undefined) return ''
 	const classes = [
 		'trace-badge',
+		highlight.role ? `trace-${highlight.role}` : '',
 		highlight.isStart ? 'trace-start' : '',
 		highlight.isEnd ? 'trace-end' : '',
 		highlight.isActive ? 'trace-active' : '',
@@ -215,15 +219,20 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 	const activeHighlight = activeView.highlights.find(highlight => highlight.traceIndex === trace?.activeIndex)
 		?? activeView.highlights[0]
 	const activeLine = activeHighlight?.region.startLine ?? 1
+	const semanticRoles = new Set(trace?.roles?.filter(Boolean) ?? [])
+	const traceLegend = semanticRoles.size
+		? `${semanticRoles.has('source') ? '<span class="legend-swatch legend-source"></span>Source' : ''}
+			${semanticRoles.has('boundary') ? '<span class="legend-swatch legend-boundary"></span>Boundary' : ''}
+			<span class="legend-swatch legend-active"></span>Active
+			${semanticRoles.has('sink') ? '<span class="legend-swatch legend-sink"></span>Sink' : ''}`
+		: '<span class="legend-swatch legend-start"></span>Start\n<span class="legend-swatch legend-active"></span>Active\n<span class="legend-swatch legend-end"></span>End'
 	const traceNavigation = trace ? `
 		<strong>${escapeHtml(trace.label)}</strong>
 		<button type="button" data-trace-action="previous" title="Previous readable trace entry ([)">&#x2190; Previous</button>
 		<span data-trace-position>Entry ${trace.activeIndex + 1} of ${trace.totalEntries} &middot; File ${activeFileIndex + 1} of ${views.length}</span>
 		<button type="button" data-trace-action="next" title="Next readable trace entry (])">Next &#x2192;</button>
 		<span class="trace-legend" aria-label="Trace color legend">
-			<span class="legend-swatch legend-start"></span>Start
-			<span class="legend-swatch legend-active"></span>Active
-			<span class="legend-swatch legend-end"></span>End
+			${traceLegend}
 		</span>` : ''
 	const missing = trace?.missing.length ? `<details class="trace-missing">
 		<summary>${trace.readableEntries} of ${trace.totalEntries} trace locations readable</summary>
@@ -477,8 +486,11 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-legend { align-items: center; display: inline-flex; gap: 4px; white-space: nowrap; }
 		.legend-swatch { border-radius: 2px; display: inline-block; height: 12px; width: 12px; }
 		.legend-start { background: #c7e9c0; border-left: 4px solid #107c10; }
+		.legend-source { background: #c7e9c0; border-left: 4px solid #107c10; }
+		.legend-boundary { background: #f7ee9f; border-left: 4px solid #8a6d1d; }
 		.legend-active { background: #bde3f4; box-shadow: 0 0 0 2px #005fb8; }
 		.legend-end { background: #f5b5b0; border-right: 4px solid #c50f1f; }
+		.legend-sink { background: #f5b5b0; border-right: 4px solid #c50f1f; }
 		.trace-missing { margin-top: 6px; }
 		.trace-missing ol { margin: 5px 0 0; max-height: 8em; overflow: auto; }
 		pre { font-size: 12pt; margin: 0; padding: 12px 0; tab-size: 4; }
@@ -549,6 +561,9 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		}
 		.trace-start { border-left: 4px solid #107c10; }
 		.trace-end { border-right: 4px solid #c50f1f; }
+		.trace-source { border-left: 4px solid #107c10; }
+		.trace-boundary { border-left: 4px solid #8a6d1d; }
+		.trace-sink { border-right: 4px solid #c50f1f; }
 		.trace-active { box-shadow: 0 0 0 2px #005fb8; }
 		.trace-active-highlight {
 			border-radius: 0;
@@ -652,8 +667,12 @@ async function readSourceFile(
 	return sourceFile
 }
 
-export function traceColor(index: number, count: number): string {
+export function traceColor(index: number, count: number, role?: AcahTraceRole): string {
 	const accessiblePalette = ['#bde3f4', '#f6d39b', '#e8bad7', '#a8dbc9', '#f7ee9f', '#aecce5', '#d8c4eb']
+	if (role === 'source') return '#c7e9c0'
+	if (role === 'boundary') return '#f7ee9f'
+	if (role === 'sink') return '#f5b5b0'
+	if (role === 'propagation') return accessiblePalette[index % accessiblePalette.length]
 	if (count === 1) return '#bde3f4'
 	if (index === 0) return '#c7e9c0'
 	if (index === count - 1) return '#f5b5b0'
@@ -667,6 +686,7 @@ interface ResolvedTraceLocation {
 	region?: Region
 	identifierHint?: string
 	step?: ThreadFlowLocation
+	role?: AcahTraceRole
 	tooltip?: string
 }
 
@@ -689,8 +709,6 @@ function readableName(value: string): string {
 }
 
 function traceStepRole(step: ThreadFlowLocation | undefined, index: number, count: number): string | undefined {
-	const auditRole = (step?.properties as any)?.audit?.role
-	if (typeof auditRole === 'string' && auditRole) return readableName(auditRole)
 	const kinds = step?.kinds?.map(kind => kind.toLowerCase()) ?? []
 	if (kinds.includes('analysisboundary')) return 'Boundary'
 	if (kinds.includes('source')) return 'Source'
@@ -711,9 +729,10 @@ function resolvedTraceLocationText(location: ResolvedTraceLocation): string | un
 
 function traceLocationTooltip(location: ResolvedTraceLocation, count: number, run: Run): string {
 	const step = location.step
-	const audit = (step?.properties as any)?.audit
-	const role = traceStepRole(step, location.traceIndex, count)
-	const heading = `Step ${location.traceIndex + 1} of ${count}${role ? ` · ${role}` : ''}`
+	const acah = getTraceStepAcah(step, run)
+	const role = getTraceStepRole(step, run) ?? traceStepRole(step, location.traceIndex, count)
+	const roleLabel = role && readableName(role)
+	const heading = `Step ${location.traceIndex + 1} of ${count}${roleLabel ? ` · ${roleLabel}` : ''}`
 	const message = multiformatText(step?.location?.message)
 	const directLogicalLocation = step?.location?.logicalLocations?.[0]
 	const logicalLocation = directLogicalLocation?.index === undefined
@@ -728,8 +747,8 @@ function traceLocationTooltip(location: ResolvedTraceLocation, count: number, ru
 	const state = stateEntries.length
 		? `${stateEntries.length === 1 ? 'Value' : 'State'}: ${stateEntries.map(entry => entry.text).join('; ')}`
 		: undefined
-	const symbol = typeof audit?.symbol === 'string' && audit.symbol && !stateEntries.some(entry => entry.name === audit.symbol)
-		? `Symbol: ${audit.symbol}`
+	const symbol = typeof acah?.symbol === 'string' && acah.symbol && !stateEntries.some(entry => entry.name === acah.symbol)
+		? `Symbol: ${acah.symbol}`
 		: undefined
 	const importance = step?.importance && step.importance !== 'important'
 		? `Importance: ${readableName(step.importance)}`
@@ -737,11 +756,8 @@ function traceLocationTooltip(location: ResolvedTraceLocation, count: number, ru
 	const nesting = typeof step?.nestingLevel === 'number' && step.nestingLevel > 0
 		? `Call depth: ${step.nestingLevel}`
 		: undefined
-	const resolution = typeof audit?.resolution === 'string' && audit.resolution
-		? `Resolution: ${audit.resolution}`
-		: undefined
-	const reason = typeof audit?.reason === 'string' && audit.reason
-		? `Reason: ${audit.reason}`
+	const resolution = typeof acah?.resolution === 'string' && acah.resolution
+		? `Resolution: ${acah.resolution}`
 		: undefined
 	return [
 		heading,
@@ -753,7 +769,6 @@ function traceLocationTooltip(location: ResolvedTraceLocation, count: number, ru
 		importance,
 		nesting,
 		resolution,
-		reason,
 	].filter(Boolean).join('\n')
 }
 
@@ -923,7 +938,8 @@ function inferIdentifierHighlights(
 	const bestScore = Math.max(...candidates.map(candidate => candidate.matches.length + (candidate.explicit ? 1000 : 0)))
 	const best = candidates.filter(candidate => candidate.matches.length + (candidate.explicit ? 1000 : 0) === bestScore)
 	if (best.length !== 1) return new Map()
-	const color = traceColor(Math.min(...best[0].matches.map(match => match.traceIndex)), resolvedTrace.length)
+	const firstIndex = Math.min(...best[0].matches.map(match => match.traceIndex))
+	const color = traceColor(firstIndex, resolvedTrace.length, resolvedTrace[firstIndex]?.role)
 	return new Map(best[0].matches.map(match => [match.traceIndex, {region: match.region, color}]))
 }
 
@@ -951,13 +967,15 @@ export async function openSourceFile(
 		const activeKey = sourceViewKey(artifactLocation) ?? 'active-source-file'
 		const resolvedTrace: ResolvedTraceLocation[] = trace?.locations.map((physicalLocation, traceIndex) => {
 			const resolvedArtifactLocation = getArtifactLocation(physicalLocation, run)
+			const step = trace.steps?.[traceIndex]
 			const resolved: ResolvedTraceLocation = {
 				traceIndex,
 				artifactLocation: resolvedArtifactLocation,
 				key: resolvedArtifactLocation && sourceViewKey(resolvedArtifactLocation),
 				region: physicalLocation?.region,
 				identifierHint: trace.identifierHints?.[traceIndex],
-				step: trace.steps?.[traceIndex],
+				step,
+				role: getTraceStepRole(step, run),
 			}
 			resolved.tooltip = traceLocationTooltip(resolved, trace.locations.length, run)
 			return resolved
@@ -1015,16 +1033,17 @@ export async function openSourceFile(
 		}
 		const identifierHighlights = trace ? inferIdentifierHighlights(trace, resolvedTrace, sourceFilesByKey) : new Map()
 		const identifierColor = identifierHighlights.values().next().value?.color
-			?? traceColor(0, Math.max(1, resolvedTrace.length))
+			?? traceColor(0, Math.max(1, resolvedTrace.length), resolvedTrace[0]?.role)
 		views.forEach(view => {
 			view.highlights = resolvedTrace
 				.filter(location => location.key === view.key && location.region?.startLine)
 				.map(location => ({
 					region: location.region,
 					traceIndex: location.traceIndex,
-					color: traceColor(location.traceIndex, resolvedTrace.length),
-					isStart: location.traceIndex === 0,
-					isEnd: location.traceIndex === resolvedTrace.length - 1,
+					color: traceColor(location.traceIndex, resolvedTrace.length, location.role),
+					role: location.role,
+					isStart: !location.role && location.traceIndex === 0,
+					isEnd: !location.role && location.traceIndex === resolvedTrace.length - 1,
 					isActive: location.traceIndex === trace?.activeIndex,
 					previousEntry: adjacentEntry(location.traceIndex, -1),
 					nextEntry: adjacentEntry(location.traceIndex, 1),
@@ -1065,6 +1084,7 @@ export async function openSourceFile(
 			totalEntries: resolvedTrace.length,
 			readableEntries: resolvedTrace.filter(location => location.key && sourceFilesByKey.has(location.key)).length,
 			activeIndex: trace.activeIndex,
+			roles: resolvedTrace.map(location => location.role),
 			missing: resolvedTrace
 				.filter(location => !location.key || !sourceFilesByKey.has(location.key))
 				.map(location => ({

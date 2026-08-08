@@ -11,6 +11,7 @@ Enzyme.configure({ adapter: new Adapter() })
 
 test('renders result stacks and code flows', () => {
 	const run: any = {
+		properties: {acah: {formatVersion: 3}},
 		threadFlowLocations: [{
 			location: {
 				message: { text: 'Enter handler' },
@@ -19,12 +20,14 @@ test('renders result stacks and code flows', () => {
 					region: { startLine: 5, snippet: {text: 'handle(request)'} },
 				},
 			},
+			properties: {acah: {role: 'boundary', symbol: 'request', resolution: 'semantic'}},
 		}],
 	}
 	const result = {
 		run,
 		message: { text: 'Finding' },
-	properties: {audit: {
+	properties: {acah: {
+		classification: 'taint-unverified', status: 'review', resolution: 'native',
 		origin: {
 			kind: 'method-parameter',
 			name: 'request',
@@ -62,7 +65,8 @@ test('renders result stacks and code flows', () => {
 		'Code flow (1 step) · Partial',
 	])
 	expect(wrapper.find('.swcTraceStatus').prop('title')).toBe([
-		'Partial trace · Construction to sink',
+		"Partial trace within ACAH's bounded static model · Construction to sink",
+		'This does not prove runtime reachability or exploitability.',
 		'Caller origin is unresolved',
 	].join('\n'))
 	expect(wrapper.find('details').map(details => details.prop('data-copy-trace-value'))).toEqual([
@@ -74,7 +78,7 @@ test('renders result stacks and code flows', () => {
 	expect(wrapper.text()).toContain('Enter handler')
 	expect(wrapper.text()).toContain('src/handler.ts:5')
 	expect(wrapper.find('.swcSnippet').map(snippet => snippet.text()).join(' ')).toContain('handle(request)')
-	expect(wrapper.find(Snippet).map(snippet => snippet.prop('highlightColor'))).toEqual(['#bde3f4', '#bde3f4'])
+	expect(wrapper.find(Snippet).map(snippet => snippet.prop('highlightColor'))).toEqual(['#bde3f4', '#f7ee9f'])
 	const sourceLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') !== 'swcSnippetLink')
 	expect(sourceLinks.at(0).prop('trace')).toEqual({
 		locations: [result.stacks[0].frames[0].location.physicalLocation],
@@ -87,6 +91,7 @@ test('renders result stacks and code flows', () => {
 		activeIndex: 0,
 		label: 'Code flow',
 		steps: [run.threadFlowLocations[0]],
+		identifierHints: ['request'],
 		inferIdentifiers: true,
 		origin,
 	})
@@ -95,13 +100,15 @@ test('renders result stacks and code flows', () => {
 	expect(snippetLinks.at(1).prop('trace')).toEqual(sourceLinks.at(1).prop('trace'))
 })
 
-test('labels a complete AuditScan trace', () => {
+test('labels a complete ACAH trace without implying runtime proof', () => {
 	const result = {
-		run: {},
-		properties: {audit: {trace: {status: 'complete', scope: 'modeled-source-to-sink'}}},
+		run: {properties: {acah: {formatVersion: 3}}},
+		properties: {acah: {classification: 'taint-high-confidence', status: 'proven', resolution: 'native',
+			trace: {status: 'complete', scope: 'modeled-source-to-sink', reason: 'all modeled endpoints are present'}}},
 		codeFlows: [{threadFlows: [{locations: []}]}],
 	} as unknown as Result
 	const wrapper = mount(<ExecutionTrace result={result} />)
 	expect(wrapper.find('summary').text()).toBe('Code flow (0 steps) · Complete')
-	expect(wrapper.find('.swcTraceStatus').prop('title')).toBe('Complete trace · Modeled source to sink')
+	expect(wrapper.find('.swcTraceStatus').prop('title')).toContain("Complete trace within ACAH's bounded static model")
+	expect(wrapper.find('.swcTraceStatus').prop('title')).toContain('does not prove runtime reachability')
 })

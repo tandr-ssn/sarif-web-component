@@ -1,16 +1,17 @@
 import {Result} from 'sarif'
-import {getResultAuditOrigin, getResultSourceTrace} from './ResultSourceTrace'
+import {getResultAcahOrigin, getResultSourceTrace} from './ResultSourceTrace'
 
-test('converts audit origin metadata into an exact source identifier', () => {
+test('converts ACAH origin metadata into an exact source identifier', () => {
 	const result = {
-		properties: {audit: {origin: {
+		run: {properties: {acah: {formatVersion: 3}}},
+		properties: {acah: {classification: 'taint-unverified', status: 'review', resolution: 'native', origin: {
 			kind: 'method-parameter',
 			name: 'filePath',
 			location: {path: 'src/file.ts', line: 12, column: 50},
 		}}},
 	} as unknown as Result
 
-	expect(getResultAuditOrigin(result)).toEqual({
+	expect(getResultAcahOrigin(result)).toEqual({
 		location: {
 			artifactLocation: {uri: 'src/file.ts'},
 			region: {startLine: 12, startColumn: 50, endColumn: 58},
@@ -18,6 +19,17 @@ test('converts audit origin metadata into an exact source identifier', () => {
 		name: 'filePath',
 		kind: 'method-parameter',
 	})
+})
+
+test('prefers an exact ACAH step symbol over inferred state', () => {
+	const location: any = {artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 2}}
+	const step: any = {location: {physicalLocation: location}, properties: {acah: {role: 'propagation', symbol: 'path'}}}
+	const result = {
+		run: {properties: {acah: {formatVersion: 3}}},
+		locations: [{physicalLocation: location}],
+		codeFlows: [{threadFlows: [{locations: [step]}]}],
+	} as unknown as Result
+	expect(getResultSourceTrace(result)?.identifierHints).toEqual(['path'])
 })
 
 test('uses a code flow and appends the primary result location', () => {

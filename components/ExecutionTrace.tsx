@@ -7,25 +7,29 @@ import {Location, PhysicalLocation, Result, Run, Stack, ThreadFlow, ThreadFlowLo
 import {getLogicalLocationText, SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace, traceColor} from './SourceFile'
 import {Snippet} from './Snippet'
-import {getResultAuditOrigin} from './ResultSourceTrace'
+import {getResultAcahOrigin} from './ResultSourceTrace'
 import {codeFlowText, stackText} from './ResultTraceText'
+import {getResultAcah, getTraceStepRole, getTraceStepSymbol} from './Acah'
 
 function messageText(message): string | undefined {
 	return message?.text ?? message?.markdown
 }
 
-function readableAuditValue(value: string): string {
+function readableAcahValue(value: string): string {
 	const words = value.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ')
 	return words ? words[0].toUpperCase() + words.slice(1) : words
 }
 
-function auditTraceSummary(result: Result): {label: string, title: string} | undefined {
-	const trace = (result.properties as any)?.audit?.trace
+function acahTraceSummary(result: Result): {label: string, title: string} | undefined {
+	const trace = getResultAcah(result)?.trace
 	if (typeof trace?.status !== 'string' || !trace.status) return undefined
-	const label = readableAuditValue(trace.status)
-	const scope = typeof trace.scope === 'string' && trace.scope ? readableAuditValue(trace.scope) : undefined
+	const label = readableAcahValue(trace.status)
+	const scope = typeof trace.scope === 'string' && trace.scope ? readableAcahValue(trace.scope) : undefined
 	const reason = typeof trace.reason === 'string' && trace.reason ? trace.reason : undefined
-	return {label, title: [`${label} trace${scope ? ` · ${scope}` : ''}`, reason].filter(Boolean).join('\n')}
+	return {label, title: [
+		`${label} trace within ACAH's bounded static model${scope ? ` · ${scope}` : ''}`,
+		'This does not prove runtime reachability or exploitability.', reason,
+	].filter(Boolean).join('\n')}
 }
 
 function TraceLocation(props: {
@@ -46,6 +50,7 @@ function TraceLocation(props: {
 	const logicalName = getLogicalLocationText(location)
 	const message = messageText(location?.message)
 	const prefix = index === undefined ? undefined : <span className="swcTraceIndex">{index + 1}</span>
+	const traceRole = index === undefined ? undefined : getTraceStepRole(traceSteps?.[index], run)
 	if (!logicalName && !message && !module && !location?.physicalLocation) return null
 
 	const trace: SourceTrace | undefined = index === undefined || !traceLocations
@@ -66,7 +71,7 @@ function TraceLocation(props: {
 			{message && message !== logicalName && <div className="swcTraceLocationMessage">{message}</div>}
 			<SourceLocationLink ploc={location?.physicalLocation} run={run} trace={trace} />
 			{showSnippet && <Snippet ploc={location?.physicalLocation} run={run} trace={trace}
-				highlightColor={index === undefined ? undefined : traceColor(index, traceCount ?? traceLocations?.length ?? 1)} />}
+				highlightColor={index === undefined ? undefined : traceColor(index, traceCount ?? traceLocations?.length ?? 1, traceRole)} />}
 		</div>
 	</li>
 }
@@ -90,7 +95,7 @@ function ResultStacks(props: { result: Result, run: Run }) {
 				data-copy-trace-value={stackText(props.result, stack, index, props.result.stacks.length)}>
 				<summary>{label} ({stack.frames?.length ?? 0} frames)</summary>
 				{messageText(stack.message) && <div className="swcTraceMessage">{messageText(stack.message)}</div>}
-				<StackFrames stack={stack} run={props.run} label={label} origin={getResultAuditOrigin(props.result)} />
+				<StackFrames stack={stack} run={props.run} label={label} origin={getResultAcahOrigin(props.result)} />
 			</details>
 		})}
 	</>
@@ -103,6 +108,8 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 		: run.threadFlowLocations?.[threadFlowLocation.index]) ?? []
 	const traceLocations = resolvedLocations.map(resolved => resolved?.location?.physicalLocation)
 	const identifierHints = resolvedLocations.map(resolved => {
+		const acahSymbol = getTraceStepSymbol(resolved, run)
+		if (acahSymbol) return acahSymbol
 		const identifiers = Object.keys(resolved?.state ?? {}).filter(key => /^[A-Za-z_$][\w$]*$/.test(key))
 		return identifiers.length === 1 ? identifiers[0] : undefined
 	})
@@ -123,7 +130,7 @@ function ThreadFlowTrace(props: { threadFlow: ThreadFlow, threadFlowCount: numbe
 
 function CodeFlows(props: { result: Result, run: Run }) {
 	if (!props.result.codeFlows?.length) return null
-	const traceSummary = auditTraceSummary(props.result)
+	const traceSummary = acahTraceSummary(props.result)
 	return <>
 		{props.result.codeFlows.map((codeFlow, codeFlowIndex) => {
 			const label = `Code flow${props.result.codeFlows.length > 1 ? ` ${codeFlowIndex + 1}` : ''}`
@@ -141,7 +148,7 @@ function CodeFlows(props: { result: Result, run: Run }) {
 				threadFlowIndex={threadFlowIndex}
 				label={codeFlow.threadFlows.length > 1 ? `${label} · Thread ${threadFlowIndex + 1}` : label}
 				run={props.run}
-				origin={getResultAuditOrigin(props.result)} />)}
+				origin={getResultAcahOrigin(props.result)} />)}
 		</details>})}
 	</>
 }

@@ -3,6 +3,8 @@ import {openSourceFile, traceColor} from './SourceFile'
 test('keeps the seventh trace color distinct from the final marker', () => {
 	expect(traceColor(6, 8)).toBe('#d8c4eb')
 	expect(traceColor(7, 8)).toBe('#f5b5b0')
+	expect(traceColor(0, 2, 'boundary')).toBe('#f7ee9f')
+	expect(traceColor(0, 2, 'boundary')).not.toBe(traceColor(0, 2, 'source'))
 })
 
 test('renders embedded source as text in a new tab', async () => {
@@ -252,16 +254,17 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 		{
 			location: {...locations[0], message: {text: 'Recognized input source'}, logicalLocations: [{fullyQualifiedName: 'send'}]},
 			importance: 'essential',
-			properties: {audit: {role: 'source', symbol: 'path', resolution: 'semantic'}},
+			properties: {acah: {role: 'source', symbol: 'path', resolution: 'semantic'}},
 			state: {path: {text: 'tainted request value'}},
 		},
 		{location: {...locations[1], message: {text: 'Value passes through clean'}}, nestingLevel: 1},
-		{location: {...locations[2], message: {text: 'Value reaches sink'}}, properties: {audit: {role: 'sink'}}},
+		{location: {...locations[2], message: {text: 'Value reaches sink'}}, properties: {acah: {role: 'sink'}}},
 	]
+	const run: any = {properties: {acah: {formatVersion: 3}}}
 
 	await openSourceFile(
 		locations[1].artifactLocation,
-		{} as any,
+		run,
 		locations[1].region,
 		reader,
 		{locations, steps, activeIndex: 1, label: 'Code flow', inferIdentifiers: true},
@@ -280,6 +283,10 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 		'Importance: Essential',
 		'Resolution: semantic',
 	].join('\n'))
+	expect(badges[0].classList.contains('trace-source')).toBe(true)
+	expect(badges[2].classList.contains('trace-sink')).toBe(true)
+	expect(childDocument.querySelector('.legend-source')).not.toBeNull()
+	expect(childDocument.querySelector('.legend-sink')).not.toBeNull()
 	expect(badges[1].dataset.sourceTooltip).toContain('Step 2 of 3')
 	expect(badges[1].dataset.sourceTooltip).toContain('Call depth: 1')
 	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.dataset.sourceTooltip)
@@ -311,6 +318,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(sourceStyles).toContain('.trace-badge:hover > a, .trace-badge:focus-within > a')
 	expect(sourceStyles).toContain('pointer-events: none')
 	expect(sourceStyles).toContain('font: 14px/1.4 Arial, sans-serif')
+	expect(sourceStyles).toContain('.trace-boundary')
 	expect(childDocument.querySelector('[data-line="4"] mark')).toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-active-highlight')).not.toBeNull()
 	expect(childDocument.querySelector('[data-line="2"] .trace-identifier-highlight')?.classList

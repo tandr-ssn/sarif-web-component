@@ -4,6 +4,7 @@
 import {ReportingDescriptor, Result, Run, ThreadFlowLocation} from 'sarif'
 
 export type AcahProperties = {[key: string]: any}
+export type AcahTraceRole = 'source' | 'propagation' | 'sink' | 'boundary'
 
 function object(value: unknown): AcahProperties | undefined {
 	return value && typeof value === 'object' && !Array.isArray(value) ? value as AcahProperties : undefined
@@ -38,4 +39,9 @@ export function getTraceStepAcah(step: ThreadFlowLocation | undefined, run: Run 
 export function getTraceStepSymbol(step: ThreadFlowLocation | undefined, run: Run | undefined): string | undefined {
 	const symbol = getTraceStepAcah(step, run)?.symbol
 	return typeof symbol === 'string' && symbol ? symbol : undefined
+}
+
+export function getTraceStepRole(step: ThreadFlowLocation | undefined, run: Run | undefined): AcahTraceRole | undefined {
+	const role = getTraceStepAcah(step, run)?.role
+	return ['source', 'propagation', 'sink', 'boundary'].includes(role) ? role : undefined
 }
