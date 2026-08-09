@@ -1,0 +1,13 @@
+  - Use synthetic test cases. Do not copy or commit client source code.
+  - Give synthetic test projects and namespaces neutral names. When a project-like name is needed, use a city, river, or clearly invented name rather than anything overheard from client work.
+  - Keep implementation commits small and make them periodically during longer work.
+  - Commit messages must have a concise subject and a short explanatory body.
+  - Run relevant validation after changes, but avoid unusually broad validation unless the change warrants it.
+  - Run independent scans or tests in parallel when practical.
+  - You may delegate small, independent, bounded tasks to subagents when useful.
+  - Use `spark_reader` only for deterministic read-only collection such as file lists, counts, exact references, and repetitive mappings. Do not rely on it for security, correctness, or architectural conclusions.
+  - Use `spark_runner` only for independent long-running commands and concise collection of exit status, timing, and relevant logs. The main agent or Luna interprets the result.
+  - Use `spark_fixer` only for trivial mechanical edits with explicit file ownership and focused validation. Do not assign it work requiring judgment.
+  - Use `luna_worker` for bounded implementation, source interpretation, finding validation, focused research, and tests that require judgment.
+  - Keep final security, correctness, and architectural conclusions with the main agent, after reviewing subagent evidence.
+  - Do not let subagents modify overlapping files. Review their work before committing it.
