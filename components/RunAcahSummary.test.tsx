@@ -8,7 +8,7 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 Enzyme.configure({adapter: new Adapter()})
 const runWithAcah = (acah: object) => ({properties: {acah: {formatVersion: 3, ...acah}}} as unknown as Run)
 
-test('summarizes native status, diagnostics, cache provenance, and filtering', () => {
+test('summarizes native status, diagnostics, and filtering without cache provenance', () => {
 	const summary = getRunAcahSummary(runWithAcah({
 		nativeAnalysis: {csharp: {inputDetected: true, status: 'succeeded', version: '5.0'}, java: {inputDetected: false, status: 'no-input'}},
 		workspaceDiagnostics: ['SDK selected', 'Workspace warning', 'Workspace warning'], semgrepCache: {status: 'hit', reused: true},
@@ -16,7 +16,7 @@ test('summarizes native status, diagnostics, cache provenance, and filtering', (
 	}))
 	expect(summary).toEqual({label: 'ACAH analysis succeeded · 2 diagnostics', lines: [
 		'Format: ACAH SARIF v3', 'Native Csharp: Succeeded · version 5.0',
-		'Semgrep cache: Hit · evidence reused · provenance only', 'Filtered evidence: 1 parameterized SQL',
+		'Filtered evidence: 1 parameterized SQL',
 		'Diagnostics: 2 (details retained in SARIF)',
 	], incomplete: false})
 	expect(mount(<RunAcahBadge summary={summary} />).text()).toContain('ACAH analysis succeeded')

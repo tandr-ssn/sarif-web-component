@@ -59,10 +59,6 @@ export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
 		if (line) lines.push(line)
 	}
 
-	const cache = acah.semgrepCache
-	if (cache && typeof cache === 'object' && text(cache.status)) {
-		lines.push(`Semgrep cache: ${readable(cache.status)} · ${cache.reused === true ? 'evidence reused' : 'evidence scanned'} · provenance only`)
-	}
 	const filteredLabels = [
 		['filteredStaleConstruction', 'stale construction'], ['filteredParameterizedSqlFindings', 'parameterized SQL'],
 		['filteredTypedSinkMismatches', 'typed sink mismatches'], ['filteredReclassifiedInventoryDuplicates', 'inventory duplicates'],
