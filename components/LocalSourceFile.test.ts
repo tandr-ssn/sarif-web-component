@@ -23,7 +23,7 @@ class TestDirectory implements FileSystemDirectoryHandleLike {
 }
 
 function sourceTree(): TestDirectory {
-	const root = new TestDirectory('repo')
+	const root = new TestDirectory('calgary')
 	const src = new TestDirectory('src')
 	src.files.set('file.ts', 'source text')
 	root.directories.set('src', src)
@@ -46,20 +46,20 @@ test('reads a relative artifact beneath the selected source root', async () => {
 })
 
 test('maps an absolute artifact path from the detected root', async () => {
-	const read = createLocalSourceFileReader(sourceTree(), '/home/user/repo')
-	await expect(read({ uri: 'file:///home/user/repo/src/file.ts' }, {} as any)).resolves.toEqual({
+	const read = createLocalSourceFileReader(sourceTree(), '/home/user/calgary')
+	await expect(read({ uri: 'file:///home/user/calgary/src/file.ts' }, {} as any)).resolves.toEqual({
 		name: 'src/file.ts',
 		text: 'source text',
 	})
 })
 
 test('maps an absolute artifact path from the selected ancestor folder name', async () => {
-	const read = createLocalSourceFileReader(sourceTree(), '/home/user/repo/src')
-	await expect(read({uri: '/home/user/repo/src/file.ts'}, {} as any)).resolves.toEqual({
+	const read = createLocalSourceFileReader(sourceTree(), '/home/user/calgary/src')
+	await expect(read({uri: '/home/user/calgary/src/file.ts'}, {} as any)).resolves.toEqual({
 		name: 'src/file.ts',
 		text: 'source text',
 	})
-	await expect(read({uri: 'C:\\work\\REPO\\src\\file.ts'}, {} as any)).resolves.toEqual({
+	await expect(read({uri: 'C:\\work\\CALGARY\\src\\file.ts'}, {} as any)).resolves.toEqual({
 		name: 'src/file.ts',
 		text: 'source text',
 	})
@@ -68,27 +68,27 @@ test('maps an absolute artifact path from the selected ancestor folder name', as
 test('maps an absolute artifact after selecting its immediate source folder', async () => {
 	const src = new TestDirectory('src')
 	src.files.set('file.ts', 'source text')
-	const read = createLocalSourceFileReader(src, '/home/user/repo')
-	await expect(read({uri: '/home/user/repo/src/file.ts'}, {} as any)).resolves.toEqual({
+	const read = createLocalSourceFileReader(src, '/home/user/calgary')
+	await expect(read({uri: '/home/user/calgary/src/file.ts'}, {} as any)).resolves.toEqual({
 		name: 'file.ts',
 		text: 'source text',
 	})
 })
 
 test('reads relative and absolute artifacts from a cross-browser folder selection', async () => {
-	const files = [selectedFile('repo/src/file.ts', 'source text')]
-	const read = createSelectedFilesSourceFileReader(files, '/home/user/repo')
+	const files = [selectedFile('calgary/src/file.ts', 'source text')]
+	const read = createSelectedFilesSourceFileReader(files, '/home/user/calgary')
 
 	await expect(read({ uri: 'src/file.ts' }, {} as any)).resolves.toEqual({
 		name: 'src/file.ts',
 		text: 'source text',
 	})
-	await expect(read({ uri: 'file:///home/user/repo/src/file.ts' }, {} as any)).resolves.toEqual({
+	await expect(read({ uri: 'file:///home/user/calgary/src/file.ts' }, {} as any)).resolves.toEqual({
 		name: 'src/file.ts',
 		text: 'source text',
 	})
-	const readWithDeepDetectedRoot = createSelectedFilesSourceFileReader(files, '/home/user/repo/src')
-	await expect(readWithDeepDetectedRoot({uri: '/home/user/repo/src/file.ts'}, {} as any)).resolves.toEqual({
+	const readWithDeepDetectedRoot = createSelectedFilesSourceFileReader(files, '/home/user/calgary/src')
+	await expect(readWithDeepDetectedRoot({uri: '/home/user/calgary/src/file.ts'}, {} as any)).resolves.toEqual({
 		name: 'src/file.ts',
 		text: 'source text',
 	})
@@ -120,14 +120,14 @@ test('finds the common absolute source root in findings and traces', () => {
 		results: [{
 			message: { text: 'test' },
 			locations: [
-				{ physicalLocation: { artifactLocation: { uri: '/repo/src/finding.ts' } } },
-				{ physicalLocation: { artifactLocation: { uri: '/repo/lib/other.ts' } } },
+				{ physicalLocation: { artifactLocation: { uri: '/calgary/src/finding.ts' } } },
+				{ physicalLocation: { artifactLocation: { uri: '/calgary/lib/other.ts' } } },
 			],
 			stacks: [{ frames: [{ location: { physicalLocation: { artifactLocation: { uri: '/usr/lib/external.ts' } } } }] }],
 			codeFlows: [{ threadFlows: [{ locations: [{ index: 0 }] }] }],
 		}],
-		threadFlowLocations: [{ location: { physicalLocation: { artifactLocation: { uri: '/repo/app/entry.ts' } } } }],
+		threadFlowLocations: [{ location: { physicalLocation: { artifactLocation: { uri: '/calgary/app/entry.ts' } } } }],
 	}
 	const log = { version: '2.1.0', runs: [run] } as Log
-	expect(getCommonAbsoluteSourceRoot([log])).toBe('/repo')
+	expect(getCommonAbsoluteSourceRoot([log])).toBe('/calgary')
 })

@@ -101,7 +101,7 @@ export function* demoResults() {
 	const resultWithRepo: Result = clone(emptyResult)
 	resultWithRepo.run = {
 		versionControlProvenance: [{
-			repositoryUri: 'https://dev.azure.com/Office/Office/_git/Office',
+			repositoryUri: 'https://dev.azure.com/Edmonton/Calgary/_git/Calgary',
 		}]
 	} as Run
 	resultWithRepo.locations = [{

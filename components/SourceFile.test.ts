@@ -58,7 +58,7 @@ test('uses the root-relative source path as an encoded browser fragment', async 
 	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
 	const reader = async () => ({name: 'src/My file#1.ts', text: 'source'})
 
-	await openSourceFile({uri: '/original/root/src/My file#1.ts'}, {} as any, undefined, reader)
+	await openSourceFile({uri: '/home/user/calgary/src/My file#1.ts'}, {} as any, undefined, reader)
 
 	expect(childWindow.location.hash).toBe('#src/My%20file%231.ts')
 	expect(childDocument.getElementById('src/My file#1.ts')).not.toBeNull()
