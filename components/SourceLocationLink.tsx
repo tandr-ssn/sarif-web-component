@@ -5,14 +5,15 @@ import * as React from 'react'
 import {Location, PhysicalLocation, Run} from 'sarif'
 import {Dialog} from 'azure-devops-ui/Dialog'
 import {getRepoUri} from './getRepoUri'
-import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourceTrace} from './SourceFile'
+import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatter, SourcePathFormatterContext, SourceTrace} from './SourceFile'
 
-export function getSourceLocationText(ploc: PhysicalLocation | undefined, run: Run): string | undefined {
+export function getSourceLocationText(ploc: PhysicalLocation | undefined, run: Run, formatPath?: SourcePathFormatter): string | undefined {
 	const artifactLocation = getArtifactLocation(ploc, run)
 	if (!artifactLocation?.uri) return undefined
+	const path = formatPath?.(artifactLocation.uri) ?? artifactLocation.uri
 	const line = ploc?.region?.startLine
 	const column = ploc?.region?.startColumn
-	return line ? `${artifactLocation.uri}:${line}${column ? `:${column}` : ''}` : artifactLocation.uri
+	return line ? `${path}:${line}${column ? `:${column}` : ''}` : path
 }
 
 function SourceLocationLinkWithReader(props: {
@@ -20,15 +21,16 @@ function SourceLocationLinkWithReader(props: {
 	run: Run
 	reader?: SourceFileReader
 	selectSourceFiles?: () => void
+	formatPath?: SourcePathFormatter
 	trace?: SourceTrace
 	children?: React.ReactNode
 	className?: string
 }) {
 	const [confirmSourceSelection, setConfirmSourceSelection] = React.useState(false)
-	const {ploc, run, reader, selectSourceFiles, trace} = props
+	const {ploc, run, reader, selectSourceFiles, formatPath, trace} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
 	const sourceLocationText = getSourceLocationText(ploc, run)
-	const text = props.children ?? sourceLocationText
+	const text = props.children ?? getSourceLocationText(ploc, run, formatPath)
 	if (!text) return null
 	if (!artifactLocation) return <>{text}</>
 
@@ -77,19 +79,19 @@ function SourceLocationLinkWithReader(props: {
 }
 
 export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, trace?: SourceTrace, children?: React.ReactNode, className?: string }) {
+	const reader = React.useContext(SourceFileReaderContext)
+	const selectSourceFiles = React.useContext(SourceFileSelectionContext)
+	const formatPath = React.useContext(SourcePathFormatterContext)
 	if (!props.ploc) return props.children ? <>{props.children}</> : null
-	return <SourceFileReaderContext.Consumer>
-		{reader => <SourceFileSelectionContext.Consumer>
-			{selectSourceFiles => <SourceLocationLinkWithReader
-				ploc={props.ploc}
-				run={props.run}
-				reader={reader}
-				selectSourceFiles={selectSourceFiles}
-				trace={props.trace}
-				children={props.children}
-				className={props.className} />}
-		</SourceFileSelectionContext.Consumer>}
-	</SourceFileReaderContext.Consumer>
+	return <SourceLocationLinkWithReader
+		ploc={props.ploc}
+		run={props.run}
+		reader={reader}
+		selectSourceFiles={selectSourceFiles}
+		formatPath={formatPath}
+		trace={props.trace}
+		children={props.children}
+		className={props.className} />
 }
 
 export function getLogicalLocationText(location: Location | undefined): string | undefined {

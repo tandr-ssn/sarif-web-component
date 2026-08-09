@@ -77,6 +77,18 @@
 	min-width: 0;
 }
 
+.swcFindingBody {
+	display: flex;
+	flex-direction: column;
+	font-size: 12pt;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.swcFindingPath + .swcFindingBody {
+	margin-left: 16px;
+}
+
 .action {
 	display: flex;
 }

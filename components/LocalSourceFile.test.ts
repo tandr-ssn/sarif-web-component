@@ -1,5 +1,5 @@
 import {Log} from 'sarif'
-import {createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot} from './LocalSourceFile'
+import {createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot} from './LocalSourceFile'
 
 class TestDirectory implements FileSystemDirectoryHandleLike {
 	readonly directories = new Map<string, TestDirectory>()
@@ -99,6 +99,19 @@ test('rejects paths outside the selected source root', async () => {
 	const read = createLocalSourceFileReader(sourceTree())
 	await expect(read({ uri: '../secret.txt' }, {} as any)).resolves.toBeUndefined()
 	await expect(read({ uri: 'https://example.test/file.ts' }, {} as any)).resolves.toBeUndefined()
+})
+
+test('displays artifact paths from the selected root name', () => {
+	expect(getSourcePathFromRoot('/home/user/calgary/src/file.ts', 'calgary', '/home/user/calgary'))
+		.toBe('calgary/src/file.ts')
+	expect(getSourcePathFromRoot('/home/user/calgary/src/file.ts', 'src', '/home/user/calgary'))
+		.toBe('src/file.ts')
+	expect(getSourcePathFromRoot('/home/user/calgary/src/file.ts', 'edmonton', '/home/user/calgary'))
+		.toBe('edmonton/src/file.ts')
+	expect(getSourcePathFromRoot('src/file.ts', 'calgary')).toBe('calgary/src/file.ts')
+	expect(getSourcePathFromRoot('calgary/src/file.ts', 'calgary')).toBe('calgary/src/file.ts')
+	expect(getSourcePathFromRoot('../secret.ts', 'calgary')).toBe('../secret.ts')
+	expect(getSourcePathFromRoot('https://example.test/file.ts', 'calgary')).toBe('https://example.test/file.ts')
 })
 
 test('finds the common absolute source root in findings and traces', () => {

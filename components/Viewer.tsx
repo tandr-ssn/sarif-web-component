@@ -29,8 +29,8 @@ import { IFilterState } from 'azure-devops-ui/Utilities/Filter'
 import { ZeroData } from 'azure-devops-ui/ZeroData'
 import { ObservableValue } from 'azure-devops-ui/Core/Observable'
 import { Button } from 'azure-devops-ui/Button'
-import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot } from './LocalSourceFile'
-import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext } from './SourceFile'
+import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot } from './LocalSourceFile'
+import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
 import {createResultCsv, downloadResultCsv, ResultExportScope} from './ResultExport'
@@ -232,6 +232,9 @@ export interface ViewerProps {
 				: undefined
 		const effectiveSourceReader = sourceFileReader ?? selectedSourceReader
 		const selectedSourceFolderName = this.sourceDirectory?.name ?? this.selectedSourceFolderName
+		const sourcePathFormatter = selectedSourceFolderName
+			? (uri: string) => getSourcePathFromRoot(uri, selectedSourceFolderName, commonSourceRoot)
+			: undefined
 		const sourceFolderDisplayName = selectedSourceFolderName ?? this.rememberedSourceFolderName
 		const sourceFolderNeedsReconnect = !selectedSourceFolderName && !!this.rememberedSourceFolderName
 		const compactSourcePicker = !!localSourcePickerContainer
@@ -336,9 +339,10 @@ export interface ViewerProps {
 
 		return <FilterKeywordContext.Provider value={filterKeywords ?? ''}>
 			<SourceFileSelectionContext.Provider value={showLocalSourcePicker ? this.selectSourceDirectory : undefined}>
-				<SourceFileReaderContext.Provider value={effectiveSourceReader}>
-					<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
-						<Page>
+				<SourcePathFormatterContext.Provider value={sourcePathFormatter}>
+					<SourceFileReaderContext.Provider value={effectiveSourceReader}>
+						<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
+							<Page>
 							<div className="swcShim"></div>
 							{renderedSourcePicker}
 							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
@@ -351,9 +355,10 @@ export interface ViewerProps {
 								Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
 							</MessageCard>}
 							{nearElement}
-						</Page>
-					</SurfaceContext.Provider>
-				</SourceFileReaderContext.Provider>
+							</Page>
+						</SurfaceContext.Provider>
+					</SourceFileReaderContext.Provider>
+				</SourcePathFormatterContext.Provider>
 			</SourceFileSelectionContext.Provider>
 		</FilterKeywordContext.Provider>
 	}

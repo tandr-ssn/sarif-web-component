@@ -92,6 +92,23 @@ function artifactSegmentCandidates(uri: string, commonAbsoluteRoot?: string, sel
 		candidates.findIndex(other => other.join('/') === candidate.join('/')) === index)
 }
 
+/** Formats an artifact URI from the actively selected source root, while keeping the root name visible. */
+export function getSourcePathFromRoot(uri: string, selectedRootName: string, commonAbsoluteRoot?: string): string {
+	const decoded = decodeArtifactPath(uri)
+	if (!decoded) return uri
+
+	if (!decoded.absolute) {
+		const segments = normalizeSegments(decoded.path)
+		if (!segments) return uri
+		if (!segments.length) return selectedRootName
+		const rootMatches = segments[0] === selectedRootName
+		return [selectedRootName, ...segments.slice(rootMatches ? 1 : 0)].join('/')
+	}
+
+	const relative = artifactSegmentCandidates(uri, commonAbsoluteRoot, selectedRootName)[0]
+	return relative?.length ? [selectedRootName, ...relative].join('/') : uri
+}
+
 function parentPath(path: string): string {
 	const slash = path.lastIndexOf('/')
 	return slash < 0 ? '' : path.slice(0, slash)

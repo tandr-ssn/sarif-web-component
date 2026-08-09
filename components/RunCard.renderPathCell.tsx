@@ -8,6 +8,19 @@ import './RunCard.renderCell.scss'
 import { getSourceLocationText, SourceLocationLink } from './SourceLocationLink'
 import { getResultSourceTrace } from './ResultSourceTrace'
 import { tryOr } from './try'
+import {SourcePathFormatterContext} from './SourceFile'
+
+function SourcePathText(props: {uri?: string, position: string, rootRelative?: boolean}) {
+	const formatPath = React.useContext(SourcePathFormatterContext)
+	if (!props.uri) return <Hi>—</Hi>
+	const uri = props.rootRelative ? formatPath?.(props.uri) ?? props.uri : props.uri
+	const index = uri.lastIndexOf('/')
+	if (index < 0) return <Hi>{uri}{props.position}</Hi>
+	return <span className="midEllipsis">
+		<span><Hi>{uri.slice(0, index)}</Hi></span>
+		<span><Hi>/{uri.slice(index + 1)}{props.position}</Hi></span>
+	</span>
+}
 
 // TODO:
 // Unify runArt vs resultArt.
@@ -19,29 +32,17 @@ export function renderPathCell(result: Result, embedded = false) {
 		?? result.analysisTarget
 	const runArt = result.run.artifacts?.[resArtLoc?.index ?? -1]
 	const runArtLoc = runArt?.location
-	const uri
-		=  resArtLoc?.description?.text
+	const description = resArtLoc?.description?.text
 		?? runArtLoc?.description?.text // vs runArt?.description?.text?
-		?? resArtLoc?.uri
+	const artifactUri = resArtLoc?.uri
 		?? runArtLoc?.uri // Commonly a relative URI.
+	const uri = description ?? artifactUri
 
-	const [path, fileName] = (() => {
-		if (!uri) return ['—']
-		const index = uri.lastIndexOf('/')
-		return index >= 0
-			? [uri.slice(0, index), uri.slice(index + 1)]
-			: [uri]
-	})()
 	const region = ploc?.region
 	const position = region?.startLine
 		? `:${region.startLine}${region.startColumn ? `:${region.startColumn}` : ''}`
 		: ''
-	const uriWithEllipsis = fileName // This is what ultimately gets displayed
-		? <span className="midEllipsis">
-			<span><Hi>{path}</Hi></span>
-			<span><Hi>/{fileName}{position}</Hi></span>
-		</span>
-		: <Hi>{uri ? `${uri}${position}` : '—'}</Hi>
+	const uriWithEllipsis = <SourcePathText uri={uri} position={position} rootRelative={!description} />
 	
 	// Example of href scenario:
 	// uri  = src\Prototypes\README.md

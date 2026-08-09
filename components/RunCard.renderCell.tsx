@@ -139,15 +139,17 @@ export function renderCell<T extends ISimpleTableCell>(
 							const formattedMarkdown = format(messageFromRule.markdown || result.message?.markdown, result.message.arguments); // No '—', leave undefined if empty.
 							return <div className="swcFindingDetails">
 								{embedPath && renderPathCell(result, true)}
-								{formattedMarkdown
-									? <div className="swcMarkDown">
-										<ReactMarkdown source={formattedMarkdown}
-											renderers={{ link: ({href, children}) => <a href={href} target="_blank">{children}</a> }} />
-									</div> // Div to cancel out containers display flex row.
-									: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span>}
+								<div className="swcFindingBody">
+									{formattedMarkdown
+										? <div className="swcMarkDown">
+											<ReactMarkdown source={formattedMarkdown}
+												renderers={{ link: ({href, children}) => <a href={href} target="_blank">{children}</a> }} />
+										</div> // Div to cancel out containers display flex row.
+										: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span>}
 									<AcahSummary result={result} />
-								<Snippet ploc={result.locations?.[0]?.physicalLocation} run={result.run} trace={getResultSourceTrace(result)} />
-								<ExecutionTrace result={result} />
+									<Snippet ploc={result.locations?.[0]?.physicalLocation} run={result.run} trace={getResultSourceTrace(result)} />
+									<ExecutionTrace result={result} />
+								</div>
 							</div>
 						case 'Rule':
 							return <>

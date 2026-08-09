@@ -30,6 +30,8 @@ export interface SourceTrace {
 
 export const SourceFileReaderContext = React.createContext<SourceFileReader | undefined>(undefined)
 export const SourceFileSelectionContext = React.createContext<(() => void) | undefined>(undefined)
+export type SourcePathFormatter = (uri: string) => string
+export const SourcePathFormatterContext = React.createContext<SourcePathFormatter | undefined>(undefined)
 
 const sourceFileCaches = new WeakMap<SourceFileReader, WeakMap<Run, Map<string, Promise<SourceFile | undefined>>>>()
 
