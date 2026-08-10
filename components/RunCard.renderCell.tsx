@@ -30,6 +30,7 @@ import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
 import {isResultVariantGroup} from './ResultVariantGroup'
 import {getSourceLocationText, SourceLocationLink} from './SourceLocationLink'
+import {getRuleTooltip} from './RunCard.rowPresentation'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
 
@@ -73,12 +74,14 @@ export function renderCell<T extends ISimpleTableCell>(
 		return columnIndex === 0
 			? ExpandableTreeCell({
 				children: <div className="swcRowRule">{/* Div for flow layout. */}
-					{tryLink(() => rule.helpUri, <Hi>{rule.id || rule.guid}</Hi>)}
-					{tryOr(() => rule.name && <>: <Hi>{rule.name}</Hi></>)}
-					{tryOr(() => rule.relationships.map((rel, i) => {
-						const taxon = rule.run.taxonomies[rel.target.toolComponent.index].taxa[rel.target.index]
-						return <Fragment key={rel.target.id}>{i > 0 ? ',' : ''} {tryLink(() => taxon.helpUri, taxon.name)}</Fragment>
-					}))}
+					<span className="swcRuleTitle" data-swc-tooltip={getRuleTooltip(rule)}>
+						{tryLink(() => rule.helpUri, <Hi>{rule.id || rule.guid}</Hi>)}
+						{tryOr(() => rule.name && <>: <Hi>{rule.name}</Hi></>)}
+						{tryOr(() => rule.relationships.map((rel, i) => {
+							const taxon = rule.run.taxonomies[rel.target.toolComponent.index].taxa[rel.target.index]
+							return <Fragment key={rel.target.id}>{i > 0 ? ',' : ''} {tryLink(() => taxon.helpUri, taxon.name)}</Fragment>
+						}))}
+					</span>
 					<Pill size={PillSize.compact}>{visibleResultCount(rule.treeItem.childItemsAll)}</Pill>
 				</div>,
 				colspan,

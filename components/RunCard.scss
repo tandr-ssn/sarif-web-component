@@ -42,3 +42,23 @@
 .swcTree .bolt-tree-row:nth-of-type(even):not(:hover):not(.selected) {
 	background-color: var(--palette-black-alpha-4);
 }
+
+.swcTree .bolt-tree-row.swcRuleRow:not(:hover):not(.selected) {
+	background-color: rgba(70, 110, 145, 0.10);
+}
+
+.swcTree .bolt-tree-row.swcResultError:not(:hover):not(.selected) {
+	background-color: rgba(209, 52, 56, 0.09);
+}
+
+.swcTree .bolt-tree-row.swcResultWarning:not(:hover):not(.selected) {
+	background-color: rgba(214, 157, 0, 0.10);
+}
+
+.swcTree .bolt-tree-row.swcResultNote:not(:hover):not(.selected) {
+	background-color: rgba(0, 120, 212, 0.07);
+}
+
+.swcTree .bolt-tree-row.swcResultSuccess:not(:hover):not(.selected) {
+	background-color: rgba(16, 124, 16, 0.08);
+}

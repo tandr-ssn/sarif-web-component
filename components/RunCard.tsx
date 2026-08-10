@@ -16,16 +16,17 @@ import {tryOr} from './try'
 
 import {Card} from 'azure-devops-ui/Card'
 import {Observer} from 'azure-devops-ui/Observer'
-import {ObservableValue, IObservableValue} from 'azure-devops-ui/Core/Observable'
+import {ObservableLike, ObservableValue, IObservableValue} from 'azure-devops-ui/Core/Observable'
 import {IHeaderCommandBarItem} from 'azure-devops-ui/HeaderCommandBar'
 import {MenuItemType} from 'azure-devops-ui/Menu'
 import {Pill, PillSize} from "azure-devops-ui/Pill"
 import {SortOrder} from 'azure-devops-ui/Table'
-import {Tree, ITreeColumn} from 'azure-devops-ui/TreeEx'
+import {Tree, ITreeColumn, ITreeRowDetails, renderTreeRow} from 'azure-devops-ui/TreeEx'
 import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
 import {ResultColumnHeader} from './ResultColumnHeader'
 import {copySelectedTableCells} from './TableClipboard'
 import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
+import {getTreeRowClass} from './RunCard.rowPresentation'
 
 @observer export class RunCard extends Component<{ runStore: RunStore, index: number, runCount: number }> {
 	@observable private show = true
@@ -155,6 +156,11 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 		}
 	)
 
+	private renderRow = (rowIndex: number, item: ITreeItemEx<ResultOrRuleOrMore>, details: ITreeRowDetails<ResultOrRuleOrMore>) => {
+		const data = ObservableLike.getValue(item.underlyingItem.data)
+		return renderTreeRow(rowIndex, item, details, this.columns, data, getTreeRowClass(data))
+	}
+
 	render() {
 		const {show, itemProvider} = this
 		const {runStore, runCount} = this.props
@@ -218,6 +224,7 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 								}
 							}}
 							behaviors={[this.sortingBehavior]}
+							renderRow={this.renderRow}
 							selectableText={true}
 							/>
 						</div>
