@@ -99,6 +99,36 @@ it('groups public review variants while preserving finding counts and exports', 
 	expect(runStore.filteredResults).toEqual(results)
 })
 
+it('presents producer-confirmed cross-rule reviews once while preserving counts and exports', () => {
+	const fingerprint = 'c'.repeat(64)
+	const results = ['public.first', 'public.second'].map((ruleId, index) => ({
+		ruleId,
+		message: {text: `Interpretation ${index + 1}`},
+		locations: [{physicalLocation: {
+			artifactLocation: {uri: 'src/river.ts'},
+			region: {startLine: 18, startColumn: 4, endLine: 18, endColumn: 20},
+		}}],
+		properties: {acah: {
+			classification: 'public-taint-high-confidence',
+			reviewGroup: {kind: 'equivalent-public-taint-site', memberCount: 2, ruleCount: 2, fingerprint},
+		}},
+	})) as unknown as Run['results']
+	const run = {
+		tool: {driver: {name: 'ACAH'}},
+		properties: {acah: {formatVersion: 3}},
+		results,
+	} as unknown as Run
+	const filter = {getState: () => ({})} as MobxFilter
+	const runStore = new RunStore(run, 0, filter, observable.box(false))
+
+	expect(runStore.rulesFiltered).toHaveLength(1)
+	const group = runStore.rulesFiltered[0].childItemsAll[0]
+	expect(isResultVariantGroup(group.data)).toBe(true)
+	expect(group.childItemsAll).toHaveLength(2)
+	expect(runStore.filteredCount).toBe(2)
+	expect(runStore.filteredResults).toEqual(results)
+})
+
 it('handles multiple logs', () => {
 	const viewer = new Viewer({})
 	

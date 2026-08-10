@@ -95,10 +95,11 @@ export function renderCell<T extends ISimpleTableCell>(
 		const result = data.representative
 		const physicalLocation = result.locations?.[0]?.physicalLocation
 		const locationText = getSourceLocationText(physicalLocation, result.run) ?? 'same source location'
+		const ruleCount = new Set(data.results.map(variant => variant.ruleId ?? variant._rule?.id ?? '')).size
 		return columnIndex === 0
 			? ExpandableTreeCell({
 				children: <div className="swcRowRule">
-					<span>Public review variants at&nbsp;</span>
+					<span>{ruleCount > 1 ? 'Equivalent public reviews' : 'Public review variants'} at&nbsp;</span>
 					<SourceLocationLink ploc={physicalLocation} run={result.run}>{locationText}</SourceLocationLink>
 					<Pill size={PillSize.compact}>{data.results.length}</Pill>
 				</div>,

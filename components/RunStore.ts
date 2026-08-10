@@ -156,6 +156,7 @@ export class RunStore {
 		const {sortOrder} = this
 		const columns = this.columns
 		const sortColumnIndex = Math.min(this.sortColumnIndex, columns.length - 1)
+		const filteredByTreeItem = new Map<ITreeItem<ResultOrRuleOrMore>, Result[]>()
 
 		treeItems.forEach(treeItem => {
 			// if (!treeItem.hasOwnProperty('isShowAll')) extendObservable(treeItem, { isShowAll: false })
@@ -210,13 +211,17 @@ export class RunStore {
 				const inverter = sortOrder === SortOrder.ascending ? 1 : -1
 				return inverter * valueLeft.localeCompare(valueRight)
 			})
-			treeItem.childItemsAll = groupPublicReviewVariants(filteredResults).map(value => {
+			filteredByTreeItem.set(treeItem, filteredResults)
+		})
+
+		const allFilteredResults = [...filteredByTreeItem.values()].flat()
+		treeItems.forEach(treeItem => {
+			const filteredResults = filteredByTreeItem.get(treeItem) ?? []
+			treeItem.childItemsAll = groupPublicReviewVariants(filteredResults, allFilteredResults).map(value => {
 				if (!isResultVariantGroup(value)) return {data: value}
 				const children = value.results.map(result => ({data: result}))
 				return {data: value, expanded: false, childItems: children, childItemsAll: children}
 			})
-
-			return treeItem as ITreeItem<ResultOrRuleOrMore>
 		})
 
 		const treeItemsVisible = treeItems.filter(rule => rule.childItemsAll.length)
