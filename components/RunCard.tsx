@@ -27,8 +27,9 @@ import {ResultColumnHeader} from './ResultColumnHeader'
 import {copySelectedTableCells} from './TableClipboard'
 import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 import {getTreeRowClass} from './RunCard.rowPresentation'
+import {RunTitle} from './RunTitle'
 
-@observer export class RunCard extends Component<{ runStore: RunStore, index: number, runCount: number }> {
+@observer export class RunCard extends Component<{ runStore: RunStore, index: number }> {
 	@observable private show = true
 	private groupByMenuItems = [] as IHeaderCommandBarItem[]
 	private itemProvider = new TreeItemProvider<ResultOrRuleOrMore>([])
@@ -161,9 +162,11 @@ import {getTreeRowClass} from './RunCard.rowPresentation'
 		return renderTreeRow(rowIndex, item, details, this.columns, data, getTreeRowClass(data))
 	}
 
+	private toggleShow = () => this.show = !this.show
+
 	render() {
 		const {show, itemProvider} = this
-		const {runStore, runCount} = this.props
+		const {runStore} = this.props
 		
 		return <Observer renderChildren={itemProvider}>
 			{(observedProps: { itemProvider }) => {
@@ -183,27 +186,19 @@ import {getTreeRowClass} from './RunCard.rowPresentation'
 				return <Card
 					titleProps={{
 						ariaLevel: 2,
-						text: <span className={'swcRunTitle'} data-swc-tooltip={runTitle}>
+						text: <RunTitle expanded={show} title={runTitle} onToggle={this.toggleShow}>
+							<span className="swcRunTitle">
 								<Hi>{runStore.driverName}</Hi>{qualityDomain && ` (${qualityDomain})`}
 								<Pill size={PillSize.compact}>{runStore.filteredCount}</Pill>
 								{acahSummary && <RunAcahBadge summary={acahSummary} />}
-							</span> as any
+							</span>
+						</RunTitle> as any
 					}}
 					contentProps={{ contentPadding: false }}
 					headerCommandBarItems={[
-						runCount > 1
-							? {
-								id: 'hide',
-								text: '', // Remove?
-								ariaLabel: 'Show/Hide',
-								onActivate: () => this.show = !this.show,
-								iconProps: { iconName: this.show ? 'ChevronDown' : 'ChevronUp' }, // Naturally updates as this entire object is re-created each render.
-								important: runCount > 1
-							}
-							: undefined,
 						...this.groupByMenuItems,
 						...this.sortRuleByMenuItems,
-					].filter(item => item)}
+					]}
 					className="flex-grow bolt-card-no-vertical-padding">
 					{show && (itemProvider.length
 						? <div onCopy={copySelectedTableCells}>

@@ -333,7 +333,7 @@ export interface ViewerProps {
 			return runStoresSorted
 				.filter(run => !filterKeywords || run.filteredCount)
 				.map((run, index) => <div key={this.getRunCardKey(run.run)} className="page-content-left page-content-right page-content-top">
-					<RunCard runStore={run} index={index} runCount={runStoresSorted.length} />
+					<RunCard runStore={run} index={index} />
 				</div>)
 		})() as JSX.Element
 

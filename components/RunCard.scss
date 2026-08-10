@@ -11,6 +11,18 @@
 	.bolt-pill { margin-left: 0; }
 }
 
+.swcRunTitleToggle {
+	align-items: center;
+	cursor: pointer;
+	display: flex;
+	min-width: 0;
+
+	&:focus-visible {
+		outline: 2px solid var(--communication-foreground, #0078d4);
+		outline-offset: 2px;
+	}
+}
+
 .swcRunAcahBadge {
 	background-color: var(--palette-black-alpha-6);
 	border: 1px solid var(--palette-black-alpha-20, rgba(0, 0, 0, 0.2));
@@ -45,6 +57,11 @@
 
 .swcTree .bolt-tree-row.swcRuleRow:not(:hover):not(.selected) {
 	background-color: rgba(70, 110, 145, 0.10);
+}
+
+.swcTree .bolt-tree-row.swcRuleRow > .bolt-list-cell {
+	padding-bottom: 8px;
+	padding-top: 8px;
 }
 
 .swcTree .bolt-tree-row.swcResultError:not(:hover):not(.selected) {
