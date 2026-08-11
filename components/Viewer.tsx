@@ -33,7 +33,7 @@ import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileS
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
-import {createResultCsv, downloadResultCsv, ResultExportScope} from './ResultExport'
+import {createResultCsv, createResultMarkdown, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
 import {installTooltips} from './Tooltip'
 
@@ -81,6 +81,12 @@ export interface ViewerProps {
 	sessionStorageKey?: string
 
 	/**
+	 * Optional local-storage key used to remember the ordered Fields selection across browser restarts.
+	 * A component-wide default is used when omitted; set this to false to disable persistence.
+	 */
+	fieldSelectionStorageKey?: string | false
+
+	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
 	 * 
@@ -100,6 +106,9 @@ export interface ViewerProps {
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
 	private selectedResultFields = observable.box<string[]>(DEFAULT_RESULT_FIELDS.slice())
+	private pendingResultFields?: string[]
+	private resultFieldSelectionRestored = false
+	private resultFieldPersistence?: () => void
 	private runCardKeys = new WeakMap<Run, number>()
 	private nextRunCardKey = 0
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
@@ -119,6 +128,20 @@ export interface ViewerProps {
 				this.rememberedSourceFolderName = window.sessionStorage.getItem(`${this.props.sessionStorageKey}:source-folder-name`) ?? undefined
 			} catch (_) { }
 		}
+		const fieldStorageKey = this.getFieldSelectionStorageKey()
+		if (fieldStorageKey) {
+			try {
+				const stored = JSON.parse(window.localStorage.getItem(fieldStorageKey) ?? 'null')
+				if (Array.isArray(stored) && stored.every(field => typeof field === 'string')) this.pendingResultFields = stored
+			} catch (_) { }
+		}
+		this.resultFieldPersistence = autorun(() => {
+			const selected = this.selectedResultFields.get()
+			if (!this.resultFieldSelectionRestored || !fieldStorageKey) return
+			try {
+				window.localStorage.setItem(fieldStorageKey, JSON.stringify(selected))
+			} catch (_) { }
+		})
 		autorun(() => {
 			const selected = this.selectedResultFields.get()
 			Object.keys(this.filter.getState())
@@ -129,6 +152,18 @@ export interface ViewerProps {
 
 	componentDidMount() {
 		installTooltips(window)
+		this.restoreResultFieldSelection()
+	}
+
+	componentDidUpdate(previousProps: ViewerProps) {
+		if (previousProps.logs !== this.props.logs
+			|| previousProps.showActions !== this.props.showActions
+			|| previousProps.hideBaseline !== this.props.hideBaseline
+			|| previousProps.showAge !== this.props.showAge) this.restoreResultFieldSelection()
+	}
+
+	componentWillUnmount() {
+		this.resultFieldPersistence?.()
 	}
 
 	@observable warnOldVersion = false
@@ -161,6 +196,23 @@ export interface ViewerProps {
 		return [...fields, ...discoverResultFieldPaths(this.props.logs)]
 	}
 
+	private getFieldSelectionStorageKey(): string | undefined {
+		if (this.props.fieldSelectionStorageKey === false) return undefined
+		return this.props.fieldSelectionStorageKey
+			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:selected-result-fields`
+	}
+
+	private restoreResultFieldSelection() {
+		if (this.props.logs === undefined) return
+		const available = new Set(this.resultFieldPaths)
+		const requested = this.pendingResultFields ?? this.selectedResultFields.get()
+		const restored = Array.from(new Set(requested)).filter(field => available.has(field))
+		const selection = restored.length ? restored : DEFAULT_RESULT_FIELDS.filter(field => available.has(field))
+		this.pendingResultFields = undefined
+		this.resultFieldSelectionRestored = true
+		this.selectedResultFields.set(selection)
+	}
+
 	private getRunCardKey(run: Run): number {
 		let key = this.runCardKeys.get(run)
 		if (key === undefined) {
@@ -170,8 +222,12 @@ export interface ViewerProps {
 		return key
 	}
 
-	private exportResults = (scope: ResultExportScope) => {
-		downloadResultCsv(createResultCsv(this.runStoresSorted, scope), `sarif-findings-${scope}.csv`)
+	private exportResults = (scope: ResultExportScope, format: ResultExportFormat) => {
+		const markdown = format === 'markdown'
+		const content = markdown ? createResultMarkdown(this.runStoresSorted, scope) : createResultCsv(this.runStoresSorted, scope)
+		const extension = markdown ? 'md' : 'csv'
+		const type = markdown ? 'text/markdown;charset=utf-8' : 'text/csv;charset=utf-8'
+		downloadResultFile(content, `sarif-findings-${scope}.${extension}`, type)
 	}
 
 	private selectSourceDirectory = async () => {
