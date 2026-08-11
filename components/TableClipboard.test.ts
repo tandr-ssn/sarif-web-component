@@ -140,9 +140,12 @@ test('copies a Markdown field as plain text, rendered HTML, and Markdown source'
 	expect(setData).toHaveBeenCalledWith('text/plain', '"Versions\n\nVersion | Status\n1.0     | affected"')
 	expect(setData).toHaveBeenCalledWith('text/markdown', '### Versions\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |')
 	const html = setData.mock.calls.find(([type]) => type === 'text/html')?.[1]
+	expect(html).toMatch(/^<meta http-equiv="content-type" content="text\/html; charset=utf-8">/)
 	expect(html).toContain('<th style=')
 	expect(html).toContain('>Version</th>')
 	expect(html).not.toContain('data-copy-value')
+	const formats = setData.mock.calls.map(([type]) => type)
+	expect(formats.indexOf('text/html')).toBeLessThan(formats.indexOf('text/plain'))
 	expect(preventDefault).toHaveBeenCalled()
 	selection.removeAllRanges()
 	root.remove()

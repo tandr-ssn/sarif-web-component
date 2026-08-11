@@ -118,7 +118,7 @@ function rowsForCells(cells: HTMLElement[]): Map<Element, HTMLElement[]> {
 }
 
 function setRichClipboardData(event: React.ClipboardEvent<HTMLElement>, rows: Map<Element, HTMLElement[]>, rich: boolean, flattenTables = false) {
-	const html = '<table><tbody>' + Array.from(rows.values())
+	const html = '<meta http-equiv="content-type" content="text/html; charset=utf-8"><table><tbody>' + Array.from(rows.values())
 		.map(row => `<tr>${row.map(cell => logicalCellsHtml(cell, rich, flattenTables)).join('')}</tr>`).join('') + '</tbody></table>'
 	event.clipboardData.setData('text/html', html)
 }
@@ -142,10 +142,10 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 		const plain = marker || alwaysCopy
 			? logicalCellTexts(cells[0]).map(tsvCell).join('\t')
 			: tsvCell(selectedText.replace(/\r\n?/g, '\n').trim())
-		event.clipboardData.setData('text/plain', plain)
 		const markdown = marker?.dataset.copyMarkdownValue
-		if (markdown !== undefined) event.clipboardData.setData('text/markdown', markdown)
 		setRichClipboardData(event, rowsForCells(cells), !alwaysCopy && markdown !== undefined)
+		if (markdown !== undefined) event.clipboardData.setData('text/markdown', markdown)
+		event.clipboardData.setData('text/plain', plain)
 		event.preventDefault()
 		return
 	}
@@ -159,7 +159,7 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 			.map(tsvCell)
 			.join('\t'))
 		.join('\n')
-	event.clipboardData.setData('text/plain', text)
 	setRichClipboardData(event, rows, true, true)
+	event.clipboardData.setData('text/plain', text)
 	event.preventDefault()
 }
