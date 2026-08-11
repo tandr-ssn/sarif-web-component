@@ -18,6 +18,7 @@
 	},
 	"exclude": [
 		"dist", // Avoids error: Cannot write file '/dist/components/FilterBar.d.ts' because it would overwrite input file.
+		"e2e", // Playwright development checks run separately through `npm run test:e2e`.
 		"index.tsx", // For webpack-dev-server only. Prevent index.d.ts being generated to /dist.
 	]
 }

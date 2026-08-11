@@ -14,5 +14,6 @@ module.exports = {
 	},
 	transformIgnorePatterns: [
 		'node_modules/(?!azure-devops-ui)/'
-	]
+	],
+	testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
 }

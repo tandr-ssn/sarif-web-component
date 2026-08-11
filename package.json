@@ -14,6 +14,7 @@
 	"scripts": {
 		"start": "tsc --noEmit && webpack-dev-server --mode development",
 		"test": "jest",
+		"test:e2e": "npm run docs && playwright test",
 		"test:watch": "jest --watchAll",
 		"typecheck": "tsc --noEmit",
 		"npm": "tsc --project tsconfig.npm.json --emitDeclarationOnly && webpack --config ./webpack.config.npm.js",
@@ -21,6 +22,7 @@
 	},
 	"devDependencies": {
 		"@babel/preset-env": "^7.4.5",
+		"@playwright/test": "^1.62.1",
 		"@types/enzyme": "3.10.8",
 		"@types/jest": "30.0.0",
 		"@types/node": "16.18.126",
