@@ -13,6 +13,10 @@ interface MarkdownNode {
 	children?: MarkdownNode[]
 }
 
+function tree(markdown: string): MarkdownNode {
+	return unified().use(remarkParse).use(remarkGfm).parse(markdown) as MarkdownNode
+}
+
 function inlineText(node: MarkdownNode): string {
 	if (['text', 'inlineCode', 'html'].includes(node.type)) return node.value ?? ''
 	if (node.type === 'break') return '\n'
@@ -65,6 +69,75 @@ function blockText(node: MarkdownNode): string {
 /** Converts CommonMark and GFM syntax into readable text without producing HTML. */
 export function markdownToPlainText(markdown: string): string {
 	if (!markdown.trim()) return ''
-	const tree = unified().use(remarkParse).use(remarkGfm).parse(markdown) as MarkdownNode
-	return blockText(tree).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+	return blockText(tree(markdown)).replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function escapeHtml(value: string): string {
+	return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+function safeHref(value: string | undefined): string | undefined {
+	return value && /^(https?:|mailto:|#|\/)/i.test(value) ? escapeHtml(value) : undefined
+}
+
+function inlineHtml(node: MarkdownNode): string {
+	const children = (node.children ?? []).map(inlineHtml).join('')
+	switch (node.type) {
+		case 'text': return escapeHtml(node.value ?? '')
+		case 'html': return escapeHtml(node.value ?? '')
+		case 'inlineCode': return `<code>${escapeHtml(node.value ?? '')}</code>`
+		case 'break': return '<br>'
+		case 'emphasis': return `<em>${children}</em>`
+		case 'strong': return `<strong>${children}</strong>`
+		case 'delete': return `<del>${children}</del>`
+		case 'link': {
+			const href = safeHref(node.url)
+			return href ? `<a href="${href}" target="_blank" rel="noopener noreferrer">${children}</a>` : children
+		}
+		case 'image': {
+			const label = escapeHtml(node.alt ?? 'Image')
+			const href = safeHref(node.url)
+			return href ? `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>` : label
+		}
+		default: return children || escapeHtml(node.value ?? '')
+	}
+}
+
+function tableHtml(node: MarkdownNode): string {
+	const rows = node.children ?? []
+	return '<table><thead>' + (rows[0] ? `<tr>${(rows[0].children ?? []).map(cell => `<th>${inlineHtml(cell)}</th>`).join('')}</tr>` : '')
+		+ '</thead><tbody>' + rows.slice(1).map(row => `<tr>${(row.children ?? []).map(cell => `<td>${inlineHtml(cell)}</td>`).join('')}</tr>`).join('')
+		+ '</tbody></table>'
+}
+
+function listItemHtml(node: MarkdownNode): string {
+	const task = node.checked === true ? '<input type="checkbox" checked disabled> ' : node.checked === false ? '<input type="checkbox" disabled> ' : ''
+	return `<li>${task}${(node.children ?? []).map(blockHtml).join('')}</li>`
+}
+
+function blockHtml(node: MarkdownNode): string {
+	const children = node.children ?? []
+	switch (node.type) {
+		case 'root': return children.map(blockHtml).join('')
+		case 'paragraph': return `<p>${inlineHtml(node)}</p>`
+		case 'heading': return `<h${Math.min(6, Math.max(1, (node as any).depth ?? 1))}>${inlineHtml(node)}</h${Math.min(6, Math.max(1, (node as any).depth ?? 1))}>`
+		case 'code': return `<pre><code>${escapeHtml(node.value ?? '')}</code></pre>`
+		case 'blockquote': return `<blockquote>${children.map(blockHtml).join('')}</blockquote>`
+		case 'list': {
+			const tag = node.ordered ? 'ol' : 'ul'
+			const start = node.ordered && node.start && node.start !== 1 ? ` start="${node.start}"` : ''
+			return `<${tag}${start}>${children.map(listItemHtml).join('')}</${tag}>`
+		}
+		case 'listItem': return listItemHtml(node)
+		case 'table': return tableHtml(node)
+		case 'thematicBreak': return '<hr>'
+		case 'definition': return ''
+		default: return children.length ? children.map(blockHtml).join('') : inlineHtml(node)
+	}
+}
+
+/** Converts CommonMark and GFM syntax into safe, self-contained HTML fragments. */
+export function markdownToHtml(markdown: string): string {
+	return markdown.trim() ? blockHtml(tree(markdown)) : ''
 }

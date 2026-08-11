@@ -2,10 +2,10 @@ import {Result} from 'sarif'
 import {RunStore} from './RunStore'
 import {resultCallStackText, resultCodeFlowText} from './ResultTraceText'
 import {looksLikeMarkdown} from './ResultFields'
-import {markdownToPlainText} from './MarkdownText'
+import {markdownToHtml, markdownToPlainText} from './MarkdownText'
 
 export type ResultExportScope = 'filtered' | 'all'
-export type ResultExportFormat = 'csv-plain' | 'csv-raw' | 'markdown'
+export type ResultExportFormat = 'csv-plain' | 'csv-raw' | 'tsv' | 'html' | 'text' | 'markdown'
 export type ResultCsvValueFormat = 'raw' | 'plain'
 
 function spreadsheetSafe(value: string): string {
@@ -14,6 +14,11 @@ function spreadsheetSafe(value: string): string {
 
 function csvCell(value: unknown): string {
 	return `"${spreadsheetSafe(String(value ?? '')).replace(/"/g, '""')}"`
+}
+
+function tsvCell(value: string): string {
+	const safe = spreadsheetSafe(value).replace(/\t/g, ' ')
+	return /["\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
 }
 
 function exportRows(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): {fields: string[], rows: string[][]} {
@@ -40,10 +45,62 @@ function exportRows(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope
 export function createResultCsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope, valueFormat: ResultCsvValueFormat = 'raw'): string {
 	const {fields, rows} = exportRows(runStores, scope)
 	const formattedRows = valueFormat === 'plain'
-		? rows.map(row => row.map((value, index) => looksLikeMarkdown(fields[index], value)
-			|| looksLikeMarkdown('value.text', value) ? markdownToPlainText(value) : value))
+		? plainRows(fields, rows)
 		: rows
 	return '\ufeff' + [fields, ...formattedRows].map(row => row.map(csvCell).join(',')).join('\r\n')
+}
+
+function plainValue(field: string, value: string): string {
+	return looksLikeMarkdown(field, value) || looksLikeMarkdown('value.text', value) ? markdownToPlainText(value) : value
+}
+
+function plainRows(fields: string[], rows: string[][]): string[][] {
+	return rows.map(row => row.map((value, index) => plainValue(fields[index], value)))
+}
+
+export function createResultTsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
+	const {fields, rows} = exportRows(runStores, scope)
+	return [fields, ...plainRows(fields, rows)].map(row => row.map(tsvCell).join('\t')).join('\r\n')
+}
+
+export function createResultText(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
+	const {fields, rows} = exportRows(runStores, scope)
+	const findings = plainRows(fields, rows).flatMap((row, index) => [
+		`Finding ${index + 1}`,
+		'─'.repeat(`Finding ${index + 1}`.length),
+		...fields.flatMap((field, fieldIndex) => [
+			`${field}:`,
+			(row[fieldIndex] || '(empty)').split('\n').map(line => `  ${line}`).join('\n'),
+		]),
+		'',
+	])
+	return ['SARIF findings', '==============', '', ...findings].join('\n').trimEnd() + '\n'
+}
+
+function escapeHtml(value: string): string {
+	return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+function htmlValue(field: string, value: string): string {
+	if (looksLikeMarkdown(field, value) || looksLikeMarkdown('value.text', value)) return markdownToHtml(value)
+	const trimmed = value.trim()
+	if (/^https?:\/\/\S+$/.test(trimmed)) {
+		const href = escapeHtml(trimmed)
+		return `<p><a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a></p>`
+	}
+	return `<pre>${escapeHtml(trimmed)}</pre>`
+}
+
+export function createResultHtml(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
+	const {fields, rows} = exportRows(runStores, scope)
+	const findings = rows.map((row, index) => `<section><h2>Finding ${index + 1}</h2>${fields.map((field, fieldIndex) =>
+		`<h3>${escapeHtml(field)}</h3>${htmlValue(field, row[fieldIndex])}`).join('')}</section>`).join('')
+	return '<!doctype html><html><head><meta charset="utf-8"><title>SARIF findings</title><style>'
+		+ 'body{font:16px/1.45 Arial,sans-serif;margin:24px;max-width:1100px}section{border-top:1px solid #bbb;margin-top:24px}'
+		+ 'pre{white-space:pre-wrap}table{border-collapse:collapse}th,td{border:1px solid #aaa;padding:4px 8px;text-align:left}'
+		+ 'code{background:#eee;padding:1px 3px}blockquote{border-left:4px solid #bbb;margin-left:0;padding-left:12px}'
+		+ '</style></head><body><h1>SARIF findings</h1>' + findings + '</body></html>\n'
 }
 
 function escapeMarkdownText(value: string): string {

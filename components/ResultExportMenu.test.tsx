@@ -13,7 +13,11 @@ test('exports filtered findings as plain-text CSV', () => {
 	expect(button.text()).toContain('Export filtered')
 	button.simulate('click')
 	wrapper.update()
-	const csv = document.querySelector('.swcResultExportMenu button') as HTMLButtonElement
+	const choices = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))
+	expect(choices.map(choice => choice.textContent)).toEqual([
+		'CSV — plain text', 'CSV — raw values', 'TSV', 'HTML', 'Plain text', 'Markdown',
+	])
+	const csv = choices[0]
 	csv.click()
 	expect(onExport).toHaveBeenCalledWith('filtered', 'csv-plain')
 	wrapper.unmount()

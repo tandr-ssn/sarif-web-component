@@ -33,7 +33,7 @@ import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileS
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
-import {createResultCsv, createResultMarkdown, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
+import {createResultCsv, createResultHtml, createResultMarkdown, createResultText, createResultTsv, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
 import {installTooltips} from './Tooltip'
 
@@ -223,11 +223,15 @@ export interface ViewerProps {
 	}
 
 	private exportResults = (scope: ResultExportScope, format: ResultExportFormat) => {
-		const markdown = format === 'markdown'
-		const content = markdown ? createResultMarkdown(this.runStoresSorted, scope)
-			: createResultCsv(this.runStoresSorted, scope, format === 'csv-plain' ? 'plain' : 'raw')
-		const extension = markdown ? 'md' : 'csv'
-		const type = markdown ? 'text/markdown;charset=utf-8' : 'text/csv;charset=utf-8'
+		const output = {
+			'csv-plain': () => ({content: createResultCsv(this.runStoresSorted, scope, 'plain'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
+			'csv-raw': () => ({content: createResultCsv(this.runStoresSorted, scope, 'raw'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
+			tsv: () => ({content: createResultTsv(this.runStoresSorted, scope), extension: 'tsv', type: 'text/tab-separated-values;charset=utf-8'}),
+			html: () => ({content: createResultHtml(this.runStoresSorted, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
+			text: () => ({content: createResultText(this.runStoresSorted, scope), extension: 'txt', type: 'text/plain;charset=utf-8'}),
+			markdown: () => ({content: createResultMarkdown(this.runStoresSorted, scope), extension: 'md', type: 'text/markdown;charset=utf-8'}),
+		}[format]()
+		const {content, extension, type} = output
 		downloadResultFile(content, `sarif-findings-${scope}.${extension}`, type)
 	}
 

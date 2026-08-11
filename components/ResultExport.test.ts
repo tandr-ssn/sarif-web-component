@@ -1,4 +1,4 @@
-import {createResultCsv, createResultMarkdown} from './ResultExport'
+import {createResultCsv, createResultHtml, createResultMarkdown, createResultText, createResultTsv} from './ResultExport'
 import {RunStore} from './RunStore'
 
 const first = {
@@ -49,6 +49,26 @@ test('exports rendered Markdown as readable text in CSV cells', () => {
 	expect(createResultCsv([markdownRunStore], 'all', 'plain')).toBe(
 		'\ufeff"rule.help.text"\r\n"Versions\n\nVersion | Status\n1.0     | affected"')
 	expect(createResultCsv([markdownRunStore], 'all', 'raw')).toContain('| --- | --- |')
+})
+
+test('exports rendered findings as TSV, HTML, and plain text', () => {
+	const renderedRunStore = {
+		columns: [
+			{id: 'result.message.text', filterString: () => 'Calgary.Package 1.0'},
+			{id: 'rule.help.text', filterString: () => '### Versions\n\n| Version | Status |\n| --- | --- |\n| 1.0 | **affected** |'},
+		],
+		run: {results: [{}]},
+		filteredResults: [],
+	} as unknown as RunStore
+
+	expect(createResultTsv([renderedRunStore], 'all')).toBe(
+		'result.message.text\trule.help.text\r\nCalgary.Package 1.0\t"Versions\n\nVersion | Status\n1.0     | affected"')
+	expect(createResultText([renderedRunStore], 'all')).toContain(
+		'rule.help.text:\n  Versions\n  \n  Version | Status\n  1.0     | affected')
+	const html = createResultHtml([renderedRunStore], 'all')
+	expect(html).toContain('<h3>rule.help.text</h3><h3>Versions</h3>')
+	expect(html).toContain('<table><thead><tr><th>Version</th><th>Status</th></tr></thead>')
+	expect(html).toContain('<strong>affected</strong>')
 })
 
 test('exports selected fields as a Markdown report without flattening Markdown values', () => {
