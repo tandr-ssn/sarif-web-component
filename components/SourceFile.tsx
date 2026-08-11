@@ -687,19 +687,12 @@ function resolvedTraceLocationText(location: ResolvedTraceLocation): string | un
 	return line ? `${path}:${line}${column ? `:${column}` : ''}` : path
 }
 
-function compactTraceMessage(message: any): string | undefined {
-	const text = multiformatText(message)?.trim()
-	if (!text || /[\r\n]/.test(text) || /^(?:```|~~~)/.test(text)) return undefined
-	return text
-}
-
 function traceLocationTooltip(location: ResolvedTraceLocation, count: number, run: Run): string {
 	const step = location.step
 	const acah = getTraceStepAcah(step, run)
 	const role = getTraceStepRole(step, run) ?? traceStepRole(step, location.traceIndex, count)
 	const roleLabel = role && readableName(role)
 	const heading = `Step ${location.traceIndex + 1} of ${count}${roleLabel ? ` · ${roleLabel}` : ''}`
-	const message = compactTraceMessage(step?.location?.message)
 	const directLogicalLocation = step?.location?.logicalLocations?.[0]
 	const logicalLocation = directLogicalLocation?.index === undefined
 		? directLogicalLocation
@@ -727,7 +720,6 @@ function traceLocationTooltip(location: ResolvedTraceLocation, count: number, ru
 		: undefined
 	return [
 		heading,
-		message,
 		resolvedTraceLocationText(location),
 		logicalName ? `Symbol location: ${logicalName}` : undefined,
 		state,

@@ -276,13 +276,13 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(badges.map(badge => badge.querySelector('button')?.textContent)).toEqual(['1', '2', '3'])
 	expect(badges[0].dataset.swcTooltip).toBe([
 		'Step 1 of 3 · Source',
-		'Recognized input source',
 		'src/app.ts:1:10',
 		'Symbol location: send',
 		'Value: path — tainted request value',
 		'Importance: Essential',
 		'Resolution: semantic',
 	].join('\n'))
+	expect(badges[0].dataset.swcTooltip).not.toContain('Recognized input source')
 	expect(badges[0].classList.contains('trace-source')).toBe(true)
 	expect(badges[2].classList.contains('trace-sink')).toBe(true)
 	expect(childDocument.querySelector('.legend-source')).not.toBeNull()
