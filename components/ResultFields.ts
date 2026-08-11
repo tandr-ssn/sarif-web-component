@@ -43,6 +43,24 @@ export interface ResultFieldNode {
 	children: ResultFieldNode[]
 }
 
+type ResultFieldSource = 'result' | 'rule'
+
+function splitFieldPath(path: string): {source: ResultFieldSource, segments: string[]} {
+	const segments = path.split('.')
+	const source = segments[0] === 'rule' ? 'rule' : 'result'
+	return {source, segments: ['result', 'rule'].includes(segments[0]) ? segments.slice(1) : segments}
+}
+
+/** Returns the canonical SARIF JSON path represented by a selectable field. */
+export function getResultFieldJsonPath(path: string): string {
+	if (BUILT_IN_RESULT_FIELDS.has(path)) return path
+	const {source, segments} = splitFieldPath(path)
+	const root = source === 'rule' ? '$.runs[*].tool.driver.rules[*]' : '$.runs[*].results[*]'
+	return root + segments.map(segment => /^[A-Za-z_$][\w$]*$/.test(segment)
+		? `.${segment}`
+		: `[${JSON.stringify(segment)}]`).join('')
+}
+
 function collectLeafPaths(value: unknown, segments: string[], paths: Set<string>, ancestors: Set<unknown>, depth: number): void {
 	if (value === undefined || value === null || depth > 12) return
 	if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -76,11 +94,12 @@ export function discoverResultFieldPaths(logs: Log[] | undefined): string[] {
 		const rules = run.tool?.driver?.rules ?? []
 		run.results?.forEach(result => {
 			const rule = result.ruleIndex === undefined ? rules.find(candidate => candidate.id === result.ruleId) : rules[result.ruleIndex]
-			collectLeafPaths(resultForFieldDiscovery(result, run, rule), [], paths, new Set(), 0)
+			collectLeafPaths(resultForFieldDiscovery(result, run, rule), ['result'], paths, new Set(), 0)
+			collectLeafPaths(rule, ['rule'], paths, new Set(), 0)
 		})
 	}))
 	return Array.from(paths)
-		.filter(path => !['level', 'kind'].includes(path))
+		.filter(path => !['result.level', 'result.kind'].includes(path))
 		.sort((left, right) => left.localeCompare(right))
 }
 
@@ -110,10 +129,10 @@ function valuesAtPath(value: unknown, segments: string[]): unknown[] {
 }
 
 export function getResultFieldValue(result: Result, path: string): string {
-	const segments = path.split('.')
-	const values = path.startsWith('properties.acah.')
+	const {source, segments} = splitFieldPath(path)
+	const values = source === 'result' && segments[0] === 'properties' && segments[1] === 'acah'
 		? valuesAtPath(getResultAcah(result), segments.slice(2))
-		: valuesAtPath(result, segments)
+		: valuesAtPath(source === 'rule' ? result._rule : result, segments)
 		.filter(value => value !== undefined && value !== null)
 		.map(value => typeof value === 'object' ? JSON.stringify(value) : String(value))
 	return Array.from(new Set(values)).join(', ')

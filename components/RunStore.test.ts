@@ -38,7 +38,7 @@ it('keeps Path as a visible fallback when Details is not selected', () => {
 })
 
 it('uses selected nested result fields as columns', () => {
-	const selected = observable.box(['Path', 'properties.acah.sink.selection.status'])
+	const selected = observable.box(['Path', 'result.properties.acah.sink.selection.status'])
 	const run = {
 		tool: {driver: {name: 'Sample Tool'}},
 		properties: {acah: {formatVersion: 3}},
@@ -48,8 +48,28 @@ it('uses selected nested result fields as columns', () => {
 	} as unknown as Run
 	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
 
-	expect(runStore.columns.map(column => column.id)).toEqual(['Path', 'properties.acah.sink.selection.status'])
+	expect(runStore.columns.map(column => column.id)).toEqual(['Path', 'result.properties.acah.sink.selection.status'])
 	expect(runStore.columns[1].filterString(run.results[0])).toBe('confirmed')
+})
+
+it('uses associated rule fields as columns and exports their report values', () => {
+	const selected = observable.box(['result.message.text', 'rule.shortDescription.text', 'rule.helpUri'])
+	const run = {
+		tool: {driver: {name: 'River', rules: [{
+			id: 'CVE-2099-3000',
+			shortDescription: {text: 'Affected dependency'},
+			helpUri: 'https://example.test/CVE-2099-3000',
+		}]}},
+		results: [{ruleId: 'CVE-2099-3000', message: {text: 'Calgary.Package 1.0.0'}}],
+	} as unknown as Run
+	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
+
+	expect(runStore.columns.map(column => column.id)).toEqual(selected.get())
+	expect(runStore.columns[1].filterString(run.results[0])).toBe('Affected dependency')
+	expect(runStore.columns[2].filterString(run.results[0])).toBe('https://example.test/CVE-2099-3000')
+	expect(createResultCsv([runStore], 'all')).toBe(
+		'\ufeff"result.message.text","rule.shortDescription.text","rule.helpUri"\r\n' +
+		'"Calgary.Package 1.0.0","Affected dependency","https://example.test/CVE-2099-3000"')
 })
 
 it('sorts rule groups by ruleId when that column is selected', () => {

@@ -11,6 +11,7 @@ import {Location} from 'azure-devops-ui/Utilities/Position'
 import {ResultOrRuleOrMore} from './Viewer.Types'
 import {RunStore, resultColumnFilterKey} from './RunStore'
 import {ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
+import {BUILT_IN_RESULT_FIELDS, getResultFieldJsonPath} from './ResultFields'
 
 const VALUE_FILTER_LIMIT = 12
 
@@ -41,11 +42,13 @@ export class ResultColumnHeader extends React.Component<{
 		const options = runStore.columnFilterOptions(column.id)
 		const useValues = !['Path', 'Details'].includes(column.id) && options.length > 0 && options.length <= VALUE_FILTER_LIMIT
 		const active = typeof value === 'string' ? !!value.trim() : !!value?.length
+		const fieldPath = getResultFieldJsonPath(column.id)
+		const fieldTooltip = BUILT_IN_RESULT_FIELDS.has(column.id) ? column.id : `SARIF JSON path: ${fieldPath}`
 		return <TableHeaderCell column={column} columnIndex={columnIndex} focuszoneId={focuszoneId} isFirstActionableHeader={isFirstActionableHeader}>
 			<div className="swcColumnHeader">
-				<span className="text-ellipsis" data-swc-tooltip={column.id}>{column.name}</span>
+				<span className="text-ellipsis" data-swc-tooltip={fieldTooltip}>{column.name}</span>
 				<button type="button" className={active ? 'active' : ''} aria-label={`Filter ${column.name}`}
-					aria-expanded={this.open} aria-haspopup="menu" data-swc-tooltip={`Filter ${column.id}`}
+					aria-expanded={this.open} aria-haspopup="menu" data-swc-tooltip={`Filter ${fieldPath}`}
 					ref={element => this.anchor = element ?? undefined}
 					onMouseDown={this.stop} onClick={event => { this.stop(event); this.open = !this.open }}>⋮</button>
 			</div>

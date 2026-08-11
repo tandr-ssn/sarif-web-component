@@ -5,7 +5,7 @@ import './ResultFieldSelector.scss'
 import * as React from 'react'
 import {IObservableValue, observable} from 'mobx'
 import {observer} from 'mobx-react'
-import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, ResultFieldNode} from './ResultFields'
+import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, getResultFieldJsonPath, ResultFieldNode} from './ResultFields'
 import {Callout} from 'azure-devops-ui/Callout'
 import {Location} from 'azure-devops-ui/Utilities/Position'
 
@@ -44,7 +44,11 @@ class FieldTreeNode extends React.Component<{
 		if (!includesSearch(node, search)) return null
 		const paths = leafPaths(node)
 		const checkedCount = paths.filter(path => selected.get().includes(path)).length
-		const label = <label data-swc-tooltip={node.path} onClick={event => event.stopPropagation()}>
+		const tooltip = node.path && (BUILT_IN_RESULT_FIELDS.has(node.path)
+			? node.path
+			: `SARIF JSON path: ${getResultFieldJsonPath(node.path)}`)
+		const label = <label data-swc-tooltip={tooltip}
+			onClick={event => event.stopPropagation()}>
 			<input type="checkbox" checked={checkedCount === paths.length} ref={this.setChecked}
 				onClick={event => event.stopPropagation()}
 				onChange={event => this.toggle(event.currentTarget.checked)} />
