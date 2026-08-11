@@ -120,3 +120,32 @@ test('copies a Markdown field as plain text, rendered HTML, and Markdown source'
 	selection.removeAllRanges()
 	root.remove()
 })
+
+test('keeps multi-cell HTML rectangular by flattening nested Markdown tables', () => {
+	const root = document.createElement('div')
+	root.innerHTML = `<table><tbody><tr>
+		<td class="bolt-table-cell" data-column-index="0"><span hidden data-copy-value="project/composer.lock"></span>project/composer.lock</td>
+		<td class="bolt-table-cell" data-column-index="1">
+			<span hidden data-copy-value="### Versions&#10;&#10;| Version | Status |&#10;| --- | --- |&#10;| 1.0 | affected |"
+				data-copy-markdown-value="### Versions&#10;&#10;| Version | Status |&#10;| --- | --- |&#10;| 1.0 | affected |"></span>
+			<div><h3>Versions</h3><table><tr><th>Version</th><th>Status</th></tr><tr><td>1.0</td><td>affected</td></tr></table></div>
+		</td>
+	</tr></tbody></table>`
+	document.body.appendChild(root)
+	const range = document.createRange()
+	range.selectNodeContents(root.querySelector('tr'))
+	const selection = window.getSelection()
+	selection.removeAllRanges()
+	selection.addRange(range)
+	const setData = jest.fn()
+
+	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault: jest.fn()} as unknown as React.ClipboardEvent<HTMLElement>)
+
+	const html = setData.mock.calls.find(([type]) => type === 'text/html')?.[1]
+	expect((html.match(/<table/g) ?? [])).toHaveLength(1)
+	expect((html.match(/<td/g) ?? [])).toHaveLength(2)
+	expect(html).toContain('project/composer.lock</td>')
+	expect(html).toContain('Version | Status<br>1.0     | affected</td>')
+	selection.removeAllRanges()
+	root.remove()
+})

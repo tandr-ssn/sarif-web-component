@@ -31,7 +31,16 @@ function comparableText(value: string): string {
 	return value.replace(/\s+/g, ' ').trim()
 }
 
-function cellHtml(cell: HTMLElement): string {
+function escapeHtml(value: string): string {
+	return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+function cellHtml(cell: HTMLElement, rich: boolean): string {
+	if (!rich) {
+		const text = escapeHtml(normalizedCellText(cell)).replace(/\n/g, '<br>')
+		return `<td style="vertical-align:top;white-space:pre-wrap">${text}</td>`
+	}
 	const clone = cell.cloneNode(true) as HTMLElement
 	clone.querySelectorAll('[data-copy-value], script, style').forEach(element => element.remove())
 	clone.querySelectorAll('[data-swc-tooltip]').forEach(element => element.removeAttribute('data-swc-tooltip'))
@@ -56,9 +65,9 @@ function rowsForCells(cells: HTMLElement[]): Map<Element, HTMLElement[]> {
 	return rows
 }
 
-function setRichClipboardData(event: React.ClipboardEvent<HTMLElement>, rows: Map<Element, HTMLElement[]>) {
+function setRichClipboardData(event: React.ClipboardEvent<HTMLElement>, rows: Map<Element, HTMLElement[]>, rich: boolean) {
 	const html = '<table><tbody>' + Array.from(rows.values())
-		.map(row => `<tr>${row.map(cellHtml).join('')}</tr>`).join('') + '</tbody></table>'
+		.map(row => `<tr>${row.map(cell => cellHtml(cell, rich)).join('')}</tr>`).join('') + '</tbody></table>'
 	event.clipboardData.setData('text/html', html)
 }
 
@@ -82,7 +91,7 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 		event.clipboardData.setData('text/plain', tsvCell(plain))
 		const markdown = marker?.dataset.copyMarkdownValue
 		if (markdown !== undefined) event.clipboardData.setData('text/markdown', markdown)
-		setRichClipboardData(event, rowsForCells(cells))
+		setRichClipboardData(event, rowsForCells(cells), true)
 		event.preventDefault()
 		return
 	}
@@ -96,6 +105,6 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 			.join('\t'))
 		.join('\n')
 	event.clipboardData.setData('text/plain', text)
-	setRichClipboardData(event, rows)
+	setRichClipboardData(event, rows, false)
 	event.preventDefault()
 }
