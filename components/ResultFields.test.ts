@@ -7,11 +7,17 @@ test('discovers nested scalar fields and ignores viewer back-links', () => {
 		properties: {acah: {classification: 'taint-unverified', status: 'review', resolution: 'native', sink: {selection: {status: 'confirmed'}}}},
 		locations: [{physicalLocation: {artifactLocation: {uri: 'src/app.ts'}}}],
 		ruleId: 'river-rule',
+		sla: 'Within SLA',
+		actions: [{text: 'Internal action', linkUrl: 'https://example.test/internal'}],
 	}
+	const riverRule: any = {id: 'river-rule', shortDescription: {text: 'River advisory'},
+		fullDescription: {text: 'A longer advisory description.'}, help: {markdown: 'Update the affected package.'},
+		helpUri: 'https://example.test/CVE-2099-1000'}
+	riverRule.isRule = true
+	riverRule.results = [result]
+	riverRule.treeItem = {childItems: [{data: result}], childItemsAll: [{data: result}]}
 	result.run = {
-		tool: {driver: {name: 'River', rules: [{id: 'river-rule', shortDescription: {text: 'River advisory'},
-			fullDescription: {text: 'A longer advisory description.'}, help: {markdown: 'Update the affected package.'},
-			helpUri: 'https://example.test/CVE-2099-1000'}]}},
+		tool: {driver: {name: 'River', rules: [riverRule]}},
 		properties: {acah: {formatVersion: 3}},
 		results: [result],
 	}
@@ -28,6 +34,11 @@ test('discovers nested scalar fields and ignores viewer back-links', () => {
 	expect(paths).toContain('rule.helpUri')
 	expect(paths.some(path => path.startsWith('result.run.'))).toBe(false)
 	expect(paths.some(path => path.startsWith('result._rule.'))).toBe(false)
+	expect(paths.some(path => path.startsWith('result.actions.'))).toBe(false)
+	expect(paths).not.toContain('result.sla')
+	expect(paths.some(path => path.includes('childItems'))).toBe(false)
+	expect(paths.some(path => path.startsWith('rule.results.'))).toBe(false)
+	expect(paths).not.toContain('rule.isRule')
 
 	const resultNode = buildResultFieldTree(paths).find(node => node.name === 'result')
 	const properties = resultNode.children.find(node => node.name === 'properties')

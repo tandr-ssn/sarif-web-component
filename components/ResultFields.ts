@@ -81,11 +81,18 @@ function collectLeafPaths(value: unknown, segments: string[], paths: Set<string>
 }
 
 function resultForFieldDiscovery(result: Result, run, rule): Result {
+	const {run: _run, _rule, firstDetection, sla, actions, ...sarifResult} = result as any
 	const properties = {...result.properties} as any
 	const acah = getResultAcah(result, run, rule)
 	if (acah) properties.acah = acah
 	else delete properties.acah
-	return {...result, properties} as Result
+	return {...sarifResult, properties} as Result
+}
+
+function ruleForFieldDiscovery(rule): unknown {
+	if (!rule) return undefined
+	const {isRule, results, treeItem, run, ...sarifRule} = rule
+	return sarifRule
 }
 
 export function discoverResultFieldPaths(logs: Log[] | undefined): string[] {
@@ -95,7 +102,7 @@ export function discoverResultFieldPaths(logs: Log[] | undefined): string[] {
 		run.results?.forEach(result => {
 			const rule = result.ruleIndex === undefined ? rules.find(candidate => candidate.id === result.ruleId) : rules[result.ruleIndex]
 			collectLeafPaths(resultForFieldDiscovery(result, run, rule), ['result'], paths, new Set(), 0)
-			collectLeafPaths(rule, ['rule'], paths, new Set(), 0)
+			collectLeafPaths(ruleForFieldDiscovery(rule), ['rule'], paths, new Set(), 0)
 		})
 	}))
 	return Array.from(paths)

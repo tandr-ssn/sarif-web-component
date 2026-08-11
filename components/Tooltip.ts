@@ -14,7 +14,7 @@ const styleText = `
 	pointer-events: none;
 	position: fixed;
 	white-space: pre-wrap;
-	z-index: 10000;
+	z-index: 2147483647;
 }`
 
 /** Installs one delegated, consistently styled tooltip layer in a browser window. */

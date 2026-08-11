@@ -14,6 +14,8 @@ test('shows one large custom tooltip layer for annotated elements', () => {
 	expect(tooltips[0].textContent).toBe('Readable details')
 	expect(Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n'))
 		.toContain('font: 16px/1.45 Arial, sans-serif')
+	expect(Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n'))
+		.toContain('z-index: 2147483647')
 
 	anchor.dispatchEvent(new MouseEvent('mouseout', {bubbles: true}))
 	expect(tooltips[0].hidden).toBe(true)
