@@ -1,6 +1,7 @@
 import {installTooltips} from './Tooltip'
 
-test('shows one large custom tooltip layer for annotated elements', () => {
+test('delays hover tooltips but shows keyboard-focus tooltips immediately', () => {
+	jest.useFakeTimers()
 	installTooltips(window)
 	installTooltips(window)
 	const anchor = document.createElement('button')
@@ -10,6 +11,15 @@ test('shows one large custom tooltip layer for annotated elements', () => {
 	anchor.dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))
 	const tooltips = document.querySelectorAll<HTMLElement>('.swcTooltip')
 	expect(tooltips).toHaveLength(1)
+	expect(tooltips[0].hidden).toBe(true)
+	jest.advanceTimersByTime(250)
+	anchor.dispatchEvent(new MouseEvent('mouseout', {bubbles: true}))
+	jest.advanceTimersByTime(500)
+	expect(tooltips[0].hidden).toBe(true)
+	anchor.dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))
+	jest.advanceTimersByTime(499)
+	expect(tooltips[0].hidden).toBe(true)
+	jest.advanceTimersByTime(1)
 	expect(tooltips[0].hidden).toBe(false)
 	expect(tooltips[0].textContent).toBe('Readable details')
 	expect(Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n'))
@@ -19,4 +29,10 @@ test('shows one large custom tooltip layer for annotated elements', () => {
 
 	anchor.dispatchEvent(new MouseEvent('mouseout', {bubbles: true}))
 	expect(tooltips[0].hidden).toBe(true)
+
+	anchor.dispatchEvent(new FocusEvent('focusin', {bubbles: true}))
+	expect(tooltips[0].hidden).toBe(false)
+	anchor.dispatchEvent(new FocusEvent('focusout', {bubbles: true}))
+	expect(tooltips[0].hidden).toBe(true)
+	jest.useRealTimers()
 })

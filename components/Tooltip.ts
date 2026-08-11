@@ -1,5 +1,6 @@
 const attribute = 'data-swc-tooltip'
 const installed = new WeakSet<Document>()
+const hoverDelay = 500
 
 const styleText = `
 .swcTooltip {
@@ -33,15 +34,25 @@ export function installTooltips(target: Window): void {
 	tooltip.hidden = true
 	document.body.appendChild(tooltip)
 	let anchor: Element | undefined
+	let pendingAnchor: Element | undefined
+	let hoverTimer: number | undefined
 
 	const owner = (eventTarget: EventTarget | null): Element | undefined =>
 		(eventTarget as Element | null)?.closest?.(`[${attribute}]`) ?? undefined
+	const cancelPending = (candidate?: Element) => {
+		if (candidate && pendingAnchor !== candidate) return
+		if (hoverTimer !== undefined) target.clearTimeout(hoverTimer)
+		hoverTimer = undefined
+		pendingAnchor = undefined
+	}
 	const hide = (candidate?: Element) => {
+		cancelPending(candidate)
 		if (candidate && anchor !== candidate) return
 		tooltip.hidden = true
 		anchor = undefined
 	}
 	const show = (candidate: Element | undefined) => {
+		cancelPending()
 		const value = candidate?.getAttribute(attribute)
 		if (!candidate || !value) return hide()
 		anchor = candidate
@@ -59,8 +70,17 @@ export function installTooltips(target: Window): void {
 			? below
 			: Math.max(edge, anchorBounds.top - tooltipBounds.height - gap)}px`
 	}
+	const showAfterDelay = (candidate: Element | undefined) => {
+		if (!candidate?.getAttribute(attribute)) return hide()
+		if (candidate === anchor || candidate === pendingAnchor) return
+		cancelPending()
+		pendingAnchor = candidate
+		hoverTimer = target.setTimeout(() => {
+			if (pendingAnchor === candidate) show(candidate)
+		}, hoverDelay)
+	}
 
-	document.addEventListener('mouseover', event => show(owner(event.target)))
+	document.addEventListener('mouseover', event => showAfterDelay(owner(event.target)))
 	document.addEventListener('mouseout', event => {
 		const candidate = owner(event.target)
 		if (!candidate || !event.relatedTarget || !candidate.contains(event.relatedTarget as Node)) hide(candidate)
