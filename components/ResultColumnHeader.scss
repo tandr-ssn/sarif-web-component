@@ -6,7 +6,17 @@
 	gap: 4px;
 	min-width: 0;
 
-	> span { flex: 1 1 auto; }
+	.swcColumnTitle { flex: 1 1 auto; min-width: 0; }
+	.swcColumnFilterActive {
+		border: 1px solid var(--communication-foreground);
+		border-radius: 8px;
+		color: var(--communication-foreground);
+		flex: 0 0 auto;
+		font-size: 9px;
+		font-weight: 700;
+		line-height: 13px;
+		padding: 0 4px;
+	}
 	> button {
 		background: transparent;
 		border: 0;

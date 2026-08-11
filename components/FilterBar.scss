@@ -1,0 +1,61 @@
+@use "azure-devops-ui/Core/_platformCommon.scss" as *;
+
+.swcFilterToolbar {
+	align-items: stretch;
+	background: $neutral-2;
+	display: flex;
+	gap: 8px;
+	margin: 8px 32px;
+	min-width: 0;
+
+	.swcKeywordFilter {
+		flex: 1 1 auto;
+		margin: 0;
+		min-width: 220px;
+	}
+
+	.vss-FilterBar--right-items { display: none; }
+
+	@media screen and (max-width: 600px) {
+		margin-left: 0;
+		margin-right: 0;
+	}
+}
+
+.swcFilterToolbarActions {
+	align-items: center;
+	display: flex;
+	flex: 0 0 auto;
+	padding: 8px 0;
+}
+
+.swcKeywordFilter .vss-FilterBar--list {
+	.vss-FilterBar--item-keyword-container {
+		border: 1px solid $neutral-20;
+		border-radius: 2px 0 0 2px;
+		border-right: 0;
+		margin-right: 0;
+	}
+
+	.vss-FilterBar--item-keyword-container + .vss-FilterBar--item {
+		margin-right: 0;
+	}
+}
+
+.swcFilterClear {
+	align-items: center;
+	background: $neutral-2;
+	border: 1px solid $neutral-20;
+	border-left: 0;
+	border-radius: 0 2px 2px 0;
+	color: $primary-text;
+	cursor: pointer;
+	display: flex;
+	font: 20px/1 Arial, sans-serif;
+	height: 32px;
+	justify-content: center;
+	width: 32px;
+
+	&:hover:not(:disabled), &:focus-visible { background: $neutral-8; }
+	&:disabled { color: $disabled-text; cursor: default; }
+}

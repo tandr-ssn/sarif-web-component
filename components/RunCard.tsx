@@ -4,21 +4,19 @@
 import './RunCard.scss'
 import * as React from 'react'
 import {Component} from 'react'
-import {autorun, runInAction, observable, computed, untracked} from 'mobx'
+import {autorun, runInAction, observable, computed} from 'mobx'
 import {observer} from 'mobx-react'
 
 import {Hi} from './Hi'
 import {renderCell} from './RunCard.renderCell'
 import {More, ResultOrRuleOrMore} from './Viewer.Types'
-import {RunStore, SortRuleBy} from './RunStore'
+import {RunStore} from './RunStore'
 import {TreeColumnSorting} from './RunCard.TreeColumnSorting'
 import {tryOr} from './try'
 
 import {Card} from 'azure-devops-ui/Card'
 import {Observer} from 'azure-devops-ui/Observer'
-import {ObservableLike, ObservableValue, IObservableValue} from 'azure-devops-ui/Core/Observable'
-import {IHeaderCommandBarItem} from 'azure-devops-ui/HeaderCommandBar'
-import {MenuItemType} from 'azure-devops-ui/Menu'
+import {ObservableLike, ObservableValue} from 'azure-devops-ui/Core/Observable'
 import {Pill, PillSize} from "azure-devops-ui/Pill"
 import {SortOrder} from 'azure-devops-ui/Table'
 import {Tree, ITreeColumn, ITreeRowDetails, renderTreeRow} from 'azure-devops-ui/TreeEx'
@@ -31,39 +29,8 @@ import {RunTitle} from './RunTitle'
 
 @observer export class RunCard extends Component<{ runStore: RunStore, index: number }> {
 	@observable private show = true
-	private groupByMenuItems = [] as IHeaderCommandBarItem[]
 	private itemProvider = new TreeItemProvider<ResultOrRuleOrMore>([])
 	private columnCache = new Map<string, ITreeColumn<ResultOrRuleOrMore>>()
-
-	@computed({ keepAlive: true }) private get sortRuleByMenuItems(): IHeaderCommandBarItem[] {
-		const {runStore} = this.props
-		const sortRuleBy = untracked(() => runStore.sortRuleBy)
-		const onActivate = menuItem => {
-			runStore.sortRuleBy = menuItem.data
-			if (menuItem.data === SortRuleBy.Name) runStore.sortRuleOrder = SortOrder.ascending
-			this.sortRuleByMenuItems.forEach(item => (item.checked as IObservableValue<boolean>).value = item.id === menuItem.id)
-		}
-		return [
-			{
-				data: SortRuleBy.Count,
-				id: 'sortByRuleCount',
-				text: 'Sort by rule count',
-				ariaLabel: 'Sort by rule count',
-				onActivate,
-				important: false,
-				checked: new ObservableValue(sortRuleBy === SortRuleBy.Count),
-			},
-			{
-				data: SortRuleBy.Name,
-				id: 'sortByRuleName',
-				text: 'Sort by rule name',
-				ariaLabel: 'Sort by rule name',
-				onActivate,
-				important: false,
-				checked: new ObservableValue(sortRuleBy === SortRuleBy.Name),
-			},
-		]
-	}
 
 	@computed private get columns() {
 		const {runStore} = this.props
@@ -100,38 +67,6 @@ import {RunTitle} from './RunTitle'
 
 	constructor(props) {
 		super(props)
-		const {runStore} = this.props
-
-		if (runStore.showAge) {
-			const onActivateGroupBy = menuItem => {
-				runStore.groupByAge.set(menuItem.data)
-				this.groupByMenuItems
-					.filter(item => item.itemType !== MenuItemType.Divider)
-					.forEach(item => (item.checked as IObservableValue<boolean>).value = item.id === menuItem.id)
-			}
-	
-			this.groupByMenuItems = [
-				{
-					data: true,
-					id: 'groupByAge',
-					text: 'Group by age',
-					ariaLabel: 'Group by age',
-					onActivate: onActivateGroupBy,
-					important: false,
-					checked: new ObservableValue(runStore.groupByAge.get()),
-				},
-				{
-					data: false,
-					id: 'groupByRule',
-					text: 'Group by rule',
-					ariaLabel: 'Group by rule',
-					onActivate: onActivateGroupBy,
-					important: false,
-					checked: new ObservableValue(!runStore.groupByAge.get()),
-				},
-				{ id: "separator", important: false, itemType: MenuItemType.Divider },
-			]
-		}
 
 		autorun(() => {
 			this.itemProvider.clear()
@@ -151,9 +86,7 @@ import {RunTitle} from './RunTitle'
 			}
 			runInAction(() => {
 			const selectedColumnIndex = this.props.runStore.columns.findIndex(column => column.id === this.columns[columnIndex]?.id)
-			const sortsRules = this.props.runStore.setColumnSort(selectedColumnIndex, proposedSortOrder)
-				if (sortsRules) this.sortRuleByMenuItems.forEach(item =>
-					(item.checked as IObservableValue<boolean>).value = item.id === 'sortByRuleName')
+			this.props.runStore.setColumnSort(selectedColumnIndex, proposedSortOrder)
 			})
 		}
 	)
@@ -196,10 +129,6 @@ import {RunTitle} from './RunTitle'
 						</RunTitle> as any
 					}}
 					contentProps={{ contentPadding: false }}
-					headerCommandBarItems={[
-						...this.groupByMenuItems,
-						...this.sortRuleByMenuItems,
-					]}
 					className="flex-grow bolt-card-no-vertical-padding">
 					{show && (itemProvider.length
 						? <div onCopy={copySelectedTableCells}>

@@ -44,9 +44,14 @@ export class ResultColumnHeader extends React.Component<{
 		const active = typeof value === 'string' ? !!value.trim() : !!value?.length
 		const fieldPath = getResultFieldJsonPath(column.id)
 		const fieldTooltip = BUILT_IN_RESULT_FIELDS.has(column.id) ? column.id : `SARIF JSON path: ${fieldPath}`
+		const activeFilterTooltip = typeof value === 'string'
+			? `Active filter: contains “${value.trim()}”`
+			: `Active filter: ${value?.join(', ')}`
 		return <TableHeaderCell column={column} columnIndex={columnIndex} focuszoneId={focuszoneId} isFirstActionableHeader={isFirstActionableHeader}>
 			<div className="swcColumnHeader">
-				<span className="text-ellipsis" data-swc-tooltip={fieldTooltip}>{column.name}</span>
+				<span className="swcColumnTitle text-ellipsis" data-swc-tooltip={fieldTooltip}>{column.name}</span>
+				{active && <span className="swcColumnFilterActive" aria-label="Column filter active"
+					data-swc-tooltip={activeFilterTooltip}>FILTER</span>}
 				<button type="button" className={active ? 'active' : ''} aria-label={`Filter ${column.name}`}
 					aria-expanded={this.open} aria-haspopup="menu" data-swc-tooltip={`Filter ${fieldPath}`}
 					ref={element => this.anchor = element ?? undefined}

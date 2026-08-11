@@ -51,7 +51,7 @@
 		background-color: $neutral-2;
 	}
 
-	.vss-FilterBar {
+	.swcFilterToolbar {
 		position: sticky;
 		z-index: 2; // Focused inputs/buttons are z=1.
 		top: 29px; // 3px less than .svShim height so the shadow overlaps neatly.

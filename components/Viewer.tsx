@@ -35,6 +35,7 @@ import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
 import {createResultCsv, createResultHtml, createResultHtmlTable, createResultMarkdown, createResultText, createResultTsv, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
+import {ResultViewOptionsMenu} from './ResultViewOptionsMenu'
 import {installTooltips} from './Tooltip'
 
 export interface ViewerProps {
@@ -409,9 +410,10 @@ export interface ViewerProps {
 							<div className="swcShim"></div>
 							{renderedSourcePicker}
 							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
-				resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
-				resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
-					filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />} />
+								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
+								resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
+									filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
+								resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresSorted} />} />
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
 								onDismiss={() => this.warnOldVersion = false}>
