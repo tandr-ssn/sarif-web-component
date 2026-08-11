@@ -1,0 +1,22 @@
+@use "azure-devops-ui/Core/_platformCommon.scss" as *;
+
+.swcGlobalResultHeader {
+	background: $neutral-2;
+	border: 1px solid $neutral-10;
+	border-radius: 3px 3px 0 0;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, .12);
+	margin: 0 32px 8px;
+
+	.bolt-table-header-row { background: $neutral-4; }
+	.bolt-table-header-cell {
+		box-shadow: inset -1px 0 rgba(var(--palette-neutral-100), .30);
+	}
+	.swcTreeHorizontalScroll {
+		overflow-x: scroll;
+		scrollbar-gutter: stable;
+	}
+}
+
+@media screen and (max-width: 600px) {
+	.swcGlobalResultHeader { margin-left: 0; margin-right: 0; }
+}

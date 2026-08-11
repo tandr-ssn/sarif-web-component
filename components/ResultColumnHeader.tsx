@@ -15,11 +15,16 @@ import {BUILT_IN_RESULT_FIELDS, getResultFieldJsonPath} from './ResultFields'
 
 const VALUE_FILTER_LIMIT = 12
 
+export function resultColumnFilterOptions(runStores: RunStore[], columnId: string): string[] {
+	return Array.from(new Set(runStores.flatMap(store => store.columnFilterOptions(columnId))))
+		.sort((left, right) => left.localeCompare(right))
+}
+
 @observer
 export class ResultColumnHeader extends React.Component<{
 	columnIndex: number
 	column: ITableColumn<ITreeItemEx<ResultOrRuleOrMore>>
-	runStore: RunStore
+	runStores: RunStore[]
 	focuszoneId?: string
 	isFirstActionableHeader?: boolean
 }> {
@@ -27,7 +32,8 @@ export class ResultColumnHeader extends React.Component<{
 	private anchor?: HTMLButtonElement
 
 	private setValue(value: string | string[] | undefined) {
-		const {filter} = this.props.runStore
+		const filter = this.props.runStores[0]?.filter
+		if (!filter) return
 		const key = resultColumnFilterKey(this.props.column.id)
 		if (value === undefined || value === '' || Array.isArray(value) && !value.length) filter.resetFilterItemState(key)
 		else filter.setFilterItemState(key, {value})
@@ -36,10 +42,11 @@ export class ResultColumnHeader extends React.Component<{
 	private stop = (event: React.SyntheticEvent) => event.stopPropagation()
 
 	render() {
-		const {columnIndex, column, runStore, focuszoneId, isFirstActionableHeader} = this.props
+		const {columnIndex, column, runStores, focuszoneId, isFirstActionableHeader} = this.props
+		const filter = runStores[0]?.filter
 		const key = resultColumnFilterKey(column.id)
-		const value = runStore.filter.getFilterItemValue<string | string[]>(key)
-		const options = runStore.columnFilterOptions(column.id)
+		const value = filter?.getFilterItemValue<string | string[]>(key)
+		const options = resultColumnFilterOptions(runStores, column.id)
 		const useValues = !['Path', 'Details'].includes(column.id) && options.length > 0 && options.length <= VALUE_FILTER_LIMIT
 		const active = typeof value === 'string' ? !!value.trim() : !!value?.length
 		const fieldPath = getResultFieldJsonPath(column.id)
