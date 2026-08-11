@@ -4,7 +4,7 @@ import * as Enzyme from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import {FilterBar as AzFilterBar} from 'azure-devops-ui/FilterBar'
 import {KeywordFilterBarItem} from 'azure-devops-ui/TextFilterBarItem'
-import {ClearAllFiltersButton, FilterBar, MobxFilter} from './FilterBar'
+import {ClearAllFiltersButton, clearFilterItem, FilterBar, MobxFilter} from './FilterBar'
 
 Enzyme.configure({adapter: new Adapter()})
 
@@ -24,15 +24,30 @@ test('uses the integrated keyword clear control and renders result actions besid
 	expect(actions.slice(1).map(child => child.prop('id'))).toEqual(['fields', 'export', 'view-options'])
 })
 
-test('shows and clears all active filters when a non-keyword filter is active', () => {
+test('describes active filters in the clear-filters dropdown', () => {
 	const filter = new MobxFilter({}, {})
 	filter.setFilterItemState('Keywords', {value: 'Calgary'})
 	filter.setFilterItemState('Column:Details', {value: 'blocked'})
 	const wrapper = shallow(<ClearAllFiltersButton filter={filter} />)
 
-	expect(wrapper.find('button').text()).toBe('Clear filters (2)')
-	expect(wrapper.find('button').prop('data-swc-tooltip'))
+	expect(wrapper.find('.swcClearAllFilters').text()).toBe('Clear filters (2) ▾')
+	expect(wrapper.find('.swcClearAllFilters').prop('data-swc-tooltip'))
 		.toBe('Clear all filters\nKeyword: “Calgary”\nDetails: contains “blocked”')
-	wrapper.find('button').simulate('click')
-	expect(filter.hasChangesToReset()).toBe(false)
+})
+
+test('clears one active filter without clearing the others', () => {
+	const filter = new MobxFilter({}, {})
+	filter.setFilterItemState('Keywords', {value: 'Calgary'})
+	filter.setFilterItemState('Column:Details', {value: 'blocked'})
+
+	clearFilterItem(filter, 'Keywords')
+
+	expect(filter.getFilterItemValue('Keywords')).toBe('')
+	expect(filter.getFilterItemValue('Column:Details')).toBe('blocked')
+
+	filter.setFilterItemState('Keywords', {value: 'Calgary'})
+	clearFilterItem(filter, 'Column:Details')
+
+	expect(filter.getFilterItemValue('Keywords')).toBe('Calgary')
+	expect(filter.getFilterItemValue('Column:Details')).toBeUndefined()
 })

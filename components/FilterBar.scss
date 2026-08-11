@@ -41,3 +41,29 @@
 
 	&:hover, &:focus-visible { background: $neutral-8; }
 }
+
+.swcClearFiltersMenu {
+	background: $neutral-4;
+	border: 1px solid $neutral-30;
+	border-radius: 3px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, .24);
+	display: flex;
+	flex-direction: column;
+	min-width: 220px;
+	padding: 4px;
+
+	button {
+		align-items: center;
+		background: transparent;
+		border: 0;
+		cursor: pointer;
+		display: flex;
+		gap: 8px;
+		padding: 7px 10px;
+		text-align: left;
+	}
+
+	button:hover, button:focus { background: $neutral-10; }
+	hr { border: 0; border-top: 1px solid $neutral-20; margin: 4px 0; width: 100%; }
+	.swcClearFiltersAll { font-weight: 600; }
+}

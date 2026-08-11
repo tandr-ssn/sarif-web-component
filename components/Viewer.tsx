@@ -372,7 +372,8 @@ export interface ViewerProps {
 			const {runStoresSorted} = this
 			if (!runStoresSorted.length) return null // Interpreted as loading.
 			const filteredResultsCount = runStoresSorted.reduce((total, run) => total + run.filteredCount, 0)
-			if (filteredResultsCount === 0) {
+			const showFilteredEmptyTables = filteredResultsCount === 0 && allResultCount > 0 && this.filter.hasChangesToReset()
+			if (filteredResultsCount === 0 && !showFilteredEmptyTables) {
 
 				const startingFilterState = this.props.filterState || recommendedDefaultState
 				const startingFilterStateLevel: string[] = startingFilterState['Level']?.value ?? []
@@ -425,7 +426,7 @@ export interface ViewerProps {
 				</div>
 			}
 			return runStoresSorted
-				.filter(run => !filterKeywords || run.filteredCount)
+				.filter(run => showFilteredEmptyTables || !filterKeywords || run.filteredCount)
 				.map((run, index) => <div key={this.getRunCardKey(run.run)} className="page-content-left page-content-right page-content-top">
 					<RunCard runStore={run} index={index} fitAllColumns={this.fitAllColumns} />
 				</div>)

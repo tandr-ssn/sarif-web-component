@@ -2,13 +2,15 @@
 // Licensed under the MIT License.
 
 import './FilterBar.scss'
-import { createAtom } from 'mobx'
+import { createAtom, observable } from 'mobx'
 import { observer } from 'mobx-react'
 import * as React from 'react'
 
+import { Callout } from 'azure-devops-ui/Callout'
 import { FilterBar as AzFilterBar } from 'azure-devops-ui/FilterBar'
 import { KeywordFilterBarItem } from 'azure-devops-ui/TextFilterBarItem'
 import { Filter, FILTER_CHANGE_EVENT, IFilterState } from 'azure-devops-ui/Utilities/Filter'
+import { Location } from 'azure-devops-ui/Utilities/Position'
 
 export const recommendedDefaultState = {
 	Baseline: { value: ['new', 'unchanged', 'updated'] },
@@ -64,16 +66,43 @@ export function getActiveFilterDescriptions(filter: MobxFilter): ActiveFilterDes
 		})
 }
 
+export function clearFilterItem(filter: MobxFilter, key: string) {
+	// Keep an object for Keywords because RunStore iterates non-column filter states.
+	if (key === 'Keywords') filter.setFilterItemState(key, {value: ''})
+	else filter.resetFilterItemState(key)
+}
+
 @observer export class ClearAllFiltersButton extends React.Component<{filter: MobxFilter}> {
+	@observable private open = false
+	private anchor?: HTMLButtonElement
+
 	render() {
 		const {filter} = this.props
 		const active = getActiveFilterDescriptions(filter)
 		if (!active.some(item => item.key !== 'Keywords')) return null
 		const tooltip = `Clear all filters\n${active.map(item => item.description).join('\n')}`
-		return <button type="button" className="swcClearAllFilters"
-			aria-label={`Clear all filters; ${active.length} active`}
-			data-swc-tooltip={tooltip}
-			onClick={() => filter.reset()}>Clear filters ({active.length})</button>
+		return <div className="swcClearFilters">
+			<button type="button" className="swcClearAllFilters"
+				ref={element => this.anchor = element ?? undefined}
+				aria-label={`Clear filters; ${active.length} active`}
+				aria-expanded={this.open} aria-haspopup="menu"
+				data-swc-tooltip={tooltip}
+				onClick={() => this.open = !this.open}>Clear filters ({active.length}) <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
+			{this.open && this.anchor && <Callout anchorElement={this.anchor}
+				anchorOrigin={{horizontal: Location.start, vertical: Location.end}}
+				calloutOrigin={{horizontal: Location.start, vertical: Location.start}}
+				blurDismiss={false} escDismiss={true} lightDismiss={true}
+				onDismiss={() => this.open = false}>
+				<div className="swcClearFiltersMenu" role="menu">
+					{active.map(item => <button type="button" role="menuitem" key={item.key}
+						aria-label={`Clear filter: ${item.description}`}
+						onClick={() => { clearFilterItem(filter, item.key); this.open = false }}><span aria-hidden="true">×</span>{item.description}</button>)}
+					<hr role="separator" />
+					<button type="button" role="menuitem" className="swcClearFiltersAll"
+						onClick={() => { filter.reset(); this.open = false }}>Clear all filters</button>
+				</div>
+			</Callout>}
+		</div>
 	}
 }
 

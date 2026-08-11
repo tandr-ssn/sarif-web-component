@@ -148,8 +148,7 @@ export function preferredResultColumnWidth(width: number): number {
 					}}
 					contentProps={{ contentPadding: false }}
 					className="flex-grow bolt-card-no-vertical-padding">
-					{show && (itemProvider.length
-						? <div onCopy={copySelectedTableCells}>
+					{show && <div onCopy={copySelectedTableCells}>
 							<Tree<ResultOrRuleOrMore>
 							className="swcTree"
 							containerClassName={fitAllColumns ? undefined : 'swcTreeHorizontalScroll'}
@@ -172,9 +171,11 @@ export function preferredResultColumnWidth(width: number): number {
 							selectableText={true}
 							showScroll={!fitAllColumns}
 							/>
+							{!itemProvider.length && <div className="swcRunEmpty">
+								{runStore.run.results?.length ? 'No matching results' : 'No Results'}
+							</div>}
 						</div>
-						: <div className="swcRunEmpty">No Results</div>
-					)}
+					}
 				</Card>
 			}}
 		</Observer>
