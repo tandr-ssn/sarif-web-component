@@ -171,7 +171,9 @@ export function renderCell<T extends ISimpleTableCell>(
 						case 'First Observed':
 							return <Hi>{result.firstDetection.toLocaleDateString()}</Hi>
 				default:
-					return <Hi>{getResultFieldValue(result, treeColumn.id)}</Hi>
+					return <span className="swcResultFieldValue" style={{whiteSpace: 'pre-wrap'}}>
+						<Hi>{getResultFieldValue(result, treeColumn.id).trim()}</Hi>
+					</span>
 			}
 		})()
 		return columnIndex === 0

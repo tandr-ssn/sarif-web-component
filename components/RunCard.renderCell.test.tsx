@@ -22,3 +22,16 @@ test('attaches the rule description tooltip to the rendered rule title', () => {
 
 	expect(wrapper.find('.swcRuleTitle').prop('data-swc-tooltip')).toBe('Detects unsafe file access.')
 })
+
+test('preserves line endings in selected result and rule field values', () => {
+	const result: any = {
+		message: {text: 'Affected dependency'},
+		_rule: {help: {text: '\n\nUpgrade Calgary.Package.\nRestart the River service.\nVerify the resolved version.\n\n'}},
+	}
+	const treeItem: any = {underlyingItem: {data: result}}
+	const wrapper = mount(renderCell(0, 1, {id: 'rule.help.text'} as any, treeItem))
+	const value = wrapper.find('.swcResultFieldValue')
+
+	expect(value.prop('style')).toEqual({whiteSpace: 'pre-wrap'})
+	expect(value.text()).toBe('Upgrade Calgary.Package.\nRestart the River service.\nVerify the resolved version.')
+})
