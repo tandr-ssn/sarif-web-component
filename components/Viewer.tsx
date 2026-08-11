@@ -33,7 +33,7 @@ import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileS
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
-import {createResultCsv, createResultHtml, createResultMarkdown, createResultText, createResultTsv, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
+import {createResultCsv, createResultHtml, createResultHtmlTable, createResultMarkdown, createResultText, createResultTsv, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
 import {installTooltips} from './Tooltip'
 
@@ -228,11 +228,13 @@ export interface ViewerProps {
 			'csv-raw': () => ({content: createResultCsv(this.runStoresSorted, scope, 'raw'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
 			tsv: () => ({content: createResultTsv(this.runStoresSorted, scope), extension: 'tsv', type: 'text/tab-separated-values;charset=utf-8'}),
 			html: () => ({content: createResultHtml(this.runStoresSorted, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
+			'html-table': () => ({content: createResultHtmlTable(this.runStoresSorted, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
 			text: () => ({content: createResultText(this.runStoresSorted, scope), extension: 'txt', type: 'text/plain;charset=utf-8'}),
 			markdown: () => ({content: createResultMarkdown(this.runStoresSorted, scope), extension: 'md', type: 'text/markdown;charset=utf-8'}),
 		}[format]()
 		const {content, extension, type} = output
-		downloadResultFile(content, `sarif-findings-${scope}.${extension}`, type)
+		const variant = format === 'html-table' ? '-table' : ''
+		downloadResultFile(content, `sarif-findings-${scope}${variant}.${extension}`, type)
 	}
 
 	private selectSourceDirectory = async () => {

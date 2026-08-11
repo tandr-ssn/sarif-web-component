@@ -15,11 +15,23 @@ test('exports filtered findings as plain-text CSV', () => {
 	wrapper.update()
 	const choices = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))
 	expect(choices.map(choice => choice.textContent)).toEqual([
-		'CSV — plain text', 'CSV — raw values', 'TSV', 'HTML', 'Plain text', 'Markdown',
+		'CSV — plain text', 'CSV — raw values', 'TSV', 'HTML — report', 'HTML — table', 'Plain text', 'Markdown',
 	])
 	const csv = choices[0]
 	csv.click()
 	expect(onExport).toHaveBeenCalledWith('filtered', 'csv-plain')
+	wrapper.unmount()
+})
+
+test('offers a logical-column HTML table', () => {
+	const onExport = jest.fn()
+	const wrapper = mount(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
+	wrapper.find('.swcResultExport > button').simulate('click')
+	wrapper.update()
+	const htmlTable = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))
+		.find(candidate => candidate.textContent === 'HTML — table')
+	htmlTable.click()
+	expect(onExport).toHaveBeenCalledWith('filtered', 'html-table')
 	wrapper.unmount()
 })
 

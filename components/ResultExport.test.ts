@@ -1,4 +1,4 @@
-import {createResultCsv, createResultHtml, createResultMarkdown, createResultText, createResultTsv} from './ResultExport'
+import {createResultCsv, createResultHtml, createResultHtmlTable, createResultMarkdown, createResultText, createResultTsv} from './ResultExport'
 import {RunStore} from './RunStore'
 
 const first = {
@@ -36,6 +36,13 @@ test('exports only currently filtered findings', () => {
 		'"src/two.ts","\'=unsafe formula"')
 })
 
+test('exports selected logical columns as an HTML table', () => {
+	const html = createResultHtmlTable([runStore], 'all')
+	expect(html).toContain('<table class="findings"><thead><tr><th>Path</th><th>Details</th><th>Code flow</th></tr></thead>')
+	expect(html).toContain('<tbody><tr><td><pre>src/one.ts</pre></td><td><pre>First, finding\nconst value = &quot;quoted&quot;</pre></td>')
+	expect(html).toContain('<tr><td><pre>src/two.ts</pre></td><td><pre>=unsafe formula</pre></td><td><pre></pre></td></tr>')
+})
+
 test('exports rendered Markdown as readable text in CSV cells', () => {
 	const markdownRunStore = {
 		columns: [{
@@ -69,6 +76,9 @@ test('exports rendered findings as TSV, HTML, and plain text', () => {
 	expect(html).toContain('<h3>Help Text</h3><h3>Versions</h3>')
 	expect(html).toContain('<table><thead><tr><th>Version</th><th>Status</th></tr></thead>')
 	expect(html).toContain('<strong>affected</strong>')
+	const htmlTable = createResultHtmlTable([renderedRunStore], 'all')
+	expect(htmlTable).toContain('<thead><tr><th>Message Text</th><th>Help Text</th></tr></thead>')
+	expect(htmlTable).toContain('<td><h3>Versions</h3><table>')
 })
 
 test('exports selected fields as a Markdown report without flattening Markdown values', () => {

@@ -12,7 +12,7 @@ import { MobxFilter } from './FilterBar'
 import {observable} from 'mobx'
 import {SortOrder} from 'azure-devops-ui/Table'
 import {isResultVariantGroup} from './ResultVariantGroup'
-import {createResultCsv} from './ResultExport'
+import {createResultCsv, createResultHtmlTable} from './ResultExport'
 jest.mock('./FilterBar')
 
 it('does not explode', () => { // Bare bones perf is 0.2s
@@ -54,6 +54,8 @@ it('exports built-in Path values relative to the SARIF source root', () => {
 	expect(runStore.columns[0].filterString(run.results[0])).toBe('calgary/src/River.java')
 	expect(createResultCsv([runStore], 'all')).toBe('\ufeff"Path"\r\n"calgary/src/River.java"')
 	expect(createResultCsv([runStore], 'all')).not.toContain('/home/user')
+	expect(createResultHtmlTable([runStore], 'all')).toContain('<td><pre>calgary/src/River.java</pre></td>')
+	expect(createResultHtmlTable([runStore], 'all')).not.toContain('/home/user')
 })
 
 it('uses selected nested result fields as columns', () => {

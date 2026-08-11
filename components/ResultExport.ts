@@ -5,7 +5,7 @@ import {getResultFieldDisplayNames, looksLikeMarkdown} from './ResultFields'
 import {markdownToHtml, markdownToPlainText} from './MarkdownText'
 
 export type ResultExportScope = 'filtered' | 'all'
-export type ResultExportFormat = 'csv-plain' | 'csv-raw' | 'tsv' | 'html' | 'text' | 'markdown'
+export type ResultExportFormat = 'csv-plain' | 'csv-raw' | 'tsv' | 'html' | 'html-table' | 'text' | 'markdown'
 export type ResultCsvValueFormat = 'raw' | 'plain'
 
 function spreadsheetSafe(value: string): string {
@@ -109,6 +109,26 @@ export function createResultHtml(runStores: ReadonlyArray<RunStore>, scope: Resu
 		+ 'pre{white-space:pre-wrap}table{border-collapse:collapse}th,td{border:1px solid #aaa;padding:4px 8px;text-align:left}'
 		+ 'code{background:#eee;padding:1px 3px}blockquote{border-left:4px solid #bbb;margin-left:0;padding-left:12px}'
 		+ '</style></head><body><h1>SARIF findings</h1>' + findings + '</body></html>\n'
+}
+
+/** Creates a rendered HTML table while retaining the selected logical export columns. */
+export function createResultHtmlTable(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
+	const {fields, rows} = exportRows(runStores, scope)
+	const labels = exportFieldLabels(fields)
+	const header = `<thead><tr>${labels.map(label => `<th>${escapeHtml(label)}</th>`).join('')}</tr></thead>`
+	const body = `<tbody>${rows.map(row => `<tr>${fields.map((field, fieldIndex) =>
+		`<td>${htmlValue(field, row[fieldIndex])}</td>`).join('')}</tr>`).join('')}</tbody>`
+	return '<!doctype html><html><head><meta charset="utf-8"><title>SARIF findings table</title><style>'
+		+ 'body{font:14px/1.4 Arial,sans-serif;margin:24px;color:#242424}h1{font-size:24px}'
+		+ '.table-wrap{overflow-x:auto}table{border-collapse:collapse}table.findings{width:100%}'
+		+ 'th,td{border:1px solid #aaa;padding:6px 9px;text-align:left;vertical-align:top}'
+		+ 'table.findings>thead>tr>th{background:#f0f0f0;font-weight:700;position:sticky;top:0}'
+		+ 'table.findings>tbody>tr:nth-child(even)>td{background:#fafafa}'
+		+ 'pre{font:inherit;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}p{margin:0 0 8px}p:last-child{margin-bottom:0}'
+		+ 'code{background:#eee;padding:1px 3px}blockquote{border-left:4px solid #bbb;margin-left:0;padding-left:12px}'
+		+ 'a{overflow-wrap:anywhere}'
+		+ '</style></head><body><h1>SARIF findings</h1><div class="table-wrap"><table class="findings">'
+		+ header + body + '</table></div></body></html>\n'
 }
 
 function escapeMarkdownText(value: string): string {

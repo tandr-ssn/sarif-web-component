@@ -34,7 +34,8 @@ import {ResultExportFormat, ResultExportScope} from './ResultExport'
 					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'csv-plain') }}>CSV — plain text</button>
 					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'csv-raw') }}>CSV — raw values</button>
 					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'tsv') }}>TSV</button>
-					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'html') }}>HTML</button>
+					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'html') }}>HTML — report</button>
+					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'html-table') }}>HTML — table</button>
 					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'text') }}>Plain text</button>
 					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'markdown') }}>Markdown</button>
 				</div>
