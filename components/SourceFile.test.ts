@@ -21,7 +21,7 @@ test('renders embedded source as text in a new tab', async () => {
 
 	await openSourceFile({ uri: 'src/file.ts', index: 0 }, run, undefined, undefined)
 
-	expect(childDocument.title).toBe('src/file.ts')
+	expect(childDocument.title).toBe('file.ts')
 	expect(childDocument.querySelector('pre')?.textContent).toBe(source)
 	expect(childDocument.querySelector('script')).toBeNull()
 	expect(childDocument.querySelectorAll('.source-line')).toHaveLength(1)
@@ -56,13 +56,27 @@ test('uses the root-relative source path as an encoded browser fragment', async 
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
 	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
-	const reader = async () => ({name: 'src/My file#1.ts', text: 'source'})
+	const reader = async () => ({name: '/home/user/calgary/src/My file#1.ts', text: 'source'})
 
-	await openSourceFile({uri: '/home/user/calgary/src/My file#1.ts'}, {} as any, undefined, reader)
+	await openSourceFile(
+		{uri: '/home/user/calgary/src/My file#1.ts'},
+		{} as any,
+		undefined,
+		reader,
+		undefined,
+		() => 'src/My file#1.ts',
+	)
 
 	expect(childWindow.location.hash).toBe('#src/My%20file%231.ts')
 	expect(childDocument.getElementById('src/My file#1.ts')).not.toBeNull()
-	expect(childDocument.title).toBe('src/My file#1.ts')
+	expect(childDocument.title).toBe('My file#1.ts')
+	const sourcePath = childDocument.querySelector('[data-current-file]')
+	expect(sourcePath?.textContent).toBe('src/My file#1.ts')
+	expect(sourcePath?.nextElementSibling?.classList.contains('source-toolbar-row')).toBe(true)
+	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
+	expect(sourceStyles).toContain('font-family: "Segoe UI", "-apple-system"')
+	expect(sourceStyles).toContain('font-size: 14px')
+	expect(sourceStyles).toContain('padding: 6px 12px')
 	open.mockRestore()
 })
 

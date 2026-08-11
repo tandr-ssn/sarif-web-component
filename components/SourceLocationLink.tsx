@@ -39,7 +39,7 @@ function SourceLocationLinkWithReader(props: {
 		return <a href="#" className={props.className} onClick={event => {
 			event.preventDefault()
 			event.stopPropagation()
-			void openSourceFile(artifactLocation, run, ploc.region, reader, trace)
+			void openSourceFile(artifactLocation, run, ploc.region, reader, trace, formatPath)
 		}} data-swc-tooltip={sourceLocationText}>{text}</a>
 	}
 

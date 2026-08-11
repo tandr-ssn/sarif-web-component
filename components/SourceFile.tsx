@@ -64,6 +64,13 @@ function fragmentHref(id: string): string {
 	return `#${encodeURIComponent(id).replace(/%2F/gi, '/')}`
 }
 
+function sourceDocumentTitle(path: string | undefined): string {
+	if (!path) return 'Source file'
+	let decoded = path
+	try { decoded = decodeURIComponent(path) } catch (_) { }
+	return decoded.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Source file'
+}
+
 function sourceLines(text: string): string[] {
 	return text.match(/[^\n]*\n|[^\n]+$/g) ?? ['']
 }
@@ -242,9 +249,9 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 		<ol>${trace.missing.map(location => `<li data-trace-index="${location.traceIndex}">${location.traceIndex + 1}. ${escapeHtml(location.name)}</li>`).join('')}</ol>
 	</details>` : ''
 	return `<div class="source-toolbar" data-active-line="${activeLine}" data-file-count="${views.length}" data-trace-count="${trace?.totalEntries ?? 0}">
+		<div class="source-path" data-current-file>${escapeHtml(activeView.name)}</div>
 		<div class="source-toolbar-row">
 			${traceNavigation}
-			<span class="source-path" data-current-file>${escapeHtml(activeView.name)}</span>
 			<span class="source-actions">
 				<button type="button" data-copy="path">Copy path</button>
 				<button type="button" data-copy="path-line">Copy path:line</button>
@@ -314,7 +321,7 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		if (position && trace) {
 			position.textContent = `Entry ${index + 1} of ${trace.totalEntries} · File ${+(section.getAttribute('data-file-index') ?? 0) + 1} of ${toolbar.getAttribute('data-file-count')}`
 		}
-		target.document.title = fileName
+		target.document.title = sourceDocumentTitle(fileName)
 		const navigablePosition = traceIndices.indexOf(index)
 		setButtonDisabled('previous', navigablePosition <= 0)
 		setButtonDisabled('next', navigablePosition < 0 || navigablePosition >= traceIndices.length - 1)
@@ -444,17 +451,17 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 	const maxBadgesPerRow = 4
 	const badgesPerRow = Math.min(maxBadgesPerRow, maxBadgesOnLine)
 	const traceColumnWidth = Math.max(9, badgesPerRow * (traceIndexWidth + 3) + 1)
-	target.document.title = activeView?.name ?? 'Source file'
+	target.document.title = sourceDocumentTitle(activeView?.name)
 	const style = target.document.createElement('style')
 	style.textContent = `
 		:root { color-scheme: light dark; }
-		body { background: #ffffff; color: #202020; margin: 0; }
+		body { background: #ffffff; color: #202020; font-family: "Segoe UI", "-apple-system", BlinkMacSystemFont, Roboto, "Helvetica Neue", Helvetica, Ubuntu, Arial, sans-serif; font-size: 14px; margin: 0; }
 		button { font: inherit; }
-		.source-toolbar { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; font: 13px sans-serif; padding: 7px 10px; position: sticky; top: 0; z-index: 10; }
+		.source-toolbar { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; padding: 7px 10px; position: sticky; top: 0; z-index: 10; }
 		.source-toolbar-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
-		.source-toolbar button { background: #ffffff; border: 1px solid #b3b3b3; border-radius: 3px; color: #202020; cursor: pointer; padding: 3px 7px; }
+		.source-toolbar button { background: #ffffff; border: 1px solid #b3b3b3; border-radius: 2px; color: #202020; cursor: pointer; font-weight: 600; padding: 6px 12px; }
 		.source-toolbar button:disabled { cursor: default; opacity: .45; }
-		.source-path { font-family: monospace; margin-left: auto; overflow-wrap: anywhere; }
+		.source-path { font-family: Menlo, Consolas, "Courier New", monospace; font-weight: 600; margin-bottom: 6px; overflow-wrap: anywhere; }
 		.source-actions { display: inline-flex; gap: 4px; }
 		.copy-status { min-width: 4em; }
 		.trace-legend { align-items: center; display: inline-flex; gap: 4px; white-space: nowrap; }
@@ -679,15 +686,16 @@ function traceStepRole(step: ThreadFlowLocation | undefined, index: number, coun
 	return undefined
 }
 
-function resolvedTraceLocationText(location: ResolvedTraceLocation): string | undefined {
-	const path = location.artifactLocation?.uri
+function resolvedTraceLocationText(location: ResolvedTraceLocation, run: Run, formatPath?: SourcePathFormatter): string | undefined {
+	const uri = location.artifactLocation?.uri
+	const path = uri && (formatPath?.(uri, run, location.artifactLocation) ?? uri)
 	const line = location.region?.startLine
 	const column = location.region?.startColumn
 	if (!path) return line ? `Line ${line}${column ? `:${column}` : ''}` : undefined
 	return line ? `${path}:${line}${column ? `:${column}` : ''}` : path
 }
 
-function traceLocationTooltip(location: ResolvedTraceLocation, count: number, run: Run): string {
+function traceLocationTooltip(location: ResolvedTraceLocation, count: number, run: Run, formatPath?: SourcePathFormatter): string {
 	const step = location.step
 	const acah = getTraceStepAcah(step, run)
 	const role = getTraceStepRole(step, run) ?? traceStepRole(step, location.traceIndex, count)
@@ -720,7 +728,7 @@ function traceLocationTooltip(location: ResolvedTraceLocation, count: number, ru
 		: undefined
 	return [
 		heading,
-		resolvedTraceLocationText(location),
+		resolvedTraceLocationText(location, run, formatPath),
 		logicalName ? `Symbol location: ${logicalName}` : undefined,
 		state,
 		symbol,
@@ -730,9 +738,9 @@ function traceLocationTooltip(location: ResolvedTraceLocation, count: number, ru
 	].filter(Boolean).join('\n')
 }
 
-function originTooltip(origin: ResolvedTraceOrigin): string {
+function originTooltip(origin: ResolvedTraceOrigin, run: Run, formatPath?: SourcePathFormatter): string {
 	const role = origin.kind ? readableName(origin.kind) : 'Origin'
-	const location = resolvedTraceLocationText({...origin, traceIndex: -1})
+	const location = resolvedTraceLocationText({...origin, traceIndex: -1}, run, formatPath)
 	return [`Origin · ${role}`, origin.name ? `Value: ${origin.name}` : undefined, location].filter(Boolean).join('\n')
 }
 
@@ -907,12 +915,13 @@ export async function openSourceFile(
 	region: Region | undefined,
 	reader: SourceFileReader | undefined,
 	trace?: SourceTrace,
+	formatPath?: SourcePathFormatter,
 ): Promise<void> {
 	// Open synchronously during the click event so popup blockers do not reject it after the async read.
 	const target = window.open('about:blank', '_blank')
 	if (!target) return
 	target.opener = null
-	target.document.title = artifactLocation.uri ?? 'Source file'
+	target.document.title = sourceDocumentTitle(artifactLocation.uri)
 	target.document.body.textContent = 'Loading source file...'
 
 	try {
@@ -935,7 +944,7 @@ export async function openSourceFile(
 				step,
 				role: getTraceStepRole(step, run),
 			}
-			resolved.tooltip = traceLocationTooltip(resolved, trace.locations.length, run)
+			resolved.tooltip = traceLocationTooltip(resolved, trace.locations.length, run, formatPath)
 			return resolved
 		}) ?? []
 		const resolvedOrigin: ResolvedTraceOrigin | undefined = trace?.origin && (() => {
@@ -974,7 +983,11 @@ export async function openSourceFile(
 			.filter(key => sourceFilesByKey.has(key))
 			.map((key, index) => {
 				const sourceFile = sourceFilesByKey.get(key)
-				const name = sourceFile.name || `source-file-${index + 1}`
+				const location = artifactsByKey.get(key)
+				const formattedName = location?.uri && formatPath?.(location.uri, run, location)
+				const name = formattedName && (!sourceFile.name || formattedName.length <= sourceFile.name.length)
+					? formattedName
+					: sourceFile.name || `source-file-${index + 1}`
 				let id = name
 				for (let duplicate = 2; usedViewIds.has(id); duplicate++) id = `${name} (${duplicate})`
 				usedViewIds.add(id)
@@ -1029,7 +1042,7 @@ export async function openSourceFile(
 					region: originRegion,
 					color: identifierColor,
 					isIdentifier: !!resolvedOrigin.name,
-					tooltip: originTooltip(resolvedOrigin),
+					tooltip: originTooltip(resolvedOrigin, run, formatPath),
 				})
 			}
 		})
@@ -1047,7 +1060,9 @@ export async function openSourceFile(
 				.filter(location => !location.key || !sourceFilesByKey.has(location.key))
 				.map(location => ({
 					traceIndex: location.traceIndex,
-					name: location.artifactLocation?.uri ?? 'No source location',
+					name: location.artifactLocation?.uri
+						? formatPath?.(location.artifactLocation.uri, run, location.artifactLocation) ?? location.artifactLocation.uri
+						: 'No source location',
 				})),
 		}
 		renderSourceDocument(target, views, activeKey, traceSummary)

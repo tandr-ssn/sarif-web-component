@@ -9,6 +9,10 @@ const fitAllColumnsKey = `${sessionKey}:fit-all-columns`
 const syntheticSarif = {
 	version: '2.1.0',
 	runs: [{
+		artifacts: [{
+			location: {uri: 'src/Ottawa/River.ts'},
+			contents: {text: Array.from({length: 45}, (_, index) => `const riverValue${index + 1} = ${index + 1};`).join('\n')},
+		}],
 		tool: {driver: {
 			name: 'River',
 			rules: [{
@@ -23,7 +27,7 @@ const syntheticSarif = {
 			kind: 'fail',
 			message: {text: 'Affected Ottawa dependency'},
 			locations: [{physicalLocation: {
-				artifactLocation: {uri: 'src/Ottawa/River.ts'},
+				artifactLocation: {uri: 'src/Ottawa/River.ts', index: 0},
 				region: {startLine: 42, startColumn: 9},
 			}}],
 			properties: {
@@ -175,4 +179,31 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	expect(controlsTop).toBeGreaterThanOrEqual(0)
 	expect(headerTop).toBeGreaterThan(controlsTop)
 	await expect(page.getByRole('button', {name: 'Filter Details'})).toBeVisible()
+})
+
+test('uses a full-width relative path and matching controls in the source popup', async ({page}) => {
+	const [popup] = await Promise.all([
+		page.waitForEvent('popup'),
+		page.locator('.swcFindingPath a').first().click(),
+	])
+	await expect(popup.locator('[data-current-file]')).toHaveText('src/Ottawa/River.ts')
+	await expect(popup).toHaveTitle('River.ts')
+	const presentation = await popup.evaluate(() => {
+		const path = document.querySelector<HTMLElement>('[data-current-file]')
+		const row = document.querySelector<HTMLElement>('.source-toolbar-row')
+		const button = document.querySelector<HTMLElement>('.source-toolbar button')
+		const bodyStyle = getComputedStyle(document.body)
+		const buttonStyle = button && getComputedStyle(button)
+		return {
+			pathAboveControls: !!path && !!row && path.getBoundingClientRect().bottom <= row.getBoundingClientRect().top,
+			bodyFontSize: bodyStyle.fontSize,
+			buttonFontFamily: buttonStyle?.fontFamily,
+			bodyFontFamily: bodyStyle.fontFamily,
+			buttonFontSize: buttonStyle?.fontSize,
+		}
+	})
+	expect(presentation.pathAboveControls).toBe(true)
+	expect(presentation.bodyFontSize).toBe('14px')
+	expect(presentation.buttonFontSize).toBe('14px')
+	expect(presentation.buttonFontFamily).toBe(presentation.bodyFontFamily)
 })
