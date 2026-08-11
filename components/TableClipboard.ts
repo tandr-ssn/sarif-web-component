@@ -15,6 +15,19 @@ function normalizedCellText(cell: HTMLElement): string {
 		.trim()
 }
 
+function leadingCellText(cell: HTMLElement): string | undefined {
+	const value = cell.querySelector<HTMLElement>('[data-copy-value]')?.dataset.copyLeadingValue
+	return value === undefined ? undefined : value
+		.replace(/\t/g, ' ')
+		.replace(/\r\n?/g, '\n')
+		.trim()
+}
+
+function logicalCellTexts(cell: HTMLElement): string[] {
+	const leading = leadingCellText(cell)
+	return leading === undefined ? [normalizedCellText(cell)] : [leading, normalizedCellText(cell)]
+}
+
 function tsvCell(value: string): string {
 	return /["\r\n\t]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
 }
@@ -52,6 +65,16 @@ function cellHtml(cell: HTMLElement, rich: boolean): string {
 	return `<td style="vertical-align:top;white-space:pre-wrap">${clone.innerHTML}</td>`
 }
 
+function textCellHtml(value: string): string {
+	const text = escapeHtml(value).replace(/\n/g, '<br>')
+	return `<td style="vertical-align:top;white-space:pre-wrap">${text}</td>`
+}
+
+function logicalCellsHtml(cell: HTMLElement, rich: boolean): string {
+	const leading = leadingCellText(cell)
+	return (leading === undefined ? '' : textCellHtml(leading)) + cellHtml(cell, rich)
+}
+
 function rowsForCells(cells: HTMLElement[]): Map<Element, HTMLElement[]> {
 	const rows = new Map<Element, HTMLElement[]>()
 	for (const cell of cells) {
@@ -67,7 +90,7 @@ function rowsForCells(cells: HTMLElement[]): Map<Element, HTMLElement[]> {
 
 function setRichClipboardData(event: React.ClipboardEvent<HTMLElement>, rows: Map<Element, HTMLElement[]>, rich: boolean) {
 	const html = '<table><tbody>' + Array.from(rows.values())
-		.map(row => `<tr>${row.map(cell => cellHtml(cell, rich)).join('')}</tr>`).join('') + '</tbody></table>'
+		.map(row => `<tr>${row.map(cell => logicalCellsHtml(cell, rich)).join('')}</tr>`).join('') + '</tbody></table>'
 	event.clipboardData.setData('text/html', html)
 }
 
@@ -87,8 +110,10 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 		const renderedText = cells[0].innerText || cells[0].textContent || ''
 		if (!alwaysCopy && comparableText(selectedText) !== comparableText(renderedText)) return
 		const marker = cells[0].querySelector<HTMLElement>('[data-copy-value]')
-		const plain = marker || alwaysCopy ? normalizedCellText(cells[0]) : selectedText.replace(/\r\n?/g, '\n').trim()
-		event.clipboardData.setData('text/plain', tsvCell(plain))
+		const plain = marker || alwaysCopy
+			? logicalCellTexts(cells[0]).map(tsvCell).join('\t')
+			: tsvCell(selectedText.replace(/\r\n?/g, '\n').trim())
+		event.clipboardData.setData('text/plain', plain)
 		const markdown = marker?.dataset.copyMarkdownValue
 		if (markdown !== undefined) event.clipboardData.setData('text/markdown', markdown)
 		setRichClipboardData(event, rowsForCells(cells), !alwaysCopy && markdown !== undefined)
@@ -101,7 +126,8 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 
 	const text = Array.from(rows.values())
 		.map(rowCells => rowCells
-			.map(cell => tsvCell(normalizedCellText(cell)))
+			.flatMap(logicalCellTexts)
+			.map(tsvCell)
 			.join('\t'))
 		.join('\n')
 	event.clipboardData.setData('text/plain', text)

@@ -129,14 +129,20 @@ export function renderCell<T extends ISimpleTableCell>(
 	if (isResult(data)) {
 		const result = data
 		const rule = result._rule
-		const copyString = (treeColumn as ITreeColumn<T> & {copyString?: (result: Result) => string}).copyString
+		const resultColumn = treeColumn as ITreeColumn<T> & {
+			copyString?: (result: Result) => string
+			embedPath?: boolean
+			embeddedPathCopyString?: (result: Result) => string
+		}
+		const copyString = resultColumn.copyString
 		const rawCopyValue = copyString?.(result) ?? ''
 		const markdownCopyValue = looksLikeMarkdown(treeColumn.id, rawCopyValue)
 			|| looksLikeMarkdown('value.text', rawCopyValue) ? rawCopyValue : undefined
+		const embedPath = resultColumn.embedPath === true
 		const copyMarker = <span hidden data-copy-value={rawCopyValue}
 			data-copy-markdown-value={markdownCopyValue}
+			data-copy-leading-value={embedPath ? resultColumn.embeddedPathCopyString?.(result) ?? '' : undefined}
 			data-copy-always={treeColumn.id === 'Details' ? 'true' : undefined} />
-		const embedPath = (treeColumn as ITreeColumn<T> & {embedPath?: boolean}).embedPath === true
 		const status = {
 			none: result.kind === 'pass' ? Statuses.Success : Statuses.Queued,
 			note: Statuses.Information,

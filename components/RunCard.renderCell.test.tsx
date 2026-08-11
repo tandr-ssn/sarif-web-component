@@ -64,3 +64,18 @@ test('renders Markdown-looking text fields with safe external links', () => {
 	expect(wrapper.find('[data-copy-value]').prop('data-copy-value')).toContain('| --- | --- |')
 	expect(wrapper.find('[data-copy-markdown-value]').prop('data-copy-markdown-value')).toContain('| --- | --- |')
 })
+
+test('marks an embedded Path as a separate logical clipboard value', () => {
+	const result: any = {message: {text: 'Finding'}, _rule: {}, run: {}}
+	const treeItem: any = {underlyingItem: {data: result}}
+	const wrapper = mount(renderCell(0, 1, {
+		id: 'Details',
+		copyString: () => 'Finding',
+		embedPath: true,
+		embeddedPathCopyString: () => 'calgary/src/River.ts',
+	} as any, treeItem))
+
+	const marker = wrapper.find('[data-copy-value]')
+	expect(marker.prop('data-copy-value')).toBe('Finding')
+	expect(marker.prop('data-copy-leading-value')).toBe('calgary/src/River.ts')
+})

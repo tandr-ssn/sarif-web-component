@@ -94,6 +94,30 @@ test('always copies a Details cell using its semantic copy value', () => {
 	root.remove()
 })
 
+test('copies an embedded Path and Details as separate logical cells', () => {
+	const root = document.createElement('div')
+	root.innerHTML = '<table><tbody><tr><td class="bolt-table-cell" data-column-index="0"><span hidden data-copy-value="Finding" data-copy-leading-value="calgary/src/app.ts" data-copy-always="true"></span>calgary/src/app.ts Finding</td></tr></tbody></table>'
+	document.body.appendChild(root)
+	const range = document.createRange()
+	range.selectNodeContents(root.querySelector('td'))
+	const selection = window.getSelection()
+	selection.removeAllRanges()
+	selection.addRange(range)
+	const setData = jest.fn()
+	const preventDefault = jest.fn()
+
+	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
+
+	expect(setData).toHaveBeenCalledWith('text/plain', 'calgary/src/app.ts\tFinding')
+	const html = setData.mock.calls.find(([type]) => type === 'text/html')?.[1]
+	expect((html.match(/<td/g) ?? [])).toHaveLength(2)
+	expect(html).toContain('calgary/src/app.ts</td>')
+	expect(html).toContain('Finding</td>')
+	expect(preventDefault).toHaveBeenCalled()
+	selection.removeAllRanges()
+	root.remove()
+})
+
 test('copies a Markdown field as plain text, rendered HTML, and Markdown source', () => {
 	const root = document.createElement('div')
 	root.innerHTML = `<table><tbody><tr><td class="bolt-table-cell" data-column-index="0">
