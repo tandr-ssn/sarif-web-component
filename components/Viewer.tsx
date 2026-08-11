@@ -29,7 +29,7 @@ import { IFilterState } from 'azure-devops-ui/Utilities/Filter'
 import { ZeroData } from 'azure-devops-ui/ZeroData'
 import { ObservableValue } from 'azure-devops-ui/Core/Observable'
 import { Button } from 'azure-devops-ui/Button'
-import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot } from './LocalSourceFile'
+import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot, getSourcePathFromSarifRoot } from './LocalSourceFile'
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
@@ -293,9 +293,9 @@ export interface ViewerProps {
 				: undefined
 		const effectiveSourceReader = sourceFileReader ?? selectedSourceReader
 		const selectedSourceFolderName = this.sourceDirectory?.name ?? this.selectedSourceFolderName
-		const sourcePathFormatter = selectedSourceFolderName
-			? (uri: string) => getSourcePathFromRoot(uri, selectedSourceFolderName, commonSourceRoot)
-			: undefined
+		const sourcePathFormatter = (uri: string, run?: Run, artifactLocation?) => selectedSourceFolderName
+			? getSourcePathFromRoot(uri, selectedSourceFolderName, commonSourceRoot)
+			: run ? getSourcePathFromSarifRoot(uri, run, artifactLocation) : uri
 		const sourceFolderDisplayName = selectedSourceFolderName ?? this.rememberedSourceFolderName
 		const sourceFolderNeedsReconnect = !selectedSourceFolderName && !!this.rememberedSourceFolderName
 		const compactSourcePicker = !!localSourcePickerContainer

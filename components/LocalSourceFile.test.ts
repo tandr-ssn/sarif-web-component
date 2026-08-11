@@ -1,5 +1,5 @@
 import {Log} from 'sarif'
-import {createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot} from './LocalSourceFile'
+import {createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot, getSourcePathFromSarifRoot} from './LocalSourceFile'
 
 class TestDirectory implements FileSystemDirectoryHandleLike {
 	readonly directories = new Map<string, TestDirectory>()
@@ -112,6 +112,16 @@ test('displays artifact paths from the selected root name', () => {
 	expect(getSourcePathFromRoot('calgary/src/file.ts', 'calgary')).toBe('calgary/src/file.ts')
 	expect(getSourcePathFromRoot('../secret.ts', 'calgary')).toBe('../secret.ts')
 	expect(getSourcePathFromRoot('https://example.test/file.ts', 'calgary')).toBe('https://example.test/file.ts')
+})
+
+test('displays file URIs from the source root recorded in SARIF', () => {
+	const uri = 'file:///home/user/calgary/src/java/river/Handler.java'
+	expect(getSourcePathFromSarifRoot(uri, {
+		versionControlProvenance: [{repositoryUri: 'https://example.test/calgary', mappedTo: {uri: 'file:///home/user/calgary/'}}],
+	} as any)).toBe('calgary/src/java/river/Handler.java')
+	expect(getSourcePathFromSarifRoot(uri, {
+		originalUriBaseIds: {'%SRCROOT%': {uri: 'file:///home/user/calgary/'}},
+	} as any, {uri, uriBaseId: '%SRCROOT%'})).toBe('calgary/src/java/river/Handler.java')
 })
 
 test('finds the common absolute source root in findings and traces', () => {

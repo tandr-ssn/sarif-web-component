@@ -10,10 +10,10 @@ import { getResultSourceTrace } from './ResultSourceTrace'
 import { tryOr } from './try'
 import {SourcePathFormatterContext} from './SourceFile'
 
-function SourcePathText(props: {uri?: string, position: string, rootRelative?: boolean}) {
+function SourcePathText(props: {uri?: string, position: string, rootRelative?: boolean, run: Result['run'], artifactLocation?: Result['analysisTarget']}) {
 	const formatPath = React.useContext(SourcePathFormatterContext)
 	if (!props.uri) return <Hi>—</Hi>
-	const uri = props.rootRelative ? formatPath?.(props.uri) ?? props.uri : props.uri
+	const uri = props.rootRelative ? formatPath?.(props.uri, props.run, props.artifactLocation) ?? props.uri : props.uri
 	const index = uri.lastIndexOf('/')
 	if (index < 0) return <Hi>{uri}{props.position}</Hi>
 	return <span className="midEllipsis">
@@ -42,7 +42,8 @@ export function renderPathCell(result: Result, embedded = false) {
 	const position = region?.startLine
 		? `:${region.startLine}${region.startColumn ? `:${region.startColumn}` : ''}`
 		: ''
-	const uriWithEllipsis = <SourcePathText uri={uri} position={position} rootRelative={!description} />
+	const uriWithEllipsis = <SourcePathText uri={uri} position={position} rootRelative={!description}
+		run={result.run} artifactLocation={resArtLoc ?? runArtLoc} />
 	
 	// Example of href scenario:
 	// uri  = src\Prototypes\README.md

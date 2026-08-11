@@ -10,7 +10,7 @@ import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileRead
 export function getSourceLocationText(ploc: PhysicalLocation | undefined, run: Run, formatPath?: SourcePathFormatter): string | undefined {
 	const artifactLocation = getArtifactLocation(ploc, run)
 	if (!artifactLocation?.uri) return undefined
-	const path = formatPath?.(artifactLocation.uri) ?? artifactLocation.uri
+	const path = formatPath?.(artifactLocation.uri, run, artifactLocation) ?? artifactLocation.uri
 	const line = ploc?.region?.startLine
 	const column = ploc?.region?.startColumn
 	return line ? `${path}:${line}${column ? `:${column}` : ''}` : path

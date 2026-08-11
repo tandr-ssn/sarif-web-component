@@ -109,6 +109,17 @@ export function getSourcePathFromRoot(uri: string, selectedRootName: string, com
 	return relative?.length ? [selectedRootName, ...relative].join('/') : uri
 }
 
+/** Formats a path relative to the source root recorded by the SARIF producer. */
+export function getSourcePathFromSarifRoot(uri: string, run: Run, artifactLocation?: ArtifactLocation): string {
+	const baseRoot = artifactLocation?.uriBaseId && run.originalUriBaseIds?.[artifactLocation.uriBaseId]?.uri
+	const mappedRoot = run.versionControlProvenance?.find(details => details.mappedTo?.uri)?.mappedTo?.uri
+	const root = decodeArtifactPath(baseRoot ?? mappedRoot ?? '')
+	if (!root?.absolute) return uri
+	const rootSegments = normalizeSegments(root.path)
+	if (!rootSegments?.length) return uri
+	return getSourcePathFromRoot(uri, rootSegments[rootSegments.length - 1], root.path)
+}
+
 function parentPath(path: string): string {
 	const slash = path.lastIndexOf('/')
 	return slash < 0 ? '' : path.slice(0, slash)
