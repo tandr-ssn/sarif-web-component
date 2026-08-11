@@ -30,3 +30,27 @@ test('renders a nested field tree and updates the selection', () => {
 		'label[data-swc-tooltip="SARIF JSON path: $.runs[*].tool.driver.rules[*].helpUri"] input')).not.toBeNull()
 	wrapper.unmount()
 })
+
+test('clears a parent indeterminate mark when its final selected leaf is cleared', () => {
+	const selected = observable.box(['Path'])
+	const wrapper = mount(<ResultFieldSelector
+		fieldPaths={['Path', 'result.properties.acah.sink.selection.status', 'result.message.text']}
+		selected={selected} />)
+	wrapper.find('.swcResultFieldSelector > button').simulate('click')
+	wrapper.update()
+	const status = document.querySelector(
+		'label[data-swc-tooltip="SARIF JSON path: $.runs[*].results[*].properties.acah.sink.selection.status"] input') as HTMLInputElement
+	const resultLabel = Array.from(document.querySelectorAll<HTMLLabelElement>('.swcResultFieldMenu label'))
+		.find(label => label.textContent === 'Result')
+	const result = resultLabel.querySelector('input') as HTMLInputElement
+
+	status.click()
+	wrapper.update()
+	expect(result.indeterminate).toBe(true)
+
+	status.click()
+	wrapper.update()
+	expect(result.checked).toBe(false)
+	expect(result.indeterminate).toBe(false)
+	wrapper.unmount()
+})

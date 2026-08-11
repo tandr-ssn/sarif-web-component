@@ -23,11 +23,22 @@ class FieldTreeNode extends React.Component<{
 	selected: IObservableValue<string[]>
 	search: string
 }> {
-	private setChecked = (element: HTMLInputElement | null) => {
-		if (!element) return
+	private checkbox?: HTMLInputElement
+
+	private updateIndeterminate = () => {
+		if (!this.checkbox) return
 		const paths = leafPaths(this.props.node)
 		const count = paths.filter(path => this.props.selected.get().includes(path)).length
-		element.indeterminate = count > 0 && count < paths.length
+		this.checkbox.indeterminate = count > 0 && count < paths.length
+	}
+
+	private setCheckbox = (element: HTMLInputElement | null) => {
+		this.checkbox = element ?? undefined
+		this.updateIndeterminate()
+	}
+
+	componentDidUpdate() {
+		this.updateIndeterminate()
 	}
 
 	private toggle = (checked: boolean) => {
@@ -49,7 +60,7 @@ class FieldTreeNode extends React.Component<{
 			: `SARIF JSON path: ${getResultFieldJsonPath(node.path)}`)
 		const label = <label data-swc-tooltip={tooltip}
 			onClick={event => event.stopPropagation()}>
-			<input type="checkbox" checked={checkedCount === paths.length} ref={this.setChecked}
+			<input type="checkbox" checked={checkedCount === paths.length} ref={this.setCheckbox}
 				onClick={event => event.stopPropagation()}
 				onChange={event => this.toggle(event.currentTarget.checked)} />
 			{node.displayName ?? node.name}
