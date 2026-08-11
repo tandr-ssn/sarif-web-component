@@ -1,6 +1,6 @@
 const attribute = 'data-swc-tooltip'
 const installed = new WeakSet<Document>()
-const hoverDelay = 500
+const hoverDelay = 600
 
 const styleText = `
 .swcTooltip {
@@ -72,7 +72,7 @@ export function installTooltips(target: Window): void {
 	}
 	const showAfterDelay = (candidate: Element | undefined) => {
 		if (!candidate?.getAttribute(attribute)) return hide()
-		if (candidate === anchor || candidate === pendingAnchor) return
+		if (candidate === anchor) return
 		cancelPending()
 		pendingAnchor = candidate
 		hoverTimer = target.setTimeout(() => {
@@ -80,10 +80,15 @@ export function installTooltips(target: Window): void {
 		}, hoverDelay)
 	}
 
-	document.addEventListener('mouseover', event => showAfterDelay(owner(event.target)))
+	document.addEventListener('mouseover', event => {
+		const candidate = owner(event.target)
+		// Delegated mouseover bubbles again while moving among descendants. Only a
+		// genuine entry starts the delay, but every newly entered owner gets a fresh timer.
+		if (candidate !== owner(event.relatedTarget)) showAfterDelay(candidate)
+	})
 	document.addEventListener('mouseout', event => {
 		const candidate = owner(event.target)
-		if (!candidate || !event.relatedTarget || !candidate.contains(event.relatedTarget as Node)) hide(candidate)
+		if (candidate !== owner(event.relatedTarget)) hide(candidate)
 	})
 	document.addEventListener('focusin', event => show(owner(event.target)))
 	document.addEventListener('focusout', event => {
