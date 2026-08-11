@@ -57,7 +57,9 @@
 		"mobx-utils": "^5.5.5",
 		"react-markdown": "5.0.3",
 		"remark-gfm": "^1.0.0",
+		"remark-parse": "^9.0.0",
 		"sass": "^1.80.6",
+		"unified": "^9.2.2",
 		"vss-web-extension-sdk": "^5.141.0"
 	},
 	"peerDependencies": {

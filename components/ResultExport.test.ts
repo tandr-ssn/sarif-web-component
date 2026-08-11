@@ -36,6 +36,21 @@ test('exports only currently filtered findings', () => {
 		'"src/two.ts","\'=unsafe formula"')
 })
 
+test('exports rendered Markdown as readable text in CSV cells', () => {
+	const markdownRunStore = {
+		columns: [{
+			id: 'rule.help.text',
+			filterString: () => '### Versions\n\n| Version | Status |\n| --- | --- |\n| 1.0 | **affected** |',
+		}],
+		run: {results: [{}]},
+		filteredResults: [],
+	} as unknown as RunStore
+
+	expect(createResultCsv([markdownRunStore], 'all', 'plain')).toBe(
+		'\ufeff"rule.help.text"\r\n"Versions\n\nVersion | Status\n1.0     | affected"')
+	expect(createResultCsv([markdownRunStore], 'all', 'raw')).toContain('| --- | --- |')
+})
+
 test('exports selected fields as a Markdown report without flattening Markdown values', () => {
 	const markdownRunStore = {
 		columns: [

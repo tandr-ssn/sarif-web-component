@@ -6,7 +6,7 @@ import {ResultExportMenu} from './ResultExportMenu'
 
 Enzyme.configure({adapter: new Adapter()})
 
-test('exports the filtered report directly when filters are active', () => {
+test('exports filtered findings as plain-text CSV', () => {
 	const onExport = jest.fn()
 	const wrapper = mount(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
 	const button = wrapper.find('.swcResultExport > button')
@@ -15,7 +15,7 @@ test('exports the filtered report directly when filters are active', () => {
 	wrapper.update()
 	const csv = document.querySelector('.swcResultExportMenu button') as HTMLButtonElement
 	csv.click()
-	expect(onExport).toHaveBeenCalledWith('filtered', 'csv')
+	expect(onExport).toHaveBeenCalledWith('filtered', 'csv-plain')
 	wrapper.unmount()
 })
 

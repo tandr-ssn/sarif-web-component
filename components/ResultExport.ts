@@ -2,9 +2,11 @@ import {Result} from 'sarif'
 import {RunStore} from './RunStore'
 import {resultCallStackText, resultCodeFlowText} from './ResultTraceText'
 import {looksLikeMarkdown} from './ResultFields'
+import {markdownToPlainText} from './MarkdownText'
 
 export type ResultExportScope = 'filtered' | 'all'
-export type ResultExportFormat = 'csv' | 'markdown'
+export type ResultExportFormat = 'csv-plain' | 'csv-raw' | 'markdown'
+export type ResultCsvValueFormat = 'raw' | 'plain'
 
 function spreadsheetSafe(value: string): string {
 	return /^\s*[=+\-@]/.test(value) ? `'${value}` : value
@@ -35,9 +37,13 @@ function exportRows(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope
 	return {fields, rows}
 }
 
-export function createResultCsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
+export function createResultCsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope, valueFormat: ResultCsvValueFormat = 'raw'): string {
 	const {fields, rows} = exportRows(runStores, scope)
-	return '\ufeff' + [fields, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')
+	const formattedRows = valueFormat === 'plain'
+		? rows.map(row => row.map((value, index) => looksLikeMarkdown(fields[index], value)
+			|| looksLikeMarkdown('value.text', value) ? markdownToPlainText(value) : value))
+		: rows
+	return '\ufeff' + [fields, ...formattedRows].map(row => row.map(csvCell).join(',')).join('\r\n')
 }
 
 function escapeMarkdownText(value: string): string {

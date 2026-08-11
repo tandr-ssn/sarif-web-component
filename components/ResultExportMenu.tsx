@@ -31,7 +31,8 @@ import {ResultExportFormat, ResultExportScope} from './ResultExport'
 				blurDismiss={false} escDismiss={true} lightDismiss={true}
 				onDismiss={() => this.open = false}>
 				<div className="swcResultExportMenu" role="menu">
-					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'csv') }}>CSV</button>
+					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'csv-plain') }}>CSV — plain text</button>
+					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'csv-raw') }}>CSV — raw values</button>
 					<button type="button" role="menuitem" onClick={() => { this.open = false; onExport(scope, 'markdown') }}>Markdown</button>
 				</div>
 			</Callout>}

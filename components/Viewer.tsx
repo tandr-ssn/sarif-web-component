@@ -224,7 +224,8 @@ export interface ViewerProps {
 
 	private exportResults = (scope: ResultExportScope, format: ResultExportFormat) => {
 		const markdown = format === 'markdown'
-		const content = markdown ? createResultMarkdown(this.runStoresSorted, scope) : createResultCsv(this.runStoresSorted, scope)
+		const content = markdown ? createResultMarkdown(this.runStoresSorted, scope)
+			: createResultCsv(this.runStoresSorted, scope, format === 'csv-plain' ? 'plain' : 'raw')
 		const extension = markdown ? 'md' : 'csv'
 		const type = markdown ? 'text/markdown;charset=utf-8' : 'text/csv;charset=utf-8'
 		downloadResultFile(content, `sarif-findings-${scope}.${extension}`, type)
