@@ -47,3 +47,27 @@ test('restores and persists the fit-all-columns preference', () => {
 	viewer.componentWillUnmount()
 	window.localStorage.removeItem(storageKey)
 })
+
+test('preserves SARIF run order regardless of result counts or tool names', () => {
+	const orderedLogs = [{
+		version: '2.1.0',
+		runs: [
+			{tool: {driver: {name: 'Zinc'}}, results: [
+				{ruleId: 'zinc-rule', message: {text: 'One result'}},
+			]},
+			{tool: {driver: {name: 'Athabasca'}}, results: [
+				{ruleId: 'athabasca-rule', message: {text: 'First result'}},
+				{ruleId: 'athabasca-rule', message: {text: 'Second result'}},
+				{ruleId: 'athabasca-rule', message: {text: 'Third result'}},
+			]},
+			{tool: {driver: {name: 'Bow'}}, results: [
+				{ruleId: 'bow-rule', message: {text: 'First result'}},
+				{ruleId: 'bow-rule', message: {text: 'Second result'}},
+			]},
+		],
+	}] as unknown as Log[]
+	const viewer = new Viewer({logs: orderedLogs, fieldSelectionStorageKey: false, fitAllColumnsStorageKey: false}) as any
+
+	expect(viewer.runStoresInOrder.map(store => store.driverName)).toEqual(['Zinc', 'Athabasca', 'Bow'])
+	viewer.componentWillUnmount()
+})

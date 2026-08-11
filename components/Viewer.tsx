@@ -206,14 +206,12 @@ export interface ViewerProps {
 		if (!logs) return [] // Undef interpreted as loading.
 		const runs = [].concat(...logs.filter(log => log.version === '2.1.0').map(log => { log.runs.forEach((run, index) => { run._index = index }); return log.runs })) as Run[]
 		const {filter, groupByAge} = this
-		const runStores = runs.map((run, i) => new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields))
-		runStores.sort((a, b) => a.driverName.localeCompare(b.driverName)) // May not be required after introduction of runStoresSorted.
-		return runStores
+		return runs.map((run, i) => new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields))
 	}, { keepAlive: true })
 
-	@computed get runStoresSorted() {
+	@computed get runStoresInOrder() {
 		const {logs} = this.props
-		return this.runStores(logs).slice().sorted((a, b) => b.filteredCount - a.filteredCount) // Highest count first.
+		return this.runStores(logs)
 	}
 
 	@computed private get resultFieldPaths(): string[] {
@@ -259,13 +257,13 @@ export interface ViewerProps {
 
 	private exportResults = (scope: ResultExportScope, format: ResultExportFormat) => {
 		const output = {
-			'csv-plain': () => ({content: createResultCsv(this.runStoresSorted, scope, 'plain'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
-			'csv-raw': () => ({content: createResultCsv(this.runStoresSorted, scope, 'raw'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
-			tsv: () => ({content: createResultTsv(this.runStoresSorted, scope), extension: 'tsv', type: 'text/tab-separated-values;charset=utf-8'}),
-			html: () => ({content: createResultHtml(this.runStoresSorted, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
-			'html-table': () => ({content: createResultHtmlTable(this.runStoresSorted, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
-			text: () => ({content: createResultText(this.runStoresSorted, scope), extension: 'txt', type: 'text/plain;charset=utf-8'}),
-			markdown: () => ({content: createResultMarkdown(this.runStoresSorted, scope), extension: 'md', type: 'text/markdown;charset=utf-8'}),
+			'csv-plain': () => ({content: createResultCsv(this.runStoresInOrder, scope, 'plain'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
+			'csv-raw': () => ({content: createResultCsv(this.runStoresInOrder, scope, 'raw'), extension: 'csv', type: 'text/csv;charset=utf-8'}),
+			tsv: () => ({content: createResultTsv(this.runStoresInOrder, scope), extension: 'tsv', type: 'text/tab-separated-values;charset=utf-8'}),
+			html: () => ({content: createResultHtml(this.runStoresInOrder, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
+			'html-table': () => ({content: createResultHtmlTable(this.runStoresInOrder, scope), extension: 'html', type: 'text/html;charset=utf-8'}),
+			text: () => ({content: createResultText(this.runStoresInOrder, scope), extension: 'txt', type: 'text/plain;charset=utf-8'}),
+			markdown: () => ({content: createResultMarkdown(this.runStoresInOrder, scope), extension: 'md', type: 'text/markdown;charset=utf-8'}),
 		}[format]()
 		const {content, extension, type} = output
 		const variant = format === 'html-table' ? '-table' : ''
@@ -369,13 +367,13 @@ export interface ViewerProps {
 
 		// Computed values fail to cache if called from onRenderNearElement() for unknown reasons. Thus call them in advance.
 		const currentfilterState = this.filter.getState()
-		const allResultCount = this.runStoresSorted.reduce((total, runStore) => total + (runStore.run.results?.length ?? 0), 0)
-		const filteredResultCount = this.runStoresSorted.reduce((total, runStore) => total + runStore.filteredResults.length, 0)
+		const allResultCount = this.runStoresInOrder.reduce((total, runStore) => total + (runStore.run.results?.length ?? 0), 0)
+		const filteredResultCount = this.runStoresInOrder.reduce((total, runStore) => total + runStore.filteredResults.length, 0)
 		const filterKeywords = currentfilterState.Keywords?.value
 		const nearElement = (() => {
-			const {runStoresSorted} = this
-			if (!runStoresSorted.length) return null // Interpreted as loading.
-			const filteredResultsCount = runStoresSorted.reduce((total, run) => total + run.filteredCount, 0)
+			const {runStoresInOrder} = this
+			if (!runStoresInOrder.length) return null // Interpreted as loading.
+			const filteredResultsCount = runStoresInOrder.reduce((total, run) => total + run.filteredCount, 0)
 			const showFilteredEmptyTables = filteredResultsCount === 0 && allResultCount > 0 && this.filter.hasChangesToReset()
 			if (filteredResultsCount === 0 && !showFilteredEmptyTables) {
 
@@ -429,7 +427,7 @@ export interface ViewerProps {
 					</Card>
 				</div>
 			}
-			return runStoresSorted
+			return runStoresInOrder
 				.filter(run => showFilteredEmptyTables || !filterKeywords || run.filteredCount)
 				.map((run, index) => <div key={this.getRunCardKey(run.run)} className="page-content-left page-content-right page-content-top">
 					<RunCard runStore={run} index={index} columnLayout={this.resultColumnLayout} />
@@ -449,8 +447,8 @@ export interface ViewerProps {
 									resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
 									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
 										filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
-									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresSorted} fitAllColumns={this.fitAllColumns} />} />
-								{!!this.runStoresSorted.length && <ResultTableHeader runStores={this.runStoresSorted} layout={this.resultColumnLayout} />}
+									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresInOrder} fitAllColumns={this.fitAllColumns} />} />
+								{!!this.runStoresInOrder.length && <ResultTableHeader runStores={this.runStoresInOrder} layout={this.resultColumnLayout} />}
 							</div>
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
