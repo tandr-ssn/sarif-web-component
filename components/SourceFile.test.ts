@@ -48,6 +48,7 @@ test('adds line numbers and preserves multi-line region highlighting', async () 
 	const lines = Array.from(childDocument.querySelectorAll('.source-line'))
 	expect(lines.map(line => line.getAttribute('data-line'))).toEqual(['1', '2', '3', '4'])
 	expect(childDocument.querySelector('pre')?.textContent).toBe(source)
+	expect(childDocument.querySelector('[data-current-file]')?.textContent).toBe('file.ts:2:2')
 	expect(Array.from(childDocument.querySelectorAll('mark')).map(mark => mark.textContent)).toEqual(['ne\n', 'tw'])
 	open.mockRestore()
 })
@@ -64,19 +65,20 @@ test('uses the root-relative source path as an encoded browser fragment', async 
 		undefined,
 		reader,
 		undefined,
-		() => 'src/My file#1.ts',
+		() => 'calgary/src/My file#1.ts',
 	)
 
-	expect(childWindow.location.hash).toBe('#src/My%20file%231.ts')
-	expect(childDocument.getElementById('src/My file#1.ts')).not.toBeNull()
+	expect(childWindow.location.hash).toBe('#calgary/src/My%20file%231.ts')
+	expect(childDocument.getElementById('calgary/src/My file#1.ts')).not.toBeNull()
 	expect(childDocument.title).toBe('My file#1.ts')
 	const sourcePath = childDocument.querySelector('[data-current-file]')
-	expect(sourcePath?.textContent).toBe('src/My file#1.ts')
+	expect(sourcePath?.textContent).toBe('calgary/src/My file#1.ts:1')
 	expect(sourcePath?.nextElementSibling?.classList.contains('source-toolbar-row')).toBe(true)
 	const sourceStyles = Array.from(childDocument.querySelectorAll('style')).map(style => style.textContent).join('\n')
 	expect(sourceStyles).toContain('font-family: "Segoe UI", "-apple-system"')
 	expect(sourceStyles).toContain('font-size: 14px')
 	expect(sourceStyles).toContain('padding: 6px 12px')
+	expect(sourceStyles).toContain('font-weight: 400')
 	open.mockRestore()
 })
 
@@ -199,6 +201,7 @@ test('highlights every trace entry in a file and links between trace files', asy
 	expect(appSection.querySelector('.trace-start')).not.toBeNull()
 	expect(appSection.querySelector('[data-line="3"] .trace-active')).not.toBeNull()
 	expect(appSection.querySelector('[data-line="3"] .trace-active-highlight')).not.toBeNull()
+	expect(childDocument.querySelector('[data-current-file]')?.textContent).toBe('src/app.ts:3')
 	const appMarkStyles = Array.from(appSection.querySelectorAll('mark')).map(mark => mark.getAttribute('style'))
 	expect(new Set(appMarkStyles).size).toBe(2)
 	expect(Array.from(appSection.querySelectorAll('a')).map(link => link.getAttribute('href'))).toEqual([
@@ -213,6 +216,7 @@ test('highlights every trace entry in a file and links between trace files', asy
 	;(childDocument.querySelector('[data-trace-action="next"]') as HTMLButtonElement).click()
 	expect(childWindow.location.hash).toBe('#src/end.ts')
 	expect(childDocument.getElementById('src/end.ts').querySelector('.trace-active')).not.toBeNull()
+	expect(childDocument.querySelector('[data-current-file]')?.textContent).toBe('src/end.ts:1')
 	childDocument.dispatchEvent(new KeyboardEvent('keydown', { key: '[' }))
 	expect(childWindow.location.hash).toBe('#src/app.ts')
 	appSection.querySelector('[data-activate-trace="0"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))

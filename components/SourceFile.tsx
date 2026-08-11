@@ -207,7 +207,8 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 	const next = highlight.nextEntry
 		? `<a class="trace-next" href="${escapeHtml(fragmentHref(highlight.nextEntry.id))}" data-activate-trace="${highlight.nextEntry.traceIndex}" data-swc-tooltip="Next trace entry: ${escapeHtml(highlight.nextEntry.name)}" aria-label="Next trace entry">&#x2192;</a>`
 		: ''
-	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}" data-swc-tooltip="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
+	const sourceColumn = highlight.region.startColumn ? ` data-source-column="${highlight.region.startColumn}"` : ''
+	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}"${sourceColumn} data-swc-tooltip="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
 function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
@@ -229,6 +230,8 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 	const activeHighlight = activeView.highlights.find(highlight => highlight.traceIndex === trace?.activeIndex)
 		?? activeView.highlights[0]
 	const activeLine = activeHighlight?.region.startLine ?? 1
+	const activeColumn = activeHighlight?.region.startColumn
+	const activeLocation = `${activeView.name}:${activeLine}${activeColumn ? `:${activeColumn}` : ''}`
 	const semanticRoles = new Set(trace?.roles?.filter(Boolean) ?? [])
 	const traceLegend = semanticRoles.size
 		? `${semanticRoles.has('source') ? '<span class="legend-swatch legend-source"></span>Source' : ''}
@@ -248,8 +251,8 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 		<summary>${trace.readableEntries} of ${trace.totalEntries} trace locations readable</summary>
 		<ol>${trace.missing.map(location => `<li data-trace-index="${location.traceIndex}">${location.traceIndex + 1}. ${escapeHtml(location.name)}</li>`).join('')}</ol>
 	</details>` : ''
-	return `<div class="source-toolbar" data-active-line="${activeLine}" data-file-count="${views.length}" data-trace-count="${trace?.totalEntries ?? 0}">
-		<div class="source-path" data-current-file>${escapeHtml(activeView.name)}</div>
+	return `<div class="source-toolbar" data-active-line="${activeLine}"${activeColumn ? ` data-active-column="${activeColumn}"` : ''} data-file-count="${views.length}" data-trace-count="${trace?.totalEntries ?? 0}">
+		<div class="source-path" data-current-file>${escapeHtml(activeLocation)}</div>
 		<div class="source-toolbar-row">
 			${traceNavigation}
 			<span class="source-actions">
@@ -315,8 +318,11 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		const fileName = section.getAttribute('data-file-name') ?? 'Source file'
 		const lineNumber = line.getAttribute('data-line') ?? '1'
 		toolbar.setAttribute('data-active-line', lineNumber)
+		const columnNumber = badge.getAttribute('data-source-column')
+		if (columnNumber) toolbar.setAttribute('data-active-column', columnNumber)
+		else toolbar.removeAttribute('data-active-column')
 		const currentFile = document.querySelector('[data-current-file]')
-		if (currentFile) currentFile.textContent = fileName
+		if (currentFile) currentFile.textContent = `${fileName}:${lineNumber}${columnNumber ? `:${columnNumber}` : ''}`
 		const position = document.querySelector('[data-trace-position]')
 		if (position && trace) {
 			position.textContent = `Entry ${index + 1} of ${trace.totalEntries} · File ${+(section.getAttribute('data-file-index') ?? 0) + 1} of ${toolbar.getAttribute('data-file-count')}`
@@ -459,9 +465,9 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		button { font: inherit; }
 		.source-toolbar { background: #f3f3f3; border-bottom: 1px solid #d0d0d0; padding: 7px 10px; position: sticky; top: 0; z-index: 10; }
 		.source-toolbar-row { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; }
-		.source-toolbar button { background: #ffffff; border: 1px solid #b3b3b3; border-radius: 2px; color: #202020; cursor: pointer; font-weight: 600; padding: 6px 12px; }
+		.source-toolbar button { background: #ffffff; border: 1px solid #b3b3b3; border-radius: 2px; color: #202020; cursor: pointer; font-weight: 400; padding: 6px 12px; }
 		.source-toolbar button:disabled { cursor: default; opacity: .45; }
-		.source-path { font-family: Menlo, Consolas, "Courier New", monospace; font-weight: 600; margin-bottom: 6px; overflow-wrap: anywhere; }
+		.source-path { font-weight: 400; margin-bottom: 6px; overflow-wrap: anywhere; }
 		.source-actions { display: inline-flex; gap: 4px; }
 		.copy-status { min-width: 4em; }
 		.trace-legend { align-items: center; display: inline-flex; gap: 4px; white-space: nowrap; }
@@ -985,9 +991,7 @@ export async function openSourceFile(
 				const sourceFile = sourceFilesByKey.get(key)
 				const location = artifactsByKey.get(key)
 				const formattedName = location?.uri && formatPath?.(location.uri, run, location)
-				const name = formattedName && (!sourceFile.name || formattedName.length <= sourceFile.name.length)
-					? formattedName
-					: sourceFile.name || `source-file-${index + 1}`
+				const name = formattedName || sourceFile.name || `source-file-${index + 1}`
 				let id = name
 				for (let duplicate = 2; usedViewIds.has(id); duplicate++) id = `${name} (${duplicate})`
 				usedViewIds.add(id)

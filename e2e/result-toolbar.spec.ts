@@ -186,7 +186,7 @@ test('uses a full-width relative path and matching controls in the source popup'
 		page.waitForEvent('popup'),
 		page.locator('.swcFindingPath a').first().click(),
 	])
-	await expect(popup.locator('[data-current-file]')).toHaveText('src/Ottawa/River.ts')
+	await expect(popup.locator('[data-current-file]')).toHaveText('src/Ottawa/River.ts:42:9')
 	await expect(popup).toHaveTitle('River.ts')
 	const presentation = await popup.evaluate(() => {
 		const path = document.querySelector<HTMLElement>('[data-current-file]')
@@ -200,10 +200,14 @@ test('uses a full-width relative path and matching controls in the source popup'
 			buttonFontFamily: buttonStyle?.fontFamily,
 			bodyFontFamily: bodyStyle.fontFamily,
 			buttonFontSize: buttonStyle?.fontSize,
+			buttonFontWeight: buttonStyle?.fontWeight,
+			pathFontWeight: path && getComputedStyle(path).fontWeight,
 		}
 	})
 	expect(presentation.pathAboveControls).toBe(true)
 	expect(presentation.bodyFontSize).toBe('14px')
 	expect(presentation.buttonFontSize).toBe('14px')
 	expect(presentation.buttonFontFamily).toBe(presentation.bodyFontFamily)
+	expect(presentation.buttonFontWeight).toBe('400')
+	expect(presentation.pathFontWeight).toBe('400')
 })
