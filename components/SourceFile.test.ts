@@ -53,6 +53,28 @@ test('adds line numbers and preserves multi-line region highlighting', async () 
 	open.mockRestore()
 })
 
+test('expands a punctuation-only source region to readable line context', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const source = '  const river = query("'
+	const startColumn = source.indexOf('"') + 1
+	const region = {startLine: 1, startColumn, endColumn: startColumn + 1}
+	const reader = async () => ({name: 'src/river.ts', text: source})
+
+	await openSourceFile(
+		{uri: 'src/river.ts'},
+		{} as any,
+		region,
+		reader,
+		{locations: [{artifactLocation: {uri: 'src/river.ts'}, region}], activeIndex: 0, label: 'Code flow'},
+	)
+
+	expect(childDocument.querySelector('mark')?.textContent).toBe('const river = query("')
+	expect(childDocument.querySelector('[data-current-file]')?.textContent).toBe(`src/river.ts:1:${startColumn}`)
+	open.mockRestore()
+})
+
 test('uses the root-relative source path as an encoded browser fragment', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = {document: childDocument, opener: window, location: {hash: ''}} as any as Window

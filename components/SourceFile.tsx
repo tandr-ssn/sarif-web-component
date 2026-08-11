@@ -134,6 +134,17 @@ function selectionOnLine(text: string, lineNumber: number, region: Region): [num
 	return end > start ? [start, end] : undefined
 }
 
+function readableSelectionOnLine(text: string, lineNumber: number, region: Region): [number, number] | undefined {
+	const selection = selectionOnLine(text, lineNumber, region)
+	if (!selection || (region.endLine ?? region.startLine) !== region.startLine) return selection
+	const selected = text.slice(selection[0], selection[1])
+	if (/[A-Za-z0-9_$]/.test(selected)) return selection
+
+	const contentEnd = text.replace(/[\r\n]+$/, '').length
+	const contentStart = text.slice(0, contentEnd).search(/\S/)
+	return contentStart >= 0 && contentEnd > contentStart ? [contentStart, contentEnd] : selection
+}
+
 function highlightColor(highlights: SourceHighlight[]): string {
 	const highlight = highlights.find(candidate => candidate.isActive) ?? highlights[0]
 	return highlight.color
@@ -148,7 +159,7 @@ function renderSyntaxSegment(text: string, fileName: string): string {
 
 function renderHighlightedText(text: string, lineNumber: number, highlights: SourceHighlight[], fileName: string): string {
 	const selections = highlights
-		.map(highlight => ({ highlight, selection: selectionOnLine(text, lineNumber, highlight.region) }))
+		.map(highlight => ({ highlight, selection: readableSelectionOnLine(text, lineNumber, highlight.region) }))
 		.filter(value => value.selection !== undefined) as Array<{ highlight: SourceHighlight, selection: [number, number] }>
 	if (!selections.length) return renderSyntaxSegment(text, fileName)
 
