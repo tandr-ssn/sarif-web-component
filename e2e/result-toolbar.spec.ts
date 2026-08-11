@@ -72,6 +72,12 @@ test.beforeEach(async ({page}) => {
 	await page.goto(docsUrl)
 	await expect(page.getByText('Ottawa.Package', {exact: true}).first()).toBeVisible()
 	await expect(page.getByRole('button', {name: 'Filter Details'})).toHaveCount(1)
+	const sourceToFilterGap = await page.evaluate(() => {
+		const source = document.querySelector('.swcLocalSourceHeader')?.getBoundingClientRect()
+		const filter = document.querySelector('.swcFilterToolbar')?.getBoundingClientRect()
+		return source && filter ? filter.top - source.bottom : undefined
+	})
+	expect(sourceToFilterGap).toBeLessThanOrEqual(20)
 })
 
 test('fits columns, exposes horizontal scrolling, and clears filters deliberately', async ({page}) => {
@@ -117,6 +123,11 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	})
 	expect(Math.max(...alignment.verticalOffsets)).toBeLessThanOrEqual(0.5)
 	expect(Math.max(...alignment.columnOffsets)).toBeLessThanOrEqual(1)
+	const headerBorders = await page.locator('.swcGlobalResultHeader').evaluate(element => {
+		const style = getComputedStyle(element)
+		return {top: style.borderTop, bottom: style.borderBottom}
+	})
+	expect(headerBorders.top).toBe(headerBorders.bottom)
 
 	await page.reload()
 	await expect(page.getByText('Ottawa.Package', {exact: true}).first()).toBeVisible()
@@ -161,7 +172,7 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	})
 	const controlsTop = await page.locator('.swcResultsControls').evaluate(element => element.getBoundingClientRect().top)
 	const headerTop = await page.locator('.swcGlobalResultHeader').evaluate(element => element.getBoundingClientRect().top)
-	expect(controlsTop).toBeGreaterThanOrEqual(28)
+	expect(controlsTop).toBeGreaterThanOrEqual(0)
 	expect(headerTop).toBeGreaterThan(controlsTop)
 	await expect(page.getByRole('button', {name: 'Filter Details'})).toBeVisible()
 })

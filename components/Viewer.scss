@@ -44,7 +44,7 @@
 	}
 
 	.swcShim {
-		height: 32px;
+		height: 0;
 		position: sticky;
 		z-index: 2;
 		top: 0;
@@ -57,7 +57,7 @@
 		flex-direction: column;
 		position: sticky;
 		z-index: 2; // Focused inputs/buttons are z=1.
-		top: 29px; // 3px less than .svShim height so the shadow overlaps neatly.
+		top: 0;
 	}
 
 	.swcFilterToolbar {
