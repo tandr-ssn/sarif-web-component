@@ -32,6 +32,21 @@ it('does not explode', () => { // Bare bones perf is 0.2s
 	expect(createResultCsv([runStore], 'all').split('\r\n')[0]).toBe('\ufeff"Path","Details","Level","Kind"')
 })
 
+it('uses the descriptive SARIF driver name in visible run headers', () => {
+	const descriptiveRun = {
+		tool: {driver: {name: 'ACAH', fullName: 'ACAH — Application findings'}},
+		results: [],
+	} as unknown as Run
+	const overriddenRun = {
+		tool: {driver: {name: 'ACAH', fullName: 'ACAH — Review candidates'}},
+		properties: {logFileName: 'Imported review'},
+		results: [],
+	} as unknown as Run
+
+	expect(new RunStore(descriptiveRun, 0, new MobxFilter()).driverName).toBe('ACAH — Application findings')
+	expect(new RunStore(overriddenRun, 0, new MobxFilter()).driverName).toBe('Imported review')
+})
+
 it('keeps Path as a visible fallback when Details is not selected', () => {
 	const run = {tool: {driver: {name: 'Sample Tool'}}, results: [{message: {text: 'Finding'}}]} as unknown as Run
 	const selected = observable.box(['Path', 'Level'])

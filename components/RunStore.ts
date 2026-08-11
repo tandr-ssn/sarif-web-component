@@ -44,7 +44,8 @@ export class RunStore {
 
 	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice())) {
 		const {driver} = run.tool
-		this.driverName = run.properties && run.properties['logFileName'] || driver.name.replace(/^Microsoft.CodeAnalysis.Sarif.PatternMatcher$/, 'CredScan on Push')
+		const sarifDriverName = driver.fullName || driver.name
+		this.driverName = run.properties && run.properties['logFileName'] || sarifDriverName.replace(/^Microsoft.CodeAnalysis.Sarif.PatternMatcher$/, 'CredScan on Push')
 		const buildId = run.properties ? run.properties['buildId'] : 0
 		const artifactName = run.properties ? run.properties['artifactName'] : ''
 		const filePath = run.properties ? run.properties['filePath'] : ''
