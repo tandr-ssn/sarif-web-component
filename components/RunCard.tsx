@@ -92,6 +92,7 @@ import {RunTitle} from './RunTitle'
 			column.name = name
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {copyString: typeof col.filterString}).copyString = col.copyString ?? col.filterString
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {embedPath?: boolean}).embedPath = col.embedPath
+			;(column as ITreeColumn<ResultOrRuleOrMore> & {embeddedPathCopyString?: typeof col.filterString}).embeddedPathCopyString = col.embeddedPathCopyString
 			column.sortProps.sortOrder = id === sortedColumnId ? runStore.sortOrder : undefined
 			return column
 		})

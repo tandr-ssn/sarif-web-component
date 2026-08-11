@@ -13,6 +13,7 @@ import {observable} from 'mobx'
 import {SortOrder} from 'azure-devops-ui/Table'
 import {isResultVariantGroup} from './ResultVariantGroup'
 import {createResultCsv, createResultHtmlTable} from './ResultExport'
+import {RunCard} from './RunCard'
 jest.mock('./FilterBar')
 
 it('does not explode', () => { // Bare bones perf is 0.2s
@@ -35,6 +36,23 @@ it('keeps Path as a visible fallback when Details is not selected', () => {
 	const selected = observable.box(['Path', 'Level'])
 	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
 	expect(runStore.displayColumns.map(column => column.id)).toEqual(['Path', 'Level'])
+})
+
+it('passes an embedded Path copy formatter to the rendered Details column', () => {
+	const run = {
+		tool: {driver: {name: 'River'}},
+		results: [{message: {text: 'Finding'}, locations: [{physicalLocation: {
+			artifactLocation: {uri: 'src/River.ts'},
+			region: {startLine: 12, startColumn: 7},
+		}}]}],
+	} as unknown as Run
+	const selected = observable.box(['Path', 'Details'])
+	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
+	const runCard = new RunCard({runStore, index: 0})
+	const detailsColumn = (runCard as any).columns[0]
+
+	expect(detailsColumn.id).toBe('Details')
+	expect(detailsColumn.embeddedPathCopyString(run.results[0])).toBe('src/River.ts:12:7')
 })
 
 it('exports built-in Path values relative to the SARIF source root', () => {
