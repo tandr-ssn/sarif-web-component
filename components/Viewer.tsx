@@ -36,6 +36,8 @@ import {ResultFieldSelector} from './ResultFieldSelector'
 import {createResultCsv, createResultHtml, createResultHtmlTable, createResultMarkdown, createResultText, createResultTsv, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
 import {ResultExportMenu} from './ResultExportMenu'
 import {ResultViewOptionsMenu} from './ResultViewOptionsMenu'
+import {ResultColumnLayout} from './ResultColumnLayout'
+import {ResultTableHeader} from './ResultTableHeader'
 import {installTooltips} from './Tooltip'
 
 export interface ViewerProps {
@@ -113,6 +115,7 @@ export interface ViewerProps {
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
 	private fitAllColumns: IObservableValue<boolean>
+	private resultColumnLayout: ResultColumnLayout
 	private selectedResultFields = observable.box<string[]>(DEFAULT_RESULT_FIELDS.slice())
 	private pendingResultFields?: string[]
 	private resultFieldSelectionRestored = false
@@ -141,6 +144,7 @@ export interface ViewerProps {
 			} catch (_) { }
 		}
 		this.fitAllColumns = observable.box(fitAllColumns)
+		this.resultColumnLayout = new ResultColumnLayout(this.fitAllColumns)
 		this.fitAllColumnsPersistence = autorun(() => {
 			const value = this.fitAllColumns.get()
 			if (!fitAllColumnsStorageKey) return
@@ -428,7 +432,7 @@ export interface ViewerProps {
 			return runStoresSorted
 				.filter(run => showFilteredEmptyTables || !filterKeywords || run.filteredCount)
 				.map((run, index) => <div key={this.getRunCardKey(run.run)} className="page-content-left page-content-right page-content-top">
-					<RunCard runStore={run} index={index} fitAllColumns={this.fitAllColumns} />
+					<RunCard runStore={run} index={index} columnLayout={this.resultColumnLayout} />
 				</div>)
 		})() as JSX.Element
 
@@ -440,11 +444,14 @@ export interface ViewerProps {
 							<Page>
 							<div className="swcShim"></div>
 							{renderedSourcePicker}
-							<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
-								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
-								resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
-									filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
-								resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresSorted} fitAllColumns={this.fitAllColumns} />} />
+							<div className="swcResultsControls">
+								<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
+									resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
+									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
+										filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
+									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresSorted} fitAllColumns={this.fitAllColumns} />} />
+								{!!this.runStoresSorted.length && <ResultTableHeader runStores={this.runStoresSorted} layout={this.resultColumnLayout} />}
+							</div>
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
 								onDismiss={() => this.warnOldVersion = false}>

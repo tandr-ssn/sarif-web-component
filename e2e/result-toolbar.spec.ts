@@ -33,6 +33,19 @@ const syntheticSarif = {
 				advisoryId: 'RIVER-2026-1',
 			},
 		}],
+	}, {
+		tool: {driver: {
+			name: 'Willow',
+			rules: [{id: 'willow-1', shortDescription: {text: 'Synthetic willow advisory'}}],
+		}},
+		results: [{
+			ruleId: 'willow-1',
+			level: 'note',
+			kind: 'review',
+			message: {text: 'Affected Calgary dependency'},
+			locations: [{physicalLocation: {artifactLocation: {uri: 'src/Calgary/Willow.ts'}}}],
+			properties: {packageName: 'Calgary.Package', packageVersion: '2.0.0'},
+		}],
 	}],
 }
 
@@ -58,18 +71,35 @@ test.beforeEach(async ({page}) => {
 	}, {fitKey: fitAllColumnsKey, fields: selectedFields, sarif: syntheticSarif, storageKey: sessionKey})
 	await page.goto(docsUrl)
 	await expect(page.getByText('Ottawa.Package', {exact: true}).first()).toBeVisible()
+	await expect(page.getByRole('button', {name: 'Filter Details'})).toHaveCount(1)
 })
 
 test('fits columns, exposes horizontal scrolling, and clears filters deliberately', async ({page}) => {
-	const scrollContainer = page.locator('.swcTreeHorizontalScroll')
-	await expect(scrollContainer).toBeVisible()
-	await expect.poll(() => scrollContainer.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true)
+	const scrollContainers = page.locator('.swcTreeHorizontalScroll')
+	const headerScroll = page.locator('.swcGlobalResultHeader .swcTreeHorizontalScroll')
+	const resultScroll = page.locator('.bolt-card .swcTreeHorizontalScroll').first()
+	await expect(scrollContainers).toHaveCount(2)
+	await expect(headerScroll).toHaveCSS('overflow-x', 'scroll')
+	await expect.poll(() => headerScroll.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true)
+	await headerScroll.evaluate(element => element.scrollLeft = 120)
+	await expect.poll(() => resultScroll.evaluate(element => element.scrollLeft)).toBeGreaterThan(0)
+	await headerScroll.evaluate(element => element.scrollLeft = element.scrollWidth)
+	const lastHeader = page.locator('.swcGlobalResultHeader .bolt-table-header-cell[data-column-index]').last()
+	const lastSizer = lastHeader.locator('.bolt-table-header-sizer')
+	const initialLastWidth = await lastHeader.evaluate(element => element.getBoundingClientRect().width)
+	await lastSizer.focus()
+	for (let index = 0; index < 30; index++) await page.keyboard.press('ArrowRight')
+	const expandedLastWidth = await lastHeader.evaluate(element => element.getBoundingClientRect().width)
+	for (let index = 0; index < 45; index++) await page.keyboard.press('ArrowLeft')
+	const contractedLastWidth = await lastHeader.evaluate(element => element.getBoundingClientRect().width)
+	expect(expandedLastWidth).toBeGreaterThan(initialLastWidth)
+	expect(contractedLastWidth).toBeLessThan(expandedLastWidth)
 
 	await page.getByRole('button', {name: 'Result view options'}).click()
 	const fitAll = page.getByRole('menuitemcheckbox', {name: 'Fit all columns'})
 	await expect(fitAll).not.toBeChecked()
 	await fitAll.click()
-	await expect(scrollContainer).toHaveCount(0)
+	await expect(scrollContainers).toHaveCount(0)
 	await expect.poll(() => page.evaluate(key => localStorage.getItem(key), fitAllColumnsKey)).toBe('true')
 
 	await page.reload()
@@ -106,4 +136,16 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	await page.getByRole('button', {name: 'Clear filters; 1 active'}).click()
 	await page.getByRole('menuitem', {name: /Clear filter: Details/}).click()
 	await expect(page.getByText('No matching results')).toHaveCount(0)
+
+	await page.evaluate(() => {
+		const spacer = document.createElement('div')
+		spacer.style.height = '1200px'
+		document.querySelector('.bolt-page')?.appendChild(spacer)
+		window.scrollTo(0, document.body.scrollHeight)
+	})
+	const controlsTop = await page.locator('.swcResultsControls').evaluate(element => element.getBoundingClientRect().top)
+	const headerTop = await page.locator('.swcGlobalResultHeader').evaluate(element => element.getBoundingClientRect().top)
+	expect(controlsTop).toBeGreaterThanOrEqual(28)
+	expect(headerTop).toBeGreaterThan(controlsTop)
+	await expect(page.getByRole('button', {name: 'Filter Details'})).toBeVisible()
 })

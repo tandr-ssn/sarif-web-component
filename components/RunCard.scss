@@ -55,6 +55,10 @@
 	overflow-x: auto;
 }
 
+.swcTree .bolt-table-cell {
+	box-shadow: inset -1px 0 rgba(var(--palette-neutral-100), .20);
+}
+
 .swcTree .bolt-tree-row:nth-of-type(even):not(:hover):not(.selected) {
 	background-color: var(--palette-black-alpha-4);
 }
