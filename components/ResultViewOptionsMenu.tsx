@@ -1,5 +1,6 @@
 import './ResultViewOptionsMenu.scss'
 import * as React from 'react'
+import {IObservableValue} from 'mobx'
 import {observer} from 'mobx-react'
 import {SortOrder} from 'azure-devops-ui/Table'
 import {IMenuItem, MenuItemType, MoreButton} from 'azure-devops-ui/Menu'
@@ -7,7 +8,10 @@ import {RunStore, SortRuleBy} from './RunStore'
 
 let menuId = 0
 
-@observer export class ResultViewOptionsMenu extends React.Component<{runStores: RunStore[]}> {
+@observer export class ResultViewOptionsMenu extends React.Component<{
+	runStores: RunStore[]
+	fitAllColumns: IObservableValue<boolean>
+}> {
 	private readonly id = `swc-result-view-options-${menuId++}`
 
 	private setGroupByAge = (value: boolean) => {
@@ -22,12 +26,16 @@ let menuId = 0
 	}
 
 	render() {
-		const {runStores} = this.props
+		const {runStores, fitAllColumns} = this.props
+		const fitAll = fitAllColumns.get()
 		const showGroupChoices = runStores.some(store => store.showAge)
 		const groupedByAge = showGroupChoices && runStores.every(store => store.groupByAge?.get())
 		const allSortedBy = (value: SortRuleBy) => !!runStores.length
 			&& runStores.every(store => store.sortRuleBy === value)
 		const items: IMenuItem[] = [
+			{id: 'fitAllColumns', text: 'Fit all columns', checked: fitAll,
+				onActivate: () => fitAllColumns.set(!fitAll)},
+			{id: 'viewDivider', itemType: MenuItemType.Divider},
 			...(showGroupChoices ? [
 				{id: 'groupByAge', text: 'Group by age', checked: groupedByAge, onActivate: () => this.setGroupByAge(true)},
 				{id: 'groupByRule', text: 'Group by rule', checked: !groupedByAge, onActivate: () => this.setGroupByAge(false)},

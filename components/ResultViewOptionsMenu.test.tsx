@@ -17,16 +17,21 @@ function menuItems(wrapper) {
 
 test('moves shared grouping and rule sorting choices into the result toolbar menu', () => {
 	const groupByAge = observable.box(false)
+	const fitAllColumns = observable.box(true)
 	const stores = [
 		{showAge: true, groupByAge, sortRuleBy: SortRuleBy.Count, sortRuleOrder: SortOrder.descending},
 		{showAge: true, groupByAge, sortRuleBy: SortRuleBy.Count, sortRuleOrder: SortOrder.descending},
 	] as any
-	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} />)
+	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} fitAllColumns={fitAllColumns} />)
 	let items = menuItems(wrapper)
 
 	expect(items.map(item => item.id)).toEqual([
+		'fitAllColumns', 'viewDivider',
 		'groupByAge', 'groupByRule', 'groupDivider', 'sortByRuleCount', 'sortByRuleName',
 	])
+	expect(items.find(item => item.id === 'fitAllColumns').checked).toBe(true)
+	items.find(item => item.id === 'fitAllColumns').onActivate()
+	expect(fitAllColumns.get()).toBe(false)
 	expect(items.find(item => item.id === 'groupByRule').checked).toBe(true)
 	items.find(item => item.id === 'groupByAge').onActivate()
 	expect(groupByAge.get()).toBe(true)
@@ -43,8 +48,10 @@ test('moves shared grouping and rule sorting choices into the result toolbar men
 
 test('omits grouping choices when age grouping is unavailable', () => {
 	const stores = [{showAge: false, groupByAge: observable.box(false), sortRuleBy: SortRuleBy.Count}] as any
-	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} />)
+	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} fitAllColumns={observable.box(true)} />)
 
-	expect(menuItems(wrapper).map(item => item.id)).toEqual(['sortByRuleCount', 'sortByRuleName'])
+	expect(menuItems(wrapper).map(item => item.id)).toEqual([
+		'fitAllColumns', 'viewDivider', 'sortByRuleCount', 'sortByRuleName',
+	])
 	wrapper.unmount()
 })

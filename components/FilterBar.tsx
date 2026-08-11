@@ -35,6 +35,35 @@ export class MobxFilter extends Filter {
 	}
 }
 
+export interface ActiveFilterDescription {
+	key: string
+	description: string
+}
+
+function filterValueText(value: unknown): string {
+	if (Array.isArray(value)) return value.join(', ')
+	if (value && typeof value === 'object') return JSON.stringify(value)
+	return String(value ?? '')
+}
+
+export function getActiveFilterDescriptions(filter: MobxFilter): ActiveFilterDescription[] {
+	const state = filter.getState()
+	const defaults = filter.getDefaultState()
+	return Array.from(new Set([...Object.keys(defaults), ...Object.keys(state)]))
+		.filter(key => !filter.filterItemStatesAreEqual(key, state[key] ?? null, defaults[key] ?? null))
+		.map(key => {
+			const value = state[key]?.value
+			if (key === 'Keywords') return {key, description: `Keyword: “${filterValueText(value)}”`}
+			if (key.startsWith('Column:')) {
+				const field = key.slice('Column:'.length)
+				return {key, description: typeof value === 'string'
+					? `${field}: contains “${value}”`
+					: `${field}: ${filterValueText(value)}`}
+			}
+			return {key, description: `${key}: ${filterValueText(value)}`}
+		})
+}
+
 @observer export class ClearFilterBarItem extends React.Component<{filter?: MobxFilter}> {
 	private button?: HTMLButtonElement
 
@@ -44,12 +73,25 @@ export class MobxFilter extends Filter {
 
 	render() {
 		const {filter} = this.props
-		filter?.getState() // Subscribe this MobX observer to filter changes.
-		const disabled = !filter?.hasChangesToReset()
-		return <button type="button" className="swcFilterClear" aria-label="Clear filters"
-			data-swc-tooltip="Clear filters" disabled={disabled}
+		const keywords = filter?.getFilterItemValue<string>('Keywords') ?? ''
+		const disabled = !keywords.trim()
+		return <button type="button" className="swcFilterClear" aria-label="Clear keyword filter"
+			data-swc-tooltip="Clear keyword filter" disabled={disabled}
 			ref={element => this.button = element ?? undefined}
-			onClick={() => filter?.reset()}><span aria-hidden="true">×</span></button>
+			onClick={() => filter?.setFilterItemState('Keywords', {value: ''})}><span aria-hidden="true">×</span></button>
+	}
+}
+
+@observer export class ClearAllFiltersButton extends React.Component<{filter: MobxFilter}> {
+	render() {
+		const {filter} = this.props
+		const active = getActiveFilterDescriptions(filter)
+		if (!active.some(item => item.key !== 'Keywords')) return null
+		const tooltip = `Clear all filters\n${active.map(item => item.description).join('\n')}`
+		return <button type="button" className="swcClearAllFilters"
+			aria-label={`Clear all filters; ${active.length} active`}
+			data-swc-tooltip={tooltip}
+			onClick={() => filter.reset()}>Clear filters ({active.length})</button>
 	}
 }
 
@@ -72,6 +114,7 @@ export class MobxFilter extends Filter {
 				<ClearFilterBarItem />
 			</AzFilterBar>
 			<div className="swcFilterToolbarActions">
+				<ClearAllFiltersButton filter={filter} />
 				{resultFieldSelector}
 				{resultExportMenu}
 				{resultViewOptionsMenu}

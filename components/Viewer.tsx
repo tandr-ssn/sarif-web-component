@@ -88,6 +88,12 @@ export interface ViewerProps {
 	fieldSelectionStorageKey?: string | false
 
 	/**
+	 * Optional local-storage key used to remember whether result columns fit the available width.
+	 * A component-wide default is used when omitted; set this to false to disable persistence.
+	 */
+	fitAllColumnsStorageKey?: string | false
+
+	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
 	 * 
@@ -106,10 +112,12 @@ export interface ViewerProps {
 	private collapseComments = new ObservableValue(false)
 	private filter: MobxFilter
 	private groupByAge: IObservableValue<boolean>
+	private fitAllColumns: IObservableValue<boolean>
 	private selectedResultFields = observable.box<string[]>(DEFAULT_RESULT_FIELDS.slice())
 	private pendingResultFields?: string[]
 	private resultFieldSelectionRestored = false
 	private resultFieldPersistence?: () => void
+	private fitAllColumnsPersistence?: () => void
 	private runCardKeys = new WeakMap<Run, number>()
 	private nextRunCardKey = 0
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
@@ -124,6 +132,21 @@ export interface ViewerProps {
 		const {defaultFilterState, filterState, showAge} = this.props
 		this.filter = new MobxFilter(defaultFilterState, filterState)
 		this.groupByAge = observable.box(showAge)
+		const fitAllColumnsStorageKey = this.getFitAllColumnsStorageKey()
+		let fitAllColumns = true
+		if (fitAllColumnsStorageKey) {
+			try {
+				const stored = JSON.parse(window.localStorage.getItem(fitAllColumnsStorageKey) ?? 'null')
+				if (typeof stored === 'boolean') fitAllColumns = stored
+			} catch (_) { }
+		}
+		this.fitAllColumns = observable.box(fitAllColumns)
+		this.fitAllColumnsPersistence = autorun(() => {
+			const value = this.fitAllColumns.get()
+			if (!fitAllColumnsStorageKey) return
+			try { window.localStorage.setItem(fitAllColumnsStorageKey, JSON.stringify(value)) }
+			catch (_) { }
+		})
 		if (this.props.sessionStorageKey) {
 			try {
 				this.rememberedSourceFolderName = window.sessionStorage.getItem(`${this.props.sessionStorageKey}:source-folder-name`) ?? undefined
@@ -165,6 +188,7 @@ export interface ViewerProps {
 
 	componentWillUnmount() {
 		this.resultFieldPersistence?.()
+		this.fitAllColumnsPersistence?.()
 	}
 
 	@observable warnOldVersion = false
@@ -201,6 +225,12 @@ export interface ViewerProps {
 		if (this.props.fieldSelectionStorageKey === false) return undefined
 		return this.props.fieldSelectionStorageKey
 			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:selected-result-fields`
+	}
+
+	private getFitAllColumnsStorageKey(): string | undefined {
+		if (this.props.fitAllColumnsStorageKey === false) return undefined
+		return this.props.fitAllColumnsStorageKey
+			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:fit-all-columns`
 	}
 
 	private restoreResultFieldSelection() {
@@ -397,7 +427,7 @@ export interface ViewerProps {
 			return runStoresSorted
 				.filter(run => !filterKeywords || run.filteredCount)
 				.map((run, index) => <div key={this.getRunCardKey(run.run)} className="page-content-left page-content-right page-content-top">
-					<RunCard runStore={run} index={index} />
+					<RunCard runStore={run} index={index} fitAllColumns={this.fitAllColumns} />
 				</div>)
 		})() as JSX.Element
 
@@ -413,7 +443,7 @@ export interface ViewerProps {
 								resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
 								resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
 									filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
-								resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresSorted} />} />
+								resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresSorted} fitAllColumns={this.fitAllColumns} />} />
 							{this.warnOldVersion && <MessageCard
 								severity={MessageCardSeverity.Warning}
 								onDismiss={() => this.warnOldVersion = false}>

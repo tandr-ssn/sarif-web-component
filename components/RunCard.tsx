@@ -4,7 +4,7 @@
 import './RunCard.scss'
 import * as React from 'react'
 import {Component} from 'react'
-import {autorun, runInAction, observable, computed} from 'mobx'
+import {autorun, runInAction, observable, computed, IObservableValue} from 'mobx'
 import {observer} from 'mobx-react'
 
 import {Hi} from './Hi'
@@ -27,23 +27,33 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 import {getTreeRowClass} from './RunCard.rowPresentation'
 import {RunTitle} from './RunTitle'
 
-@observer export class RunCard extends Component<{ runStore: RunStore, index: number }> {
+export function preferredResultColumnWidth(width: number): number {
+	return width < 0 ? Math.max(140, Math.abs(width) * 100) : width
+}
+
+@observer export class RunCard extends Component<{
+	runStore: RunStore
+	index: number
+	fitAllColumns?: IObservableValue<boolean>
+}> {
 	@observable private show = true
 	private itemProvider = new TreeItemProvider<ResultOrRuleOrMore>([])
 	private columnCache = new Map<string, ITreeColumn<ResultOrRuleOrMore>>()
+	private preferredColumnWidths = new Map<string, number>()
 
 	@computed private get columns() {
 		const {runStore} = this.props
+		const fitAll = this.props.fitAllColumns?.get() ?? true
 		const sortedColumnId = runStore.columns[Math.min(runStore.sortColumnIndex, runStore.columns.length - 1)]?.id
 		return runStore.displayColumns.map((col, i) => {
 			const {id, name, width} = col
+			if (!this.preferredColumnWidths.has(id)) this.preferredColumnWidths.set(id, preferredResultColumnWidth(width))
 			if (!this.columnCache.has(id)) {
-				const observableWidth = new ObservableValue(width)
+				const observableWidth = new ObservableValue(fitAll ? width : this.preferredColumnWidths.get(id))
 				this.columnCache.set(id, {
 					id,
 					name,
 					width: observableWidth,
-					onSize: (e, i, newWidth) => observableWidth.value = newWidth,
 					renderCell: renderCell, // Normally renderTreeCell
 					renderHeaderCell: (columnIndex, column, focuszoneId, isFirstActionableHeader) =>
 						<ResultColumnHeader columnIndex={columnIndex} column={column} runStore={runStore}
@@ -56,7 +66,14 @@ import {RunTitle} from './RunTitle'
 				} as ITreeColumn<ResultOrRuleOrMore>)
 			}
 			const column = this.columnCache.get(id)
+			const observableWidth = column.width as ObservableValue<number>
+			const desiredWidth = fitAll ? width : this.preferredColumnWidths.get(id)
+			if (observableWidth.value !== desiredWidth) observableWidth.value = desiredWidth
 			column.name = name
+			column.onSize = fitAll ? undefined : (event, columnIndex, newWidth) => {
+				this.preferredColumnWidths.set(id, newWidth)
+				observableWidth.value = newWidth
+			}
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {copyString: typeof col.filterString}).copyString = col.copyString ?? col.filterString
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {embedPath?: boolean}).embedPath = col.embedPath
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {embeddedPathCopyString?: typeof col.filterString}).embeddedPathCopyString = col.embeddedPathCopyString
@@ -101,6 +118,7 @@ import {RunTitle} from './RunTitle'
 	render() {
 		const {show, itemProvider} = this
 		const {runStore} = this.props
+		const fitAllColumns = this.props.fitAllColumns?.get() ?? true
 		
 		return <Observer renderChildren={itemProvider}>
 			{(observedProps: { itemProvider }) => {
@@ -134,6 +152,7 @@ import {RunTitle} from './RunTitle'
 						? <div onCopy={copySelectedTableCells}>
 							<Tree<ResultOrRuleOrMore>
 							className="swcTree"
+							containerClassName={fitAllColumns ? undefined : 'swcTreeHorizontalScroll'}
 							columns={this.columns}
 							itemProvider={itemProvider}
 							onToggle={(event, treeItem: ITreeItemEx<ResultOrRuleOrMore>) => {
@@ -151,6 +170,7 @@ import {RunTitle} from './RunTitle'
 							behaviors={[this.sortingBehavior]}
 							renderRow={this.renderRow}
 							selectableText={true}
+							showScroll={!fitAllColumns}
 							/>
 						</div>
 						: <div className="swcRunEmpty">No Results</div>

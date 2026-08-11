@@ -51,6 +51,10 @@
 	margin-bottom: 32px;
 }
 
+.swcTreeHorizontalScroll {
+	overflow-x: auto;
+}
+
 .swcTree .bolt-tree-row:nth-of-type(even):not(:hover):not(.selected) {
 	background-color: var(--palette-black-alpha-4);
 }

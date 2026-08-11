@@ -35,3 +35,15 @@ test('uses default fields when persisted field data is invalid', () => {
 	viewer.componentWillUnmount()
 	window.localStorage.removeItem(storageKey)
 })
+
+test('restores and persists the fit-all-columns preference', () => {
+	const storageKey = 'calgary-viewer:test-fit-all-columns'
+	window.localStorage.setItem(storageKey, 'false')
+	const viewer = new Viewer({logs, fitAllColumnsStorageKey: storageKey}) as any
+
+	expect(viewer.fitAllColumns.get()).toBe(false)
+	viewer.fitAllColumns.set(true)
+	expect(window.localStorage.getItem(storageKey)).toBe('true')
+	viewer.componentWillUnmount()
+	window.localStorage.removeItem(storageKey)
+})

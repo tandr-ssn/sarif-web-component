@@ -55,6 +55,33 @@ it('passes an embedded Path copy formatter to the rendered Details column', () =
 	expect(detailsColumn.embeddedPathCopyString(run.results[0])).toBe('src/River.ts:12:7')
 })
 
+it('switches between proportional fit widths and remembered scroll widths', () => {
+	const run = {
+		tool: {driver: {name: 'River'}},
+		results: [{message: {text: 'Finding'}, locations: [{physicalLocation: {
+			artifactLocation: {uri: 'src/River.ts'},
+		}}]}],
+	} as unknown as Run
+	const selected = observable.box(['Path', 'Level'])
+	const fitAllColumns = observable.box(true)
+	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
+	const runCard = new RunCard({runStore, index: 0, fitAllColumns}) as any
+
+	let columns = runCard.columns
+	expect(columns.map(column => column.width.value)).toEqual([-3, -1])
+	expect(columns.map(column => column.onSize)).toEqual([undefined, undefined])
+
+	fitAllColumns.set(false)
+	columns = runCard.columns
+	expect(columns.map(column => column.width.value)).toEqual([300, 140])
+	columns[0].onSize(undefined, 0, 360)
+
+	fitAllColumns.set(true)
+	expect(runCard.columns[0].width.value).toBe(-3)
+	fitAllColumns.set(false)
+	expect(runCard.columns[0].width.value).toBe(360)
+})
+
 it('exports built-in Path values relative to the SARIF source root', () => {
 	const run = {
 		tool: {driver: {name: 'River'}},
