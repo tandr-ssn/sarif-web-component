@@ -20,6 +20,7 @@ test('copies selected finding cells as tab-separated rows with multiline cells',
 	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
 
 	expect(setData).toHaveBeenCalledWith('text/plain', 'one\t"Finding message\n\nsrc/app.ts:10\n10  const value = ""quoted""\n\nCode flow\n1. src/app.ts:12\n12  use(value);"\nthree\tfour')
+	expect(setData).toHaveBeenCalledWith('text/html', expect.stringContaining('<table>'))
 	expect(preventDefault).toHaveBeenCalled()
 	selection.removeAllRanges()
 	root.remove()
@@ -40,6 +41,7 @@ test('copies a completely selected single cell', () => {
 	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
 
 	expect(setData).toHaveBeenCalledWith('text/plain', 'one cell')
+	expect(setData).toHaveBeenCalledWith('text/html', expect.stringContaining('one cell'))
 	expect(preventDefault).toHaveBeenCalled()
 	selection.removeAllRanges()
 	root.remove()
@@ -84,6 +86,36 @@ test('always copies a Details cell using its semantic copy value', () => {
 	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
 
 	expect(setData).toHaveBeenCalledWith('text/plain', '"Finding\n\n20  source();"')
+	expect(preventDefault).toHaveBeenCalled()
+	selection.removeAllRanges()
+	root.remove()
+})
+
+test('copies a Markdown field as plain text, rendered HTML, and Markdown source', () => {
+	const root = document.createElement('div')
+	root.innerHTML = `<table><tbody><tr><td class="bolt-table-cell" data-column-index="0">
+		<span hidden data-copy-value="### Versions&#10;&#10;| Version | Status |&#10;| --- | --- |&#10;| 1.0 | affected |"
+			data-copy-markdown-value="### Versions&#10;&#10;| Version | Status |&#10;| --- | --- |&#10;| 1.0 | affected |"></span>
+		<div class="swcMarkDown"><h3>Versions</h3><table><thead><tr><th>Version</th><th>Status</th></tr></thead>
+		<tbody><tr><td>1.0</td><td>affected</td></tr></tbody></table></div>
+	</td></tr></tbody></table>`
+	document.body.appendChild(root)
+	const range = document.createRange()
+	range.selectNodeContents(root.querySelector('td.bolt-table-cell'))
+	const selection = window.getSelection()
+	selection.removeAllRanges()
+	selection.addRange(range)
+	const setData = jest.fn()
+	const preventDefault = jest.fn()
+
+	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
+
+	expect(setData).toHaveBeenCalledWith('text/plain', '"Versions\n\nVersion | Status\n1.0     | affected"')
+	expect(setData).toHaveBeenCalledWith('text/markdown', '### Versions\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |')
+	const html = setData.mock.calls.find(([type]) => type === 'text/html')?.[1]
+	expect(html).toContain('<th style=')
+	expect(html).toContain('>Version</th>')
+	expect(html).not.toContain('data-copy-value')
 	expect(preventDefault).toHaveBeenCalled()
 	selection.removeAllRanges()
 	root.remove()

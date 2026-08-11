@@ -130,7 +130,10 @@ export function renderCell<T extends ISimpleTableCell>(
 		const result = data
 		const rule = result._rule
 		const copyString = (treeColumn as ITreeColumn<T> & {copyString?: (result: Result) => string}).copyString
-		const copyMarker = <span hidden data-copy-value={copyString?.(result) ?? ''}
+		const rawCopyValue = copyString?.(result) ?? ''
+		const markdownCopyValue = looksLikeMarkdown(treeColumn.id, rawCopyValue) ? rawCopyValue : undefined
+		const copyMarker = <span hidden data-copy-value={rawCopyValue}
+			data-copy-markdown-value={markdownCopyValue}
 			data-copy-always={treeColumn.id === 'Details' ? 'true' : undefined} />
 		const embedPath = (treeColumn as ITreeColumn<T> & {embedPath?: boolean}).embedPath === true
 		const status = {

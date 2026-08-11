@@ -52,11 +52,15 @@ test('renders Markdown-looking text fields with safe external links', () => {
 		_rule: {help: {text: '### Remediation\n\nSee [the advisory](https://example.test/advisory).\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |'}},
 	}
 	const treeItem: any = {underlyingItem: {data: result}}
-	const wrapper = mount(renderCell(0, 1, {id: 'rule.help.text'} as any, treeItem))
+	const wrapper = mount(renderCell(0, 1, {
+		id: 'rule.help.text', copyString: () => result._rule.help.text,
+	} as any, treeItem))
 
 	expect(wrapper.find('.swcResultFieldValue.swcMarkDown h3').text()).toBe('Remediation')
 	expect(wrapper.find('.swcResultFieldValue a').prop('href')).toBe('https://example.test/advisory')
 	expect(wrapper.find('.swcResultFieldValue a').prop('rel')).toBe('noopener noreferrer')
 	expect(wrapper.find('.swcResultFieldValue table')).toHaveLength(1)
 	expect(wrapper.find('.swcResultFieldValue th').map(cell => cell.text())).toEqual(['Version', 'Status'])
+	expect(wrapper.find('[data-copy-value]').prop('data-copy-value')).toContain('| --- | --- |')
+	expect(wrapper.find('[data-copy-markdown-value]').prop('data-copy-markdown-value')).toContain('| --- | --- |')
 })
