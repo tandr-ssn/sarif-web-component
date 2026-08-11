@@ -47,6 +47,22 @@ it('uses the descriptive SARIF driver name in visible run headers', () => {
 	expect(new RunStore(overriddenRun, 0, new MobxFilter()).driverName).toBe('Imported review')
 })
 
+it('prefers an ACAH run title that distinguishes producers in one section', () => {
+	const run = {
+		tool: {driver: {name: 'ACAH', fullName: 'ACAH — Application findings'}},
+		properties: {acah: {
+			formatVersion: 3,
+			section: {id: 'application-findings', title: 'ACAH — Application findings', order: 10},
+			producer: {id: 'acah-csharp-roslyn', title: 'C# native'},
+			runTitle: 'ACAH — Application findings — C# native',
+		}},
+		results: [],
+	} as unknown as Run
+
+	expect(new RunStore(run, 0, new MobxFilter()).driverName)
+		.toBe('ACAH — Application findings — C# native')
+})
+
 it('keeps Path as a visible fallback when Details is not selected', () => {
 	const run = {tool: {driver: {name: 'Sample Tool'}}, results: [{message: {text: 'Finding'}}]} as unknown as Run
 	const selected = observable.box(['Path', 'Level'])

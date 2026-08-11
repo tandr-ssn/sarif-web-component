@@ -15,6 +15,7 @@ import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} 
 import {resultDetailsCopyText} from './ResultTraceText'
 import {groupPublicReviewVariants, isResultVariantGroup, resultVariantCount, variantResults} from './ResultVariantGroup'
 import {getSourcePathFromSarifRoot} from './LocalSourceFile'
+import {getRunAcah} from './Acah'
 
 declare module 'sarif' {
     interface Run {
@@ -45,7 +46,10 @@ export class RunStore {
 	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice())) {
 		const {driver} = run.tool
 		const sarifDriverName = driver.fullName || driver.name
-		this.driverName = run.properties && run.properties['logFileName'] || sarifDriverName.replace(/^Microsoft.CodeAnalysis.Sarif.PatternMatcher$/, 'CredScan on Push')
+		const acahRunTitle = getRunAcah(run)?.runTitle
+		this.driverName = run.properties && run.properties['logFileName']
+			|| typeof acahRunTitle === 'string' && acahRunTitle
+			|| sarifDriverName.replace(/^Microsoft.CodeAnalysis.Sarif.PatternMatcher$/, 'CredScan on Push')
 		const buildId = run.properties ? run.properties['buildId'] : 0
 		const artifactName = run.properties ? run.properties['artifactName'] : ''
 		const filePath = run.properties ? run.properties['filePath'] : ''

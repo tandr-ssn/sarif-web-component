@@ -87,10 +87,7 @@ import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
 				const qualityDomain = tryOr(() => runStore.run.tool.driver.properties['microsoft/qualityDomain'])
 				const acahSummary = getRunAcahSummary(runStore.run)
 				const runTitle = [
-					tryOr(
-						() => runStore.run.tool.driver.fullName,
-						() => `${runStore.run.tool.driver.name} ${runStore.run.tool.driver.semanticVersion || ''}`.trim(),
-					),
+					runStore.driverName,
 					tryOr(
 						() => runStore.run.tool.driver.fullDescription.text,
 						() => runStore.run.tool.driver.shortDescription.text,
