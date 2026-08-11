@@ -148,14 +148,14 @@ test('copies a Markdown field as plain text, rendered HTML, and Markdown source'
 	root.remove()
 })
 
-test('keeps multi-cell HTML rectangular by flattening nested Markdown tables', () => {
+test('keeps rich multi-cell HTML rectangular by flattening only nested Markdown tables', () => {
 	const root = document.createElement('div')
 	root.innerHTML = `<table><tbody><tr>
 		<td class="bolt-table-cell" data-column-index="0"><span hidden data-copy-value="project/composer.lock"></span>project/composer.lock</td>
 		<td class="bolt-table-cell" data-column-index="1">
 			<span hidden data-copy-value="### Versions&#10;&#10;| Version | Status |&#10;| --- | --- |&#10;| 1.0 | affected |"
 				data-copy-markdown-value="### Versions&#10;&#10;| Version | Status |&#10;| --- | --- |&#10;| 1.0 | affected |"></span>
-			<div><h3>Versions</h3><table><tr><th>Version</th><th>Status</th></tr><tr><td>1.0</td><td>affected</td></tr></table></div>
+			<div><h3>Versions</h3><table><tr><th>Version</th><th>Status</th></tr><tr><td>1.0</td><td><strong>affected</strong></td></tr></table></div>
 		</td>
 	</tr></tbody></table>`
 	document.body.appendChild(root)
@@ -172,7 +172,9 @@ test('keeps multi-cell HTML rectangular by flattening nested Markdown tables', (
 	expect((html.match(/<table/g) ?? [])).toHaveLength(1)
 	expect((html.match(/<td/g) ?? [])).toHaveLength(2)
 	expect(html).toContain('project/composer.lock</td>')
-	expect(html).toContain('Version | Status<br>1.0     | affected</td>')
+	expect(html).toContain('<h3>Versions</h3>')
+	expect(html).toContain('role="table"')
+	expect(html).toContain('<strong>affected</strong>')
 	selection.removeAllRanges()
 	root.remove()
 })

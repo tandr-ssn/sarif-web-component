@@ -49,19 +49,48 @@ function escapeHtml(value: string): string {
 		.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
-function cellHtml(cell: HTMLElement, rich: boolean): string {
-	if (!rich) {
+function flattenNestedTable(table: HTMLTableElement): void {
+	const document = table.ownerDocument
+	const grid = document.createElement('div')
+	grid.setAttribute('role', 'table')
+	grid.style.display = 'table'
+	grid.style.borderCollapse = 'collapse'
+	Array.from(table.rows).forEach(row => {
+		const gridRow = document.createElement('div')
+		gridRow.setAttribute('role', 'row')
+		gridRow.style.display = 'table-row'
+		Array.from(row.cells).forEach(sourceCell => {
+			const gridCell = document.createElement('div')
+			gridCell.setAttribute('role', sourceCell.tagName === 'TH' ? 'columnheader' : 'cell')
+			gridCell.style.display = 'table-cell'
+			gridCell.style.border = '1px solid #c8c8c8'
+			gridCell.style.padding = '4px 8px'
+			if (sourceCell.tagName === 'TH') gridCell.style.fontWeight = 'bold'
+			while (sourceCell.firstChild) gridCell.appendChild(sourceCell.firstChild)
+			gridRow.appendChild(gridCell)
+		})
+		grid.appendChild(gridRow)
+	})
+	table.replaceWith(grid)
+}
+
+function cellHtml(cell: HTMLElement, rich: boolean, flattenTables = false): string {
+	const alwaysCopy = cell.querySelector<HTMLElement>('[data-copy-always]') !== null
+	if (!rich || alwaysCopy) {
 		const text = escapeHtml(normalizedCellText(cell)).replace(/\n/g, '<br>')
 		return `<td style="vertical-align:top;white-space:pre-wrap">${text}</td>`
 	}
 	const clone = cell.cloneNode(true) as HTMLElement
 	clone.querySelectorAll('[data-copy-value], script, style').forEach(element => element.remove())
 	clone.querySelectorAll('[data-swc-tooltip]').forEach(element => element.removeAttribute('data-swc-tooltip'))
-	clone.querySelectorAll<HTMLElement>('table').forEach(table => table.style.borderCollapse = 'collapse')
-	clone.querySelectorAll<HTMLElement>('th, td').forEach(element => {
-		element.style.border = '1px solid #c8c8c8'
-		element.style.padding = '4px 8px'
-	})
+	if (flattenTables) clone.querySelectorAll<HTMLTableElement>('table').forEach(flattenNestedTable)
+	else {
+		clone.querySelectorAll<HTMLElement>('table').forEach(table => table.style.borderCollapse = 'collapse')
+		clone.querySelectorAll<HTMLElement>('th, td').forEach(element => {
+			element.style.border = '1px solid #c8c8c8'
+			element.style.padding = '4px 8px'
+		})
+	}
 	return `<td style="vertical-align:top;white-space:pre-wrap">${clone.innerHTML}</td>`
 }
 
@@ -70,9 +99,9 @@ function textCellHtml(value: string): string {
 	return `<td style="vertical-align:top;white-space:pre-wrap">${text}</td>`
 }
 
-function logicalCellsHtml(cell: HTMLElement, rich: boolean): string {
+function logicalCellsHtml(cell: HTMLElement, rich: boolean, flattenTables = false): string {
 	const leading = leadingCellText(cell)
-	return (leading === undefined ? '' : textCellHtml(leading)) + cellHtml(cell, rich)
+	return (leading === undefined ? '' : textCellHtml(leading)) + cellHtml(cell, rich, flattenTables)
 }
 
 function rowsForCells(cells: HTMLElement[]): Map<Element, HTMLElement[]> {
@@ -88,9 +117,9 @@ function rowsForCells(cells: HTMLElement[]): Map<Element, HTMLElement[]> {
 	return rows
 }
 
-function setRichClipboardData(event: React.ClipboardEvent<HTMLElement>, rows: Map<Element, HTMLElement[]>, rich: boolean) {
+function setRichClipboardData(event: React.ClipboardEvent<HTMLElement>, rows: Map<Element, HTMLElement[]>, rich: boolean, flattenTables = false) {
 	const html = '<table><tbody>' + Array.from(rows.values())
-		.map(row => `<tr>${row.map(cell => logicalCellsHtml(cell, rich)).join('')}</tr>`).join('') + '</tbody></table>'
+		.map(row => `<tr>${row.map(cell => logicalCellsHtml(cell, rich, flattenTables)).join('')}</tr>`).join('') + '</tbody></table>'
 	event.clipboardData.setData('text/html', html)
 }
 
@@ -131,6 +160,6 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 			.join('\t'))
 		.join('\n')
 	event.clipboardData.setData('text/plain', text)
-	setRichClipboardData(event, rows, false)
+	setRichClipboardData(event, rows, true, true)
 	event.preventDefault()
 }
