@@ -10,6 +10,7 @@ import {Button} from 'azure-devops-ui/Button'
 import { Viewer } from '../components/Viewer'
 import {FileSystemFileHandleLike} from '../components/LocalSourceFile'
 import Shield from './Shield'
+import {docsSessionKey, indexedDbRememberedSarifStore, loadRememberedSarifFromSession, rememberSarif} from './SarifSession'
 
 declare global {
 	interface Window {
@@ -40,18 +41,7 @@ const demoLog = {
 	}]
 } as Log
 
-const docsSessionKey = 'sarif-web-component:docs'
-const sarifSessionKey = `${docsSessionKey}:sarif`
-const sarifNameSessionKey = `${sarifSessionKey}:name`
-
-function loadSessionLog(): Log | undefined {
-	try {
-		const text = window.sessionStorage.getItem(sarifSessionKey)
-		return text ? JSON.parse(text) : undefined
-	} catch (_) {
-		return undefined
-	}
-}
+const rememberedSessionSarif = loadRememberedSarifFromSession(window.sessionStorage)
 
 // file is File/Blob
 const readAsText = file => new Promise<string>((resolve, reject) => {
@@ -62,20 +52,28 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 })
 
 @observer export class Index extends React.Component {
-	@observable.ref sample = loadSessionLog() ?? demoLog
-	@observable currentSarifFileName = (() => {
-		try {
-			return window.sessionStorage.getItem(sarifNameSessionKey) ?? undefined
-		} catch (_) {
-			return undefined
-		}
+	@observable.ref sample = (() => {
+		try { return rememberedSessionSarif ? JSON.parse(rememberedSessionSarif.text) : demoLog }
+		catch (_) { return demoLog }
 	})()
+	@observable currentSarifFileName = rememberedSessionSarif?.name
 	private sourcePickerContainer?: HTMLSpanElement
 	private sarifFileHandle?: FileSystemFileHandleLike
 	private currentSarifFile?: File
+	private loadRevision = 0
+	private persistence = Promise.resolve()
 	state = {sourcePickerReady: false}
 	componentDidMount() {
 		this.setState({sourcePickerReady: true})
+		if (!rememberedSessionSarif) void indexedDbRememberedSarifStore.get().then(remembered => {
+			if (!remembered || this.loadRevision !== 0) return
+			try {
+				this.sample = JSON.parse(remembered.text)
+				this.currentSarifFileName = remembered.name
+			} catch (_) {
+				void indexedDbRememberedSarifStore.remove()
+			}
+		}).catch(() => undefined)
 	}
 	@autobind async loadFile(file, handle?: FileSystemFileHandleLike) {
 		if (!file) return
@@ -83,15 +81,28 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 			alert('File name must end with ".json" or ".sarif"')
 			return
 		}
+		const revision = ++this.loadRevision
+		const text = await readAsText(file)
+		if (revision !== this.loadRevision) return
+		const sample = JSON.parse(text)
+		let persistenceError: unknown
+		this.persistence = this.persistence.then(async () => {
+			if (revision !== this.loadRevision) return
+			try {
+				await rememberSarif({name: file.name, text}, window.sessionStorage, indexedDbRememberedSarifStore)
+			} catch (error) {
+				persistenceError = error
+			}
+		})
+		await this.persistence
+		if (revision !== this.loadRevision) return
 		this.currentSarifFile = file
 		this.currentSarifFileName = file.name
 		this.sarifFileHandle = handle
-		const text = await readAsText(file)
-		this.sample = JSON.parse(text)
-		try {
-			window.sessionStorage.setItem(sarifSessionKey, text)
-			window.sessionStorage.setItem(sarifNameSessionKey, file.name)
-		} catch (_) { }
+		this.sample = sample
+		if (persistenceError) {
+			alert(`The SARIF file was opened, but could not be remembered for refresh: ${persistenceError instanceof Error ? persistenceError.message : String(persistenceError)}`)
+		}
 	}
 	private openInputFilePicker = () => (this.refs.inputFile as any).click()
 	private openFile = async () => {
@@ -161,4 +172,5 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 	}
 }
 
-ReactDOM.render(<Index />, document.getElementById('app'))
+const app = document.getElementById('app')
+if (app) ReactDOM.render(<Index />, app)
