@@ -14,6 +14,7 @@ import {tryOr} from './try'
 import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} from './ResultFields'
 import {resultDetailsCopyText} from './ResultTraceText'
 import {groupPublicReviewVariants, isResultVariantGroup, resultVariantCount, variantResults} from './ResultVariantGroup'
+import {getSourcePathFromSarifRoot} from './LocalSourceFile'
 
 declare module 'sarif' {
     interface Run {
@@ -294,12 +295,17 @@ export class RunStore {
 	}
 
 	@computed get columns() {
+		const artifactPath = (result: Result) => {
+			const artifactLocation = result.locations?.[0]?.physicalLocation?.artifactLocation ?? result.analysisTarget
+			const uri = artifactLocation?.uri
+			return uri ? getSourcePathFromSarifRoot(uri, this.run, artifactLocation) : ''
+		}
 		const pathValue = (result: Result) => tryOr<string>(
 			() => `${result.locations[0].logicalLocations[0].fullyQualifiedName} ${tryOr(() => {
 				const {index} = result.locations[0].physicalLocation.artifactLocation
 				return result.run.artifacts[index].description.text
 			}, '')}`,
-			() => result.locations[0].physicalLocation.artifactLocation.uri,
+			() => artifactPath(result),
 			'',
 		)
 		const detailsValue = (result: Result) => {

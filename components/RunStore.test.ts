@@ -37,6 +37,25 @@ it('keeps Path as a visible fallback when Details is not selected', () => {
 	expect(runStore.displayColumns.map(column => column.id)).toEqual(['Path', 'Level'])
 })
 
+it('exports built-in Path values relative to the SARIF source root', () => {
+	const run = {
+		tool: {driver: {name: 'River'}},
+		versionControlProvenance: [{
+			repositoryUri: 'https://example.test/calgary',
+			mappedTo: {uri: 'file:///home/user/calgary/'},
+		}],
+		results: [{message: {text: 'Finding'}, locations: [{physicalLocation: {
+			artifactLocation: {uri: 'file:///home/user/calgary/src/River.java'},
+		}}]}],
+	} as unknown as Run
+	const selected = observable.box(['Path'])
+	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
+
+	expect(runStore.columns[0].filterString(run.results[0])).toBe('calgary/src/River.java')
+	expect(createResultCsv([runStore], 'all')).toBe('\ufeff"Path"\r\n"calgary/src/River.java"')
+	expect(createResultCsv([runStore], 'all')).not.toContain('/home/user')
+})
+
 it('uses selected nested result fields as columns', () => {
 	const selected = observable.box(['Path', 'result.properties.acah.sink.selection.status'])
 	const run = {
