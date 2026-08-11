@@ -1,4 +1,4 @@
-import {createResultCsv} from './ResultExport'
+import {createResultCsv, createResultMarkdown} from './ResultExport'
 import {RunStore} from './RunStore'
 
 const first = {
@@ -34,4 +34,26 @@ test('exports only currently filtered findings', () => {
 	expect(createResultCsv([runStore], 'filtered')).toBe(
 		'\ufeff"Path","Details"\r\n' +
 		'"src/two.ts","\'=unsafe formula"')
+})
+
+test('exports selected fields as a Markdown report without flattening Markdown values', () => {
+	const markdownRunStore = {
+		columns: [
+			{id: 'result.message.text', filterString: () => 'Calgary.Package 1.0.0'},
+			{id: 'rule.help.text', filterString: () => '### Remediation\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |'},
+			{id: 'rule.helpUri', filterString: () => 'https://example.test/advisory'},
+		],
+		run: {results: [{}]},
+		filteredResults: [],
+	} as unknown as RunStore
+
+	expect(createResultMarkdown([markdownRunStore], 'all')).toBe(
+		'# SARIF findings\n\n' +
+		'## Finding 1\n\n' +
+		'### result\\.message\\.text\n\n' +
+		'Calgary\\.Package 1\\.0\\.0\n\n' +
+		'### rule\\.help\\.text\n\n' +
+		'### Remediation\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |\n\n' +
+		'### rule\\.helpUri\n\n' +
+		'<https://example.test/advisory>\n')
 })

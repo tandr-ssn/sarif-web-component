@@ -6,6 +6,10 @@
 }
 
 .swcMarkDown {
+	table { border-collapse: collapse; }
+	th, td { border: 1px solid var(--palette-neutral-30, #c8c8c8); padding: 4px 8px; }
+	th { background: var(--palette-neutral-6, #f3f3f3); text-align: left; }
+
 	li {
 		list-style: unset;
 		list-style-position: inside;

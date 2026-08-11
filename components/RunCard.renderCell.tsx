@@ -5,6 +5,7 @@ import './RunCard.renderCell.scss'
 import * as React from 'react'
 import {Fragment} from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {Result} from 'sarif'
 
 import {Hi} from './Hi'
@@ -25,7 +26,7 @@ import { renderPathCell } from './RunCard.renderPathCell'
 import { renderActionsCell } from './RunCard.renderActionsCell'
 import { getRepoUri } from './getRepoUri'
 import { ExecutionTrace } from './ExecutionTrace'
-import { getResultFieldValue } from './ResultFields'
+import {getResultFieldValue, looksLikeMarkdown} from './ResultFields'
 import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
 import {isResultVariantGroup} from './ResultVariantGroup'
@@ -36,6 +37,19 @@ const colspan = 99 // No easy way to parameterize this, however extra does not h
 
 const visibleResultCount = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.reduce(
 	(total, item) => total + (isResultVariantGroup(item.data) ? item.data.results.length : 1), 0)
+
+const markdownRenderers = {
+	link: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,
+}
+
+function renderResultFieldValue(fieldId: string, value: string): JSX.Element {
+	const trimmed = value.trim()
+	return looksLikeMarkdown(fieldId, trimmed)
+		? <div className="swcResultFieldValue swcMarkDown">
+			<ReactMarkdown source={trimmed} escapeHtml={true} plugins={[remarkGfm]} renderers={markdownRenderers} />
+		</div>
+		: <span className="swcResultFieldValue" style={{whiteSpace: 'pre-wrap'}}><Hi>{trimmed}</Hi></span>
+}
 
 export function renderCell<T extends ISimpleTableCell>(
 	rowIndex: number,
@@ -147,7 +161,7 @@ export function renderCell<T extends ISimpleTableCell>(
 									{formattedMarkdown
 										? <div className="swcMarkDown">
 											<ReactMarkdown source={formattedMarkdown}
-												renderers={{ link: ({href, children}) => <a href={href} target="_blank">{children}</a> }} />
+												escapeHtml={true} plugins={[remarkGfm]} renderers={markdownRenderers} />
 										</div> // Div to cancel out containers display flex row.
 										: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span>}
 									<AcahSummary result={result} />
@@ -171,9 +185,7 @@ export function renderCell<T extends ISimpleTableCell>(
 						case 'First Observed':
 							return <Hi>{result.firstDetection.toLocaleDateString()}</Hi>
 				default:
-					return <span className="swcResultFieldValue" style={{whiteSpace: 'pre-wrap'}}>
-						<Hi>{getResultFieldValue(result, treeColumn.id).trim()}</Hi>
-					</span>
+					return renderResultFieldValue(treeColumn.id, getResultFieldValue(result, treeColumn.id))
 			}
 		})()
 		return columnIndex === 0

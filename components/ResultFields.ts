@@ -61,6 +61,23 @@ export function getResultFieldJsonPath(path: string): string {
 		: `[${JSON.stringify(segment)}]`).join('')
 }
 
+/** Detects common Markdown constructs in fields which producers label as plain text. */
+export function looksLikeMarkdown(fieldId: string, value: string): boolean {
+	if (/\.markdown$/i.test(fieldId)) return true
+	if (!/\.text$/i.test(fieldId)) return false
+	return [
+		/(^|\n)\s{0,3}```[^\n]*(\n|$)/,
+		/(^|\n)\s{0,3}#{1,6}[ \t]+\S/,
+		/(^|\n)\s{0,3}(?:[-+*]|\d+[.)])[ \t]+\S/,
+		/(^|\n)\s{0,3}>[ \t]+\S/,
+		/(^|\n)\s{0,3}(?:-{3,}|\*{3,}|_{3,})[ \t]*(\n|$)/,
+		/(^|\n)\s*\|?.+\|.+\n\s*\|?\s*:?-{3,}/,
+		/!?\[[^\]\n]+\]\([^\s)]+(?:\s+"[^"]*")?\)/,
+		/(?:\*\*|__)[^\n]+(?:\*\*|__)/,
+		/`[^`\n]+`/,
+	].some(pattern => pattern.test(value))
+}
+
 function collectLeafPaths(value: unknown, segments: string[], paths: Set<string>, ancestors: Set<unknown>, depth: number): void {
 	if (value === undefined || value === null || depth > 12) return
 	if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
