@@ -17,7 +17,7 @@ export const FilterKeywordContext = React.createContext('')
 
 import { FilterBar, MobxFilter, recommendedDefaultState } from './FilterBar'
 import { RunCard } from './RunCard'
-import { RunStore } from './RunStore'
+import { RunStore, SortRuleBy } from './RunStore'
 const successPng = require('./Viewer.Success.png')
 const noResultsPng = require('./Viewer.ZeroData.png')
 
@@ -29,6 +29,7 @@ import { IFilterState } from 'azure-devops-ui/Utilities/Filter'
 import { ZeroData } from 'azure-devops-ui/ZeroData'
 import { ObservableValue } from 'azure-devops-ui/Core/Observable'
 import { Button } from 'azure-devops-ui/Button'
+import {SortOrder} from 'azure-devops-ui/Table'
 import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot, getSourcePathFromSarifRoot } from './LocalSourceFile'
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
@@ -96,6 +97,12 @@ export interface ViewerProps {
 	fitAllColumnsStorageKey?: string | false
 
 	/**
+	 * Optional local-storage key used to remember whether rule groups are sorted by count or name.
+	 * A component-wide default is used when omitted; set this to false to disable persistence.
+	 */
+	ruleSortStorageKey?: string | false
+
+	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
 	 * 
@@ -121,6 +128,8 @@ export interface ViewerProps {
 	private resultFieldSelectionRestored = false
 	private resultFieldPersistence?: () => void
 	private fitAllColumnsPersistence?: () => void
+	private ruleSortPersistence?: () => void
+	private rememberedRuleSort = {by: SortRuleBy.Count, order: SortOrder.ascending}
 	private runCardKeys = new WeakMap<Run, number>()
 	private nextRunCardKey = 0
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
@@ -170,6 +179,33 @@ export interface ViewerProps {
 				window.localStorage.setItem(fieldStorageKey, JSON.stringify(selected))
 			} catch (_) { }
 		})
+		const ruleSortStorageKey = this.getRuleSortStorageKey()
+		if (ruleSortStorageKey) {
+			try {
+				const stored = JSON.parse(window.localStorage.getItem(ruleSortStorageKey) ?? 'null')
+				if ((stored?.by === 'count' || stored?.by === 'name')
+					&& (stored?.order === 'ascending' || stored?.order === 'descending')) {
+					this.rememberedRuleSort = {
+						by: stored.by === 'name' ? SortRuleBy.Name : SortRuleBy.Count,
+						order: stored.order === 'descending' ? SortOrder.descending : SortOrder.ascending,
+					}
+				}
+			} catch (_) { }
+		}
+		this.ruleSortPersistence = autorun(() => {
+			const stores = this.runStoresInOrder
+			if (!stores.length) return
+			const {sortRuleBy, sortRuleOrder} = stores[0]
+			if (!stores.every(store => store.sortRuleBy === sortRuleBy && store.sortRuleOrder === sortRuleOrder)) return
+			this.rememberedRuleSort = {by: sortRuleBy, order: sortRuleOrder}
+			if (!ruleSortStorageKey) return
+			try {
+				window.localStorage.setItem(ruleSortStorageKey, JSON.stringify({
+					by: sortRuleBy === SortRuleBy.Name ? 'name' : 'count',
+					order: sortRuleOrder === SortOrder.descending ? 'descending' : 'ascending',
+				}))
+			} catch (_) { }
+		})
 		autorun(() => {
 			const selected = this.selectedResultFields.get()
 			Object.keys(this.filter.getState())
@@ -193,6 +229,7 @@ export interface ViewerProps {
 	componentWillUnmount() {
 		this.resultFieldPersistence?.()
 		this.fitAllColumnsPersistence?.()
+		this.ruleSortPersistence?.()
 	}
 
 	@observable warnOldVersion = false
@@ -206,7 +243,12 @@ export interface ViewerProps {
 		if (!logs) return [] // Undef interpreted as loading.
 		const runs = [].concat(...logs.filter(log => log.version === '2.1.0').map(log => { log.runs.forEach((run, index) => { run._index = index }); return log.runs })) as Run[]
 		const {filter, groupByAge} = this
-		return runs.map((run, i) => new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields))
+		return runs.map((run, i) => {
+			const store = new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields)
+			store.sortRuleBy = this.rememberedRuleSort.by
+			store.sortRuleOrder = this.rememberedRuleSort.order
+			return store
+		})
 	}, { keepAlive: true })
 
 	@computed get runStoresInOrder() {
@@ -233,6 +275,12 @@ export interface ViewerProps {
 		if (this.props.fitAllColumnsStorageKey === false) return undefined
 		return this.props.fitAllColumnsStorageKey
 			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:fit-all-columns`
+	}
+
+	private getRuleSortStorageKey(): string | undefined {
+		if (this.props.ruleSortStorageKey === false) return undefined
+		return this.props.ruleSortStorageKey
+			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:rule-sort`
 	}
 
 	private restoreResultFieldSelection() {

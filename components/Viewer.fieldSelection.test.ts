@@ -1,5 +1,7 @@
 import {Log} from 'sarif'
 import {Viewer} from './Viewer'
+import {SortRuleBy} from './RunStore'
+import {SortOrder} from 'azure-devops-ui/Table'
 
 const logs = [{
 	version: '2.1.0',
@@ -45,6 +47,25 @@ test('restores and persists the fit-all-columns preference', () => {
 	viewer.fitAllColumns.set(true)
 	expect(window.localStorage.getItem(storageKey)).toBe('true')
 	viewer.componentWillUnmount()
+	window.localStorage.removeItem(storageKey)
+})
+
+test('restores and persists rule-group sorting', () => {
+	const storageKey = 'calgary-viewer:test-rule-sort'
+	window.localStorage.setItem(storageKey, JSON.stringify({by: 'name', order: 'descending'}))
+	const viewer = new Viewer({logs, ruleSortStorageKey: storageKey}) as any
+
+	expect(viewer.runStoresInOrder[0].sortRuleBy).toBe(SortRuleBy.Name)
+	expect(viewer.runStoresInOrder[0].sortRuleOrder).toBe(SortOrder.descending)
+	viewer.runStoresInOrder[0].sortRuleBy = SortRuleBy.Count
+	viewer.runStoresInOrder[0].sortRuleOrder = SortOrder.ascending
+	expect(JSON.parse(window.localStorage.getItem(storageKey))).toEqual({by: 'count', order: 'ascending'})
+	viewer.componentWillUnmount()
+
+	const restored = new Viewer({logs, ruleSortStorageKey: storageKey}) as any
+	expect(restored.runStoresInOrder[0].sortRuleBy).toBe(SortRuleBy.Count)
+	expect(restored.runStoresInOrder[0].sortRuleOrder).toBe(SortOrder.ascending)
+	restored.componentWillUnmount()
 	window.localStorage.removeItem(storageKey)
 })
 
