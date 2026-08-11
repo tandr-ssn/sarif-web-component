@@ -47,7 +47,7 @@ test('exports rendered Markdown as readable text in CSV cells', () => {
 	} as unknown as RunStore
 
 	expect(createResultCsv([markdownRunStore], 'all', 'plain')).toBe(
-		'\ufeff"rule.help.text"\r\n"Versions\n\nVersion | Status\n1.0     | affected"')
+		'\ufeff"Text"\r\n"Versions\n\nVersion | Status\n1.0     | affected"')
 	expect(createResultCsv([markdownRunStore], 'all', 'raw')).toContain('| --- | --- |')
 })
 
@@ -62,11 +62,11 @@ test('exports rendered findings as TSV, HTML, and plain text', () => {
 	} as unknown as RunStore
 
 	expect(createResultTsv([renderedRunStore], 'all')).toBe(
-		'result.message.text\trule.help.text\r\nCalgary.Package 1.0\t"Versions\n\nVersion | Status\n1.0     | affected"')
+		'Message Text\tHelp Text\r\nCalgary.Package 1.0\t"Versions\n\nVersion | Status\n1.0     | affected"')
 	expect(createResultText([renderedRunStore], 'all')).toContain(
-		'rule.help.text:\n  Versions\n  \n  Version | Status\n  1.0     | affected')
+		'Help Text:\n  Versions\n  \n  Version | Status\n  1.0     | affected')
 	const html = createResultHtml([renderedRunStore], 'all')
-	expect(html).toContain('<h3>rule.help.text</h3><h3>Versions</h3>')
+	expect(html).toContain('<h3>Help Text</h3><h3>Versions</h3>')
 	expect(html).toContain('<table><thead><tr><th>Version</th><th>Status</th></tr></thead>')
 	expect(html).toContain('<strong>affected</strong>')
 })
@@ -85,10 +85,10 @@ test('exports selected fields as a Markdown report without flattening Markdown v
 	expect(createResultMarkdown([markdownRunStore], 'all')).toBe(
 		'# SARIF findings\n\n' +
 		'## Finding 1\n\n' +
-		'### result\\.message\\.text\n\n' +
+		'### Message Text\n\n' +
 		'Calgary\\.Package 1\\.0\\.0\n\n' +
-		'### rule\\.help\\.text\n\n' +
+		'### Help Text\n\n' +
 		'### Remediation\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |\n\n' +
-		'### rule\\.helpUri\n\n' +
+		'### Help Uri\n\n' +
 		'<https://example.test/advisory>\n')
 })

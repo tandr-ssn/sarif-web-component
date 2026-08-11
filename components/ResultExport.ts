@@ -1,7 +1,7 @@
 import {Result} from 'sarif'
 import {RunStore} from './RunStore'
 import {resultCallStackText, resultCodeFlowText} from './ResultTraceText'
-import {looksLikeMarkdown} from './ResultFields'
+import {getResultFieldDisplayNames, looksLikeMarkdown} from './ResultFields'
 import {markdownToHtml, markdownToPlainText} from './MarkdownText'
 
 export type ResultExportScope = 'filtered' | 'all'
@@ -42,12 +42,18 @@ function exportRows(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope
 	return {fields, rows}
 }
 
+function exportFieldLabels(fields: string[]): string[] {
+	const displayNames = getResultFieldDisplayNames(fields)
+	return fields.map(field => displayNames.get(field) ?? field)
+}
+
 export function createResultCsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope, valueFormat: ResultCsvValueFormat = 'raw'): string {
 	const {fields, rows} = exportRows(runStores, scope)
+	const labels = exportFieldLabels(fields)
 	const formattedRows = valueFormat === 'plain'
 		? plainRows(fields, rows)
 		: rows
-	return '\ufeff' + [fields, ...formattedRows].map(row => row.map(csvCell).join(',')).join('\r\n')
+	return '\ufeff' + [labels, ...formattedRows].map(row => row.map(csvCell).join(',')).join('\r\n')
 }
 
 function plainValue(field: string, value: string): string {
@@ -60,16 +66,17 @@ function plainRows(fields: string[], rows: string[][]): string[][] {
 
 export function createResultTsv(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
 	const {fields, rows} = exportRows(runStores, scope)
-	return [fields, ...plainRows(fields, rows)].map(row => row.map(tsvCell).join('\t')).join('\r\n')
+	return [exportFieldLabels(fields), ...plainRows(fields, rows)].map(row => row.map(tsvCell).join('\t')).join('\r\n')
 }
 
 export function createResultText(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
 	const {fields, rows} = exportRows(runStores, scope)
+	const labels = exportFieldLabels(fields)
 	const findings = plainRows(fields, rows).flatMap((row, index) => [
 		`Finding ${index + 1}`,
 		'─'.repeat(`Finding ${index + 1}`.length),
-		...fields.flatMap((field, fieldIndex) => [
-			`${field}:`,
+		...labels.flatMap((label, fieldIndex) => [
+			`${label}:`,
 			(row[fieldIndex] || '(empty)').split('\n').map(line => `  ${line}`).join('\n'),
 		]),
 		'',
@@ -94,8 +101,9 @@ function htmlValue(field: string, value: string): string {
 
 export function createResultHtml(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
 	const {fields, rows} = exportRows(runStores, scope)
+	const labels = exportFieldLabels(fields)
 	const findings = rows.map((row, index) => `<section><h2>Finding ${index + 1}</h2>${fields.map((field, fieldIndex) =>
-		`<h3>${escapeHtml(field)}</h3>${htmlValue(field, row[fieldIndex])}`).join('')}</section>`).join('')
+		`<h3>${escapeHtml(labels[fieldIndex])}</h3>${htmlValue(field, row[fieldIndex])}`).join('')}</section>`).join('')
 	return '<!doctype html><html><head><meta charset="utf-8"><title>SARIF findings</title><style>'
 		+ 'body{font:16px/1.45 Arial,sans-serif;margin:24px;max-width:1100px}section{border-top:1px solid #bbb;margin-top:24px}'
 		+ 'pre{white-space:pre-wrap}table{border-collapse:collapse}th,td{border:1px solid #aaa;padding:4px 8px;text-align:left}'
@@ -125,11 +133,12 @@ function markdownValue(field: string, value: string): string {
 /** Creates a readable report which preserves Markdown-valued selected fields. */
 export function createResultMarkdown(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope): string {
 	const {fields, rows} = exportRows(runStores, scope)
+	const labels = exportFieldLabels(fields)
 	const findings = rows.flatMap((row, index) => [
 		`## Finding ${index + 1}`,
 		'',
 		...fields.flatMap((field, fieldIndex) => [
-			`### ${escapeMarkdownText(field)}`,
+			`### ${escapeMarkdownText(labels[fieldIndex])}`,
 			'',
 			markdownValue(field, row[fieldIndex]),
 			'',

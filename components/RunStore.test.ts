@@ -87,7 +87,7 @@ it('uses associated rule fields as columns and exports their report values', () 
 	expect(runStore.columns[1].filterString(run.results[0])).toBe('Affected dependency')
 	expect(runStore.columns[2].filterString(run.results[0])).toBe('https://example.test/CVE-2099-3000')
 	expect(createResultCsv([runStore], 'all')).toBe(
-		'\ufeff"result.message.text","rule.shortDescription.text","rule.helpUri"\r\n' +
+		'\ufeff"Message Text","Short Description Text","Help Uri"\r\n' +
 		'"Calgary.Package 1.0.0","Affected dependency","https://example.test/CVE-2099-3000"')
 })
 
