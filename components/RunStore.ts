@@ -296,16 +296,18 @@ export class RunStore {
 
 	@computed get columns() {
 		const artifactPath = (result: Result) => {
-			const artifactLocation = result.locations?.[0]?.physicalLocation?.artifactLocation ?? result.analysisTarget
+			const physicalLocation = result.locations?.[0]?.physicalLocation
+			const artifactLocation = physicalLocation?.artifactLocation ?? result.analysisTarget
 			const uri = artifactLocation?.uri
-			return uri ? getSourcePathFromSarifRoot(uri, this.run, artifactLocation) : ''
+			if (!uri) return ''
+			const path = getSourcePathFromSarifRoot(uri, this.run, artifactLocation)
+			const line = physicalLocation?.region?.startLine
+			const column = physicalLocation?.region?.startColumn
+			return line ? `${path}:${line}${column ? `:${column}` : ''}` : path
 		}
 		const pathValue = (result: Result) => tryOr<string>(
-			() => `${result.locations[0].logicalLocations[0].fullyQualifiedName} ${tryOr(() => {
-				const {index} = result.locations[0].physicalLocation.artifactLocation
-				return result.run.artifacts[index].description.text
-			}, '')}`,
 			() => artifactPath(result),
+			() => result.locations[0].logicalLocations[0].fullyQualifiedName,
 			'',
 		)
 		const detailsValue = (result: Result) => {
