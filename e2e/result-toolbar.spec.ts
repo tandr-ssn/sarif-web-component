@@ -101,6 +101,22 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	await fitAll.click()
 	await expect(scrollContainers).toHaveCount(0)
 	await expect.poll(() => page.evaluate(key => localStorage.getItem(key), fitAllColumnsKey)).toBe('true')
+	const alignment = await page.evaluate(() => {
+		const boxes = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector))
+			.map(element => element.getBoundingClientRect())
+		const headers = boxes('.swcGlobalResultHeader .bolt-table-header-cell[data-column-index]')
+		const headerContents = boxes('.swcGlobalResultHeader .bolt-table-header-cell-content')
+		const resultCells = boxes('.swcResultWarning .bolt-table-cell:not(.bolt-table-cell-compact)')
+		return {
+			verticalOffsets: headers.map((header, index) => Math.abs(
+				header.top + header.height / 2 - (headerContents[index].top + headerContents[index].height / 2))),
+			columnOffsets: headers.map((header, index) => Math.max(
+				Math.abs(header.left - resultCells[index].left),
+				Math.abs(header.right - resultCells[index].right))),
+		}
+	})
+	expect(Math.max(...alignment.verticalOffsets)).toBeLessThanOrEqual(0.5)
+	expect(Math.max(...alignment.columnOffsets)).toBeLessThanOrEqual(1)
 
 	await page.reload()
 	await expect(page.getByText('Ottawa.Package', {exact: true}).first()).toBeVisible()

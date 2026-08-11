@@ -55,8 +55,17 @@
 	overflow-x: auto;
 }
 
-.swcTree .bolt-table-cell {
-	box-shadow: inset -1px 0 rgba(var(--palette-neutral-100), .20);
+.swcTree .bolt-table-cell:not(.bolt-table-cell-compact) {
+	box-shadow: inset -1px 0 $neutral-20;
+}
+
+.swcTree .bolt-table-cell-compact,
+.swcTree .bolt-tree-row.swcRuleRow .bolt-table-cell {
+	box-shadow: none;
+}
+
+.swcTree.bolt-table-show-lines .bolt-tree-row:not(.first-row) .bolt-table-cell {
+	border-top-color: $neutral-20;
 }
 
 .swcTree .bolt-tree-row:nth-of-type(even):not(:hover):not(.selected) {

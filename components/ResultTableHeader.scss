@@ -2,15 +2,27 @@
 
 .swcGlobalResultHeader {
 	background: $neutral-2;
-	border: 1px solid $neutral-10;
-	border-radius: 3px 3px 0 0;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, .12);
+	border-bottom: 1px solid $neutral-20;
 	margin: 0 32px 8px;
 
-	.bolt-table-header-row { background: $neutral-4; }
-	.bolt-table-header-cell {
-		box-shadow: inset -1px 0 rgba(var(--palette-neutral-100), .30);
+	.bolt-table-header-row {
+		background: $neutral-4;
+		height: 42px;
 	}
+	.bolt-table-header-cell {
+		border-bottom: 0;
+		box-shadow: inset -1px 0 $neutral-20;
+		vertical-align: middle;
+	}
+	.bolt-table-header-cell-content {
+		align-items: center;
+		box-sizing: border-box;
+		height: 42px;
+		margin: 0;
+		padding-bottom: 0;
+		padding-top: 0;
+	}
+	.bolt-table-header-border { border-bottom: 0; }
 	.swcTreeHorizontalScroll {
 		overflow-x: scroll;
 		scrollbar-gutter: stable;
