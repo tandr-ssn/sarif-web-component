@@ -90,7 +90,7 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	const keyword = page.getByPlaceholder('Filter by keyword')
 	await keyword.fill('River')
 	await expect(page.getByRole('button', {name: 'Clear all filters; 2 active'})).toHaveText('Clear filters (2)')
-	await page.getByRole('button', {name: 'Clear keyword filter'}).click()
+	await page.locator('.bolt-text-filterbaritem-clear').click()
 	await expect(page.getByRole('button', {name: 'Clear all filters; 1 active'})).toBeVisible()
 
 	await page.getByRole('button', {name: 'Clear all filters; 1 active'}).click()

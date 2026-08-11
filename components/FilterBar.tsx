@@ -64,24 +64,6 @@ export function getActiveFilterDescriptions(filter: MobxFilter): ActiveFilterDes
 		})
 }
 
-@observer export class ClearFilterBarItem extends React.Component<{filter?: MobxFilter}> {
-	private button?: HTMLButtonElement
-
-	focus() {
-		this.button?.focus()
-	}
-
-	render() {
-		const {filter} = this.props
-		const keywords = filter?.getFilterItemValue<string>('Keywords') ?? ''
-		const disabled = !keywords.trim()
-		return <button type="button" className="swcFilterClear" aria-label="Clear keyword filter"
-			data-swc-tooltip="Clear keyword filter" disabled={disabled}
-			ref={element => this.button = element ?? undefined}
-			onClick={() => filter?.setFilterItemState('Keywords', {value: ''})}><span aria-hidden="true">×</span></button>
-	}
-}
-
 @observer export class ClearAllFiltersButton extends React.Component<{filter: MobxFilter}> {
 	render() {
 		const {filter} = this.props
@@ -110,8 +92,7 @@ export function getActiveFilterDescriptions(filter: MobxFilter): ActiveFilterDes
 		const {filter, resultFieldSelector, resultExportMenu, resultViewOptionsMenu} = this.props
 		return <div className="swcFilterToolbar">
 			<AzFilterBar className="swcKeywordFilter" filter={filter} hideClearAction={true}>
-				<KeywordFilterBarItem filterItemKey="Keywords" placeholder="Filter by keyword" />
-				<ClearFilterBarItem />
+				<KeywordFilterBarItem filterItemKey="Keywords" placeholder="Filter by keyword" clearable />
 			</AzFilterBar>
 			<div className="swcFilterToolbarActions">
 				<ClearAllFiltersButton filter={filter} />
