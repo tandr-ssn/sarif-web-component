@@ -257,7 +257,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 			properties: {acah: {role: 'source', symbol: 'path', resolution: 'semantic'}},
 			state: {path: {text: 'tainted request value'}},
 		},
-		{location: {...locations[1], message: {text: 'Value passes through clean'}}, nestingLevel: 1},
+		{location: {...locations[1], message: {text: 'const next = clean(path);\nconsume(next);'}}, nestingLevel: 1},
 		{location: {...locations[2], message: {text: 'Value reaches sink'}}, properties: {acah: {role: 'sink'}}},
 	]
 	const run: any = {properties: {acah: {formatVersion: 3}}}
@@ -289,8 +289,10 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(childDocument.querySelector('.legend-sink')).not.toBeNull()
 	expect(badges[1].dataset.swcTooltip).toContain('Step 2 of 3')
 	expect(badges[1].dataset.swcTooltip).toContain('Call depth: 1')
-	expect(childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.dataset.swcTooltip)
-		.toContain('Value passes through clean')
+	const selectedBlockTooltip = childDocument.querySelector<HTMLElement>('[data-line="2"] mark')?.dataset.swcTooltip
+	expect(selectedBlockTooltip).toContain('Step 2 of 3')
+	expect(selectedBlockTooltip).not.toContain('const next = clean(path)')
+	expect(selectedBlockTooltip).not.toContain('consume(next)')
 	expect(childDocument.querySelector('.swcTooltip')).not.toBeNull()
 	expect(identifiers[1].style.backgroundColor).toBe(badges[1].style.backgroundColor)
 	expect(identifiers[2].style.backgroundColor).toBe(badges[2].style.backgroundColor)
