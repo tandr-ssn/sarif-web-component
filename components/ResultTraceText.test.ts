@@ -20,3 +20,19 @@ test('copies a primary context snippet with source line numbers', () => {
 		'12  third();',
 	].join('\n'))
 })
+
+test('strips the absolute source-root prefix from copied locations', () => {
+	const result = {
+		message: {text: 'Finding'},
+		locations: [{physicalLocation: {
+			artifactLocation: {uri: 'file:///home/user/calgary/composer.lock'},
+			region: {startLine: 1, snippet: {text: 'package'}},
+		}}],
+		run: {versionControlProvenance: [{
+			repositoryUri: 'https://example.test/calgary', mappedTo: {uri: 'file:///home/user/calgary/'},
+		}]},
+	} as unknown as Result
+
+	expect(resultDetailsCopyText(result)).toContain('calgary/composer.lock:1')
+	expect(resultDetailsCopyText(result)).not.toContain('/home/user')
+})

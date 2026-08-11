@@ -124,6 +124,15 @@ test('displays file URIs from the source root recorded in SARIF', () => {
 	} as any, {uri, uriBaseId: '%SRCROOT%'})).toBe('calgary/src/java/river/Handler.java')
 })
 
+test('infers a missing source root from common finding paths', () => {
+	const composerUri = 'file:///home/user/calgary/composer.lock'
+	const run = {results: [
+		{locations: [{physicalLocation: {artifactLocation: {uri: composerUri}}}]},
+		{locations: [{physicalLocation: {artifactLocation: {uri: 'file:///home/user/calgary/src/River.php'}}}]},
+	]} as any
+	expect(getSourcePathFromSarifRoot(composerUri, run)).toBe('calgary/composer.lock')
+})
+
 test('finds the common absolute source root in findings and traces', () => {
 	const run: any = {
 		tool: { driver: { name: 'test' } },

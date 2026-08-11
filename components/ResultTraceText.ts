@@ -1,4 +1,5 @@
 import {CodeFlow, Location, PhysicalLocation, Result, Stack} from 'sarif'
+import {getSourcePathFromSarifRoot} from './LocalSourceFile'
 
 function messageText(message): string {
 	return message?.text ?? message?.markdown ?? ''
@@ -7,7 +8,8 @@ function messageText(message): string {
 export function physicalLocationText(result: Result, physicalLocation: PhysicalLocation | undefined): string {
 	if (!physicalLocation) return ''
 	const artifact = physicalLocation.artifactLocation
-	const path = artifact?.uri ?? (artifact?.index === undefined ? '' : result.run?.artifacts?.[artifact.index]?.location?.uri) ?? ''
+	const rawPath = artifact?.uri ?? (artifact?.index === undefined ? '' : result.run?.artifacts?.[artifact.index]?.location?.uri) ?? ''
+	const path = rawPath && result.run ? getSourcePathFromSarifRoot(rawPath, result.run, artifact) : rawPath
 	const line = physicalLocation.region?.startLine
 	return path && line ? `${path}:${line}` : path || (line ? `Line ${line}` : '')
 }

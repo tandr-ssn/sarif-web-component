@@ -20,6 +20,8 @@ declare global {
 	}
 }
 
+const inferredSourceRoots = new WeakMap<Run, string | undefined>()
+
 function decodeArtifactPath(uri: string): { path: string, absolute: boolean } | undefined {
 	let decoded = uri
 	try { decoded = decodeURIComponent(uri) } catch (_) { }
@@ -113,7 +115,13 @@ export function getSourcePathFromRoot(uri: string, selectedRootName: string, com
 export function getSourcePathFromSarifRoot(uri: string, run: Run, artifactLocation?: ArtifactLocation): string {
 	const baseRoot = artifactLocation?.uriBaseId && run.originalUriBaseIds?.[artifactLocation.uriBaseId]?.uri
 	const mappedRoot = run.versionControlProvenance?.find(details => details.mappedTo?.uri)?.mappedTo?.uri
-	const root = decodeArtifactPath(baseRoot ?? mappedRoot ?? '')
+	let root = decodeArtifactPath(baseRoot ?? mappedRoot ?? '')
+	if (!root?.absolute) {
+		if (!inferredSourceRoots.has(run)) inferredSourceRoots.set(run,
+			getCommonAbsoluteSourceRoot([{version: '2.1.0', runs: [run]} as Log]))
+		const inferredRoot = inferredSourceRoots.get(run)
+		if (inferredRoot) root = {path: inferredRoot, absolute: true}
+	}
 	if (!root?.absolute) return uri
 	const rootSegments = normalizeSegments(root.path)
 	if (!rootSegments?.length) return uri
