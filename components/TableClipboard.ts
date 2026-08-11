@@ -91,7 +91,7 @@ export function copySelectedTableCells(event: React.ClipboardEvent<HTMLElement>)
 		event.clipboardData.setData('text/plain', tsvCell(plain))
 		const markdown = marker?.dataset.copyMarkdownValue
 		if (markdown !== undefined) event.clipboardData.setData('text/markdown', markdown)
-		setRichClipboardData(event, rowsForCells(cells), true)
+		setRichClipboardData(event, rowsForCells(cells), !alwaysCopy && markdown !== undefined)
 		event.preventDefault()
 		return
 	}

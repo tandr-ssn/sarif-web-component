@@ -86,6 +86,9 @@ test('always copies a Details cell using its semantic copy value', () => {
 	copySelectedTableCells({currentTarget: root, clipboardData: {setData}, preventDefault} as unknown as React.ClipboardEvent<HTMLElement>)
 
 	expect(setData).toHaveBeenCalledWith('text/plain', '"Finding\n\n20  source();"')
+	const html = setData.mock.calls.find(([type]) => type === 'text/html')?.[1]
+	expect(html).toContain('Finding<br><br>20  source();')
+	expect(html).not.toContain('Finding rendered snippet')
 	expect(preventDefault).toHaveBeenCalled()
 	selection.removeAllRanges()
 	root.remove()
