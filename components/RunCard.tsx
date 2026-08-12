@@ -101,7 +101,7 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 		const {runStore} = this.props
 		const fitAllColumns = this.columnLayout.fitAllColumns.get()
 		
-		return <Observer renderChildren={itemProvider}>
+		return <Observer itemProvider={itemProvider}>
 			{(observedProps: { itemProvider }) => {
 				const qualityDomain = tryOr(() => runStore.run.tool.driver.properties['microsoft/qualityDomain'])
 				const acahSummary = getRunAcahSummary(runStore.run)

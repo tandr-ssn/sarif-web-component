@@ -54,7 +54,7 @@
 		"webpack-dev-server": "6.0.0"
 	},
 	"dependencies": {
-		"azure-devops-ui": "2.167.22",
+		"azure-devops-ui": "^2.277.0",
 		"highlight.js": "^11.12.0",
 		"mobx": "^5.9.4",
 		"mobx-react": "^5.4.4",

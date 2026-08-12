@@ -117,7 +117,7 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	expect(Math.abs(stickyGeometry.button.left + stickyGeometry.button.width / 2
 		- (stickyGeometry.cell.left + stickyGeometry.cell.width / 2))).toBeLessThanOrEqual(1)
 	const lastSizer = page.locator('.swcGlobalResultHeader .bolt-table-header-sizer').last()
-	const lastHeader = lastSizer.locator('xpath=..')
+	const lastHeader = lastSizer.locator('xpath=ancestor::th[1]')
 	const initialLastWidth = await lastHeader.evaluate(element => element.getBoundingClientRect().width)
 	await lastSizer.focus()
 	for (let index = 0; index < 30; index++) await page.keyboard.press('ArrowRight')
@@ -311,6 +311,8 @@ test('uses a full-width relative path and matching controls in the source popup'
 	expect(presentation.buttonFontFamily).toBe(presentation.bodyFontFamily)
 	expect(presentation.buttonFontWeight).toBe('400')
 	expect(presentation.pathFontWeight).toBe('400')
-	await popup.getByRole('button', {name: /Findings/}).click()
-	await expect(popup).toBeClosed()
+	await Promise.all([
+		popup.waitForEvent('close'),
+		popup.getByRole('button', {name: /Findings/}).click(),
+	])
 })
