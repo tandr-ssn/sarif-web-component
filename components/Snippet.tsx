@@ -15,6 +15,18 @@ import {tryOr} from './try'
 import {SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace} from './SourceFile'
 
+export function trimSnippetIndent(text: string): {text: string, removed: number} {
+	const lines = text.replace(/\r/g, '').split('\n')
+	const indents = lines
+		.filter(line => line.trim().length > 0)
+		.map(line => line.match(/^[ \t]*/)?.[0].length ?? 0)
+	const removed = indents.length ? Math.min(...indents) : 0
+	return {
+		text: lines.map(line => line.trim().length ? line.slice(Math.min(removed, line.length)) : '').join('\n'),
+		removed,
+	}
+}
+
 @observer export class Snippet extends React.Component<{ ploc?: PhysicalLocation, run?: Run, trace?: SourceTrace, style?: React.CSSProperties, highlightColor?: string }> {
 	static contextType = FilterKeywordContext
 	@observable showAll = false
@@ -31,19 +43,15 @@ import {SourceTrace} from './SourceFile'
 				const {region, contextRegion} = ploc
 				if (!contextRegion) return undefined // tryOr fallthrough.
 
-				const crst = contextRegion.snippet.text
+				const trimmed = trimSnippetIndent(contextRegion.snippet.text)
+				const crst = trimmed.text
 
 				// Search/Filter highlighting is active so bypass snippet highlighting and return plain text.
 				if (term) return crst
 
-				// Carriage returns (\n) causing hljs colorization off-by-one errors, thus stripping them here.
-				let lines = crst.replace(/\r/g, '').split('\n')
-				const minLeadingWhitespace = Math.min(
-					...lines
-					.filter(line => line.trimLeft().length) // Blank lines often have indent 0, so throwing these out.
-					.map(line => line.match(/^ */)[0].length)
-				)
-				lines = lines.map(line => line.slice(minLeadingWhitespace))
+				// Carriage returns cause syntax-colorization offsets, so trimSnippetIndent removes them too.
+				const lines = crst.split('\n')
+				const minLeadingWhitespace = trimmed.removed
 
 				// Per 3.30.2 SARIF line and columns are 1-based.
 				let {startLine, startColumn = 1, endLine = startLine, endColumn = Number.MAX_SAFE_INTEGER} = region
@@ -80,7 +88,7 @@ import {SourceTrace} from './SourceFile'
 				const [pre, hi, post] = lines.join('\n').split(marker)
 				return <>{pre}<span className="swcRegion">{hi}</span>{post}</>
 			},
-			() => ploc.region.snippet.text, // No need to un-indent as these infrequently include leading whitespace.
+			() => trimSnippetIndent(ploc.region.snippet.text).text,
 		)
 		if (!body) return null // May no longer be needed.
 
