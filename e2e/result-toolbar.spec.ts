@@ -147,6 +147,7 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	const scrollingWidths = await page.locator('.swcGlobalResultHeader .bolt-table-header-cell[data-column-index]')
 		.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width))
 	expect(scrollingWidths.every((width, index) => Math.abs(width - fittedWidths[index]) <= 1)).toBe(true)
+	await page.keyboard.press('Escape')
 	await page.getByRole('button', {name: 'Result view options'}).click()
 	await page.getByRole('menuitemcheckbox', {name: 'Fit all columns'}).click()
 
@@ -165,7 +166,7 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	await expect(page.getByRole('button', {name: 'Clear filters; 1 active'})).toBeVisible()
 
 	await page.getByRole('button', {name: 'Clear filters; 1 active'}).click()
-	await page.getByRole('menuitem', {name: 'Clear all filters'}).click()
+	await page.getByRole('button', {name: 'Clear all filters', exact: true}).click()
 	await expect(page.getByLabel('Column filter active')).toHaveCount(0)
 	await expect(page.getByText(/^Clear filters \(/)).toHaveCount(0)
 
@@ -175,7 +176,7 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	await expect(page.getByRole('button', {name: 'Filter Details'})).toBeVisible()
 	await page.keyboard.press('Escape')
 	await page.getByRole('button', {name: 'Clear filters; 1 active'}).click()
-	await page.getByRole('menuitem', {name: /Clear filter: Details/}).click()
+	await page.getByRole('button', {name: /Clear filter: Details/}).click()
 	await expect(page.getByText('No matching results')).toHaveCount(0)
 
 	await page.evaluate(() => {
@@ -194,22 +195,42 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 test('persists hidden findings and restores the current SARIF state', async ({page}) => {
 	const finding = page.getByText('Affected Ottawa dependency', {exact: true})
 	await expect(finding).toBeVisible()
-	await page.getByRole('button', {name: 'Hide', exact: true}).first().click()
+	await page.getByRole('button', {name: 'Hide finding', exact: true}).first().click()
 	await expect(finding).toHaveCount(0)
+	await expect(page.getByRole('status')).toContainText('Finding hidden')
 
 	await page.reload()
 	await expect(finding).toHaveCount(0)
 	await page.getByLabel('Finding visibility').selectOption('hidden')
 	await expect(finding).toBeVisible()
-	await page.getByRole('button', {name: 'Restore', exact: true}).first().click()
+	await page.getByRole('button', {name: 'Unhide finding', exact: true}).first().click()
 	await expect(finding).toHaveCount(0)
 	await page.getByLabel('Finding visibility').selectOption('visible')
 	await expect(finding).toBeVisible()
 
-	await page.getByRole('button', {name: 'Hide', exact: true}).first().click()
+	await page.getByRole('button', {name: 'Hide finding', exact: true}).first().click()
 	await page.getByRole('button', {name: 'Result view options'}).click()
 	await page.getByRole('menuitem', {name: 'Restore all findings in this SARIF'}).click()
 	await expect(finding).toBeVisible()
+})
+
+test('keeps search and actions usable in a narrow side-by-side window', async ({page}) => {
+	await page.setViewportSize({width: 560, height: 800})
+	const toolbar = page.locator('.swcFilterToolbar')
+	const search = page.locator('.swcKeywordFilter')
+	const actions = page.locator('.swcFilterToolbarActions')
+	const geometry = await Promise.all([toolbar, search, actions].map(locator => locator.evaluate(element => {
+		const box = element.getBoundingClientRect()
+		return {left: box.left, right: box.right, top: box.top, bottom: box.bottom}
+	})))
+	const [toolbarBox, searchBox, actionsBox] = geometry
+	expect(searchBox.left).toBeGreaterThanOrEqual(toolbarBox.left)
+	expect(searchBox.right).toBeLessThanOrEqual(toolbarBox.right + 1)
+	expect(actionsBox.right).toBeLessThanOrEqual(toolbarBox.right + 1)
+	expect(actionsBox.top).toBeGreaterThanOrEqual(searchBox.bottom - 1)
+	await expect(page.getByRole('button', {name: /Fields/})).toBeVisible()
+	await expect(page.getByRole('button', {name: /Export/})).toBeVisible()
+	await expect(page.getByRole('button', {name: 'Result view options'})).toBeVisible()
 })
 
 test('uses a full-width relative path and matching controls in the source popup', async ({page}) => {

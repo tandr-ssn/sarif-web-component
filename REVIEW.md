@@ -19,7 +19,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Clarify finding and group visibility actions, include visible/hidden/all counts, and provide an accessible undo after hiding.
 - [x] Reduce column-header menu noise while keeping active filters obvious and keyboard-accessible.
 - [x] Add a selected-columns area with ordering, removal, and restore-defaults controls.
-- [ ] Keep fit-all readable with many columns and preserve usable horizontal scrolling when fit-all is disabled.
+- [x] Keep fit-all readable with many columns and preserve usable horizontal scrolling when fit-all is disabled.
 - [x] Ensure shortened source paths are also used in tooltips so local home-directory prefixes are not exposed.
 - [x] Improve narrow-screen, keyboard, zoom, and tooltip accessibility behavior.
 
@@ -27,7 +27,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 
 - [x] Show useful file-read, JSON-parse, and invalid-SARIF errors; document local retention and provide a close-and-forget action.
 - [x] Add CI using the supported Node version, clean installation, type checking, unit tests, and package dry-run before publishing.
-- [ ] Add focused tests for report replacement, prop changes, hostile paths and URLs, lifecycle cleanup, narrow viewports, keyboard operation, and large synthetic reports.
+- [x] Add focused tests for report replacement, prop changes, hostile paths and URLs, lifecycle cleanup, narrow viewports, keyboard operation, and large synthetic reports.
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [ ] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.

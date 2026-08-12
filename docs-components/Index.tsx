@@ -192,12 +192,12 @@ export function parseSarif(text: string): Log {
 				{this.currentSarifFileName && <span className="demoSarifName" data-swc-tooltip={this.currentSarifFileName}>
 					SARIF: <strong>{this.currentSarifFileName}</strong>
 				</span>}
+				{this.currentSarifFileName && <span className="demoRetentionNote" data-swc-tooltip="This report is stored only in this browser so it can survive refresh. Close and forget removes the remembered copy.">Stored locally</span>}
 				{this.currentSarifFileName && <Button text="Close and forget" onClick={() => void this.closeFile()} />}
 				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>
 				<span style={{ flexGrow: 1 }}></span>
 			</div>
 			{this.loadError && <div className="demoLoadError" role="alert">{this.loadError}</div>}
-			{this.currentSarifFileName && <div className="demoRetentionNotice" role="status">This report is stored only in this browser so it can survive refresh. Use “Close and forget” to remove the remembered copy.</div>}
 			<Viewer logs={[this.sample]} showSuppression showLocalSourcePicker
 				localSourcePickerContainer={this.state.sourcePickerReady ? this.sourcePickerContainer : null}
 				sessionStorageKey={docsSessionKey}
