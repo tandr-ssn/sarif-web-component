@@ -1,4 +1,4 @@
-import {loadRememberedSarifFromSession, rememberSarif, RememberedSarif, RememberedSarifStore} from './SarifSession'
+import {docsSessionKey, legacyDocsSessionKey, loadRememberedSarifFromSession, rememberSarif, RememberedSarif, RememberedSarifStore} from './SarifSession'
 
 function fallback(initial?: RememberedSarif): RememberedSarifStore & {value?: RememberedSarif} {
 	return {
@@ -33,8 +33,8 @@ test('keeps a successful session entry when fallback cleanup is unavailable', as
 
 test('clears a stale session entry and falls back when the replacement exceeds its quota', async () => {
 	const values = new Map<string, string>([
-		['sarif-web-component:docs:sarif', '{"old":true}'],
-		['sarif-web-component:docs:sarif:name', 'Bow River.sarif'],
+		[`${legacyDocsSessionKey}:sarif`, '{"old":true}'],
+		[`${legacyDocsSessionKey}:sarif:name`, 'Bow River.sarif'],
 	])
 	const storage = {
 		getItem: key => values.get(key) ?? null,
@@ -56,4 +56,28 @@ test('removes an older fallback entry if its replacement cannot be stored', asyn
 
 	await expect(rememberSarif({name: 'North River.sarif', text: '{"new":true}'}, storage, largeStore)).rejects.toThrow('Quota exceeded')
 	expect(largeStore.value).toBeUndefined()
+})
+
+test('loads the session entry from legacy keys when the new keys are absent', () => {
+	window.sessionStorage.setItem(`${legacyDocsSessionKey}:sarif`, '{"old":true}')
+	window.sessionStorage.setItem(`${legacyDocsSessionKey}:sarif:name`, 'North River.sarif')
+
+	expect(loadRememberedSarifFromSession(window.sessionStorage)).toEqual({
+		name: 'North River.sarif',
+		text: '{"old":true}',
+	})
+	window.sessionStorage.clear()
+})
+
+test('prefers the new key when both new and legacy session values are available', () => {
+	window.sessionStorage.setItem(`${legacyDocsSessionKey}:sarif`, '{"old":true}')
+	window.sessionStorage.setItem(`${legacyDocsSessionKey}:sarif:name`, 'Legacy.sarif')
+	window.sessionStorage.setItem(`${docsSessionKey}:sarif`, '{"new":true}')
+	window.sessionStorage.setItem(`${docsSessionKey}:sarif:name`, 'Current.sarif')
+
+	expect(loadRememberedSarifFromSession(window.sessionStorage)).toEqual({
+		name: 'Current.sarif',
+		text: '{"new":true}',
+	})
+	window.sessionStorage.clear()
 })

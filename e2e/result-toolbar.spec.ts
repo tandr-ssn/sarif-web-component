@@ -1,9 +1,10 @@
 import {expect, test} from '@playwright/test'
 import * as path from 'node:path'
 import {pathToFileURL} from 'node:url'
+import {docsSessionKey} from '../docs-components/SarifSession'
 
 const docsUrl = pathToFileURL(path.resolve(__dirname, '../dist/index.html')).href
-const sessionKey = 'sarif-web-component:docs'
+const sessionKey = docsSessionKey
 const fitAllColumnsKey = `${sessionKey}:fit-all-columns`
 
 const syntheticSarif = {

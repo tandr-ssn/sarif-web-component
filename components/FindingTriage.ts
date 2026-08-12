@@ -9,7 +9,7 @@ export interface StoredFindingTriage {
 }
 
 export interface FindingTriageStore {
-	load(namespace: string): Promise<StoredFindingTriage>
+	load(namespace: string, legacyNamespace?: string): Promise<StoredFindingTriage>
 	setHidden(namespace: string, keys: string[], hidden: boolean): Promise<void>
 	hasAny(): Promise<boolean>
 	clearAll(): Promise<void>
@@ -71,7 +71,7 @@ export class FindingTriage {
 	private hiddenKeys = new Set<string>()
 	private recentlyHiddenTimer?: number
 
-	constructor(readonly namespace: string, readonly store: FindingTriageStore) {
+	constructor(readonly namespace: string, readonly store: FindingTriageStore, readonly legacyNamespace?: string) {
 		makeObservable<this, 'revision'>(this, {
 			ready: observable,
 			pending: observable,
@@ -82,7 +82,7 @@ export class FindingTriage {
 	}
 
 	async load(): Promise<void> {
-		const stored = await this.store.load(this.namespace)
+		const stored = await this.store.load(this.namespace, this.legacyNamespace)
 		const keys = stored.keys.filter(key => key.startsWith('v3\0sha256\0'))
 		const legacyKeys = stored.keys.filter(key => !key.startsWith('v3\0sha256\0'))
 		if (legacyKeys.length) await this.store.setHidden(this.namespace, legacyKeys, false)
@@ -171,10 +171,12 @@ export class FindingTriage {
 	}
 }
 
-const databaseName = 'sarif-web-component'
+const databaseName = '@acah/sarif-web-component'
+const legacyDatabaseName = 'sarif-web-component'
 const storeName = 'hidden-finding-state'
+const databaseNames = [databaseName, legacyDatabaseName]
 
-function openDatabase(): Promise<IDBDatabase> {
+function openDatabase(databaseName: string): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
 		if (!window.indexedDB) return reject(new Error('IndexedDB is unavailable'))
 		const request = window.indexedDB.open(databaseName, 1)
@@ -195,24 +197,52 @@ function namespaceRange(namespace: string): IDBKeyRange {
 	return IDBKeyRange.bound(prefix, `${prefix}\uffff`)
 }
 
-export const indexedDbFindingTriageStore: FindingTriageStore = {
-	load: namespace => openDatabase().then(database => new Promise<StoredFindingTriage>((resolve, reject) => {
+function loadFromDatabase(databaseName: string, namespaces: string[]): Promise<StoredFindingTriage> {
+	const namespaceRequests = new Set(namespaces)
+	return openDatabase(databaseName).then(database => new Promise<StoredFindingTriage>((resolve, reject) => {
 		const transaction = database.transaction(storeName, 'readonly')
 		const store = transaction.objectStore(storeName)
-		const keysRequest = store.getAllKeys(namespaceRange(namespace))
+		const keyRequests = Array.from(namespaceRequests).map(namespace => ({
+			namespace,
+			keysRequest: store.getAllKeys(namespaceRange(namespace)),
+		}))
 		const countRequest = store.count()
 		transaction.oncomplete = () => {
 			database.close()
-			const prefix = namespacePrefix(namespace)
+			const keys = keyRequests.flatMap(({namespace, keysRequest}) => {
+				const prefix = namespacePrefix(namespace)
+				return Array.from(keysRequest.result as Iterable<unknown>).map(key => String(key).slice(prefix.length))
+			})
 			resolve({
-				keys: keysRequest.result.map(key => String(key).slice(prefix.length)),
+				keys: [...new Set(keys)],
 				hasAny: countRequest.result > 0,
 			})
 		}
-		transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error('Unable to load finding state')) }
-		transaction.onabort = () => { database.close(); reject(transaction.error ?? new Error('Unable to load finding state')) }
-	})),
-	setHidden: (namespace, keys, hidden) => openDatabase().then(database => new Promise<void>((resolve, reject) => {
+		transaction.onerror = () => {
+			const error = transaction.error ?? new Error('Unable to load finding state')
+			database.close()
+			reject(error)
+		}
+		transaction.onabort = () => {
+			const error = transaction.error ?? new Error('Unable to load finding state')
+			database.close()
+			reject(error)
+		}
+	}))
+}
+
+export const indexedDbFindingTriageStore: FindingTriageStore = {
+	load: (namespace, legacyNamespace) => Promise.all(databaseNames.map(databaseName => {
+		const namespaces = legacyNamespace && legacyNamespace !== namespace
+			? [namespace, legacyNamespace]
+			: [namespace]
+		return loadFromDatabase(databaseName, namespaces)
+	}))
+		.then(stores => ({
+			keys: [...new Set(stores.flatMap(entry => entry.keys))],
+			hasAny: stores.some(store => store.hasAny),
+		})),
+	setHidden: (namespace, keys, hidden) => openDatabase(databaseName).then(database => new Promise<void>((resolve, reject) => {
 		const transaction = database.transaction(storeName, 'readwrite')
 		const store = transaction.objectStore(storeName)
 		const prefix = namespacePrefix(namespace)
@@ -221,14 +251,14 @@ export const indexedDbFindingTriageStore: FindingTriageStore = {
 		transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error('Unable to save finding state')) }
 		transaction.onabort = () => { database.close(); reject(transaction.error ?? new Error('Unable to save finding state')) }
 	})),
-	hasAny: () => openDatabase().then(database => new Promise<boolean>((resolve, reject) => {
+	hasAny: () => openDatabase(databaseName).then(database => new Promise<boolean>((resolve, reject) => {
 		const transaction = database.transaction(storeName, 'readonly')
 		const request = transaction.objectStore(storeName).count()
 		transaction.oncomplete = () => { database.close(); resolve(request.result > 0) }
 		transaction.onerror = () => { database.close(); reject(transaction.error ?? new Error('Unable to inspect finding state')) }
 		transaction.onabort = () => { database.close(); reject(transaction.error ?? new Error('Unable to inspect finding state')) }
 	})),
-	clearAll: () => openDatabase().then(database => new Promise<void>((resolve, reject) => {
+	clearAll: () => openDatabase(databaseName).then(database => new Promise<void>((resolve, reject) => {
 		const transaction = database.transaction(storeName, 'readwrite')
 		transaction.objectStore(storeName).clear()
 		transaction.oncomplete = () => { database.close(); resolve() }

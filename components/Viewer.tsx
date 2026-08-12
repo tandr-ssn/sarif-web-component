@@ -34,6 +34,51 @@ import {FindingTriage, FindingTriageStore, indexedDbFindingTriageStore} from './
 import {FindingVisibilityFilter} from './FindingVisibilityFilter'
 import {buildSourceNavigation} from './SourceNavigation'
 
+const defaultStorageNamespace = '@acah/sarif-web-component'
+const legacyStorageNamespace = '@microsoft/sarif-web-component'
+const legacyStorageTtlMs = 1000 * 60 * 60 * 24 * 182
+const legacyStorageMigrationMarker = ':acah-legacy-seen'
+
+interface StorageLookup {
+	key: string
+	legacy?: true
+}
+
+function readStorageValue(storage: Storage, keys: readonly StorageLookup[]): string | undefined {
+	const now = Date.now()
+	for (const key of keys) {
+		try {
+			const value = storage.getItem(key.key)
+			if (!key.legacy) {
+				if (value !== null) return value
+				continue
+			}
+			const markerKey = `${key.key}${legacyStorageMigrationMarker}`
+			if (value === null) {
+				storage.removeItem(markerKey)
+				continue
+			}
+			const markerRaw = storage.getItem(markerKey)
+			if (markerRaw === null) {
+				storage.setItem(markerKey, String(now))
+				return value
+			}
+			const marker = Number(markerRaw)
+			if (!Number.isFinite(marker) || marker > now) {
+				storage.setItem(markerKey, String(now))
+				return value
+			}
+			if (now - marker > legacyStorageTtlMs) {
+				storage.removeItem(key.key)
+				storage.removeItem(markerKey)
+				continue
+			}
+			return value
+		} catch (_) { }
+	}
+	return undefined
+}
+
 export interface ViewerProps {
 	logs?: Log[]
 
@@ -167,19 +212,22 @@ export interface ViewerProps {
 		const {defaultFilterState, filterState, showAge} = this.props
 		this.filter = new MobxFilter(defaultFilterState, filterState)
 		if (this.props.findingTriageStorageKey !== false) {
+			const findingTriageStorage = this.getFindingTriageStorage()
 			this.findingTriage = new FindingTriage(
-				this.props.findingTriageStorageKey
-					?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:finding-triage`,
-				this.props.findingTriageStore ?? indexedDbFindingTriageStore)
+				findingTriageStorage.namespace, this.props.findingTriageStore ?? indexedDbFindingTriageStore, findingTriageStorage.legacyNamespace)
 		}
 		this.groupByAge = observable.box(showAge)
 		const fitAllColumnsStorageKey = this.getFitAllColumnsStorageKey()
+		const fitAllColumnsStorageKeys = this.getFitAllColumnsStorageKeys()
 		let fitAllColumns = true
-		if (fitAllColumnsStorageKey) {
-			try {
-				const stored = JSON.parse(window.localStorage.getItem(fitAllColumnsStorageKey) ?? 'null')
-				if (typeof stored === 'boolean') fitAllColumns = stored
-			} catch (_) { }
+		if (fitAllColumnsStorageKeys) {
+			const storedRaw = readStorageValue(window.localStorage, fitAllColumnsStorageKeys)
+			if (storedRaw !== undefined) {
+				try {
+					const stored = JSON.parse(storedRaw)
+					if (typeof stored === 'boolean') fitAllColumns = stored
+				} catch (_) { }
+			}
 		}
 		this.fitAllColumns = observable.box(fitAllColumns)
 		this.resultColumnLayout = new ResultColumnLayout(this.fitAllColumns)
@@ -189,17 +237,25 @@ export interface ViewerProps {
 			try { window.localStorage.setItem(fitAllColumnsStorageKey, JSON.stringify(value)) }
 			catch (_) { }
 		})
-		if (this.props.sessionStorageKey) {
-			try {
-				this.rememberedSourceFolderName = window.sessionStorage.getItem(`${this.props.sessionStorageKey}:source-folder-name`) ?? undefined
-			} catch (_) { }
+		{
+			const sourceFolderKeys = this.getSourceFolderStorageKeys()
+			if (sourceFolderKeys.length) {
+				try {
+					const sourceFolderName = readStorageValue(window.sessionStorage, sourceFolderKeys)
+					if (sourceFolderName !== undefined) this.rememberedSourceFolderName = sourceFolderName
+				} catch (_) { }
+			}
 		}
 		const fieldStorageKey = this.getFieldSelectionStorageKey()
-		if (fieldStorageKey) {
-			try {
-				const stored = JSON.parse(window.localStorage.getItem(fieldStorageKey) ?? 'null')
-				if (Array.isArray(stored) && stored.every(field => typeof field === 'string')) this.pendingResultFields = stored
-			} catch (_) { }
+		const fieldStorageKeys = this.getFieldSelectionStorageKeys()
+		if (fieldStorageKeys) {
+			const storedRaw = readStorageValue(window.localStorage, fieldStorageKeys)
+			if (storedRaw !== undefined) {
+				try {
+					const stored = JSON.parse(storedRaw)
+					if (Array.isArray(stored) && stored.every(field => typeof field === 'string')) this.pendingResultFields = stored
+				} catch (_) { }
+			}
 		}
 		this.resultFieldPersistence = autorun(() => {
 			const selected = this.selectedResultFields.get()
@@ -209,17 +265,21 @@ export interface ViewerProps {
 			} catch (_) { }
 		})
 		const ruleSortStorageKey = this.getRuleSortStorageKey()
-		if (ruleSortStorageKey) {
-			try {
-				const stored = JSON.parse(window.localStorage.getItem(ruleSortStorageKey) ?? 'null')
-				if ((stored?.by === 'count' || stored?.by === 'name')
-					&& (stored?.order === 'ascending' || stored?.order === 'descending')) {
-					this.rememberedRuleSort = {
-						by: stored.by === 'name' ? SortRuleBy.Name : SortRuleBy.Count,
-						order: stored.order === 'descending' ? SortOrder.descending : SortOrder.ascending,
+		const ruleSortStorageKeys = this.getRuleSortStorageKeys()
+		if (ruleSortStorageKeys) {
+			const storedRaw = readStorageValue(window.localStorage, ruleSortStorageKeys)
+			if (storedRaw !== undefined) {
+				try {
+					const stored = JSON.parse(storedRaw)
+					if ((stored?.by === 'count' || stored?.by === 'name')
+						&& (stored?.order === 'ascending' || stored?.order === 'descending')) {
+						this.rememberedRuleSort = {
+							by: stored.by === 'name' ? SortRuleBy.Name : SortRuleBy.Count,
+							order: stored.order === 'descending' ? SortOrder.descending : SortOrder.ascending,
+						}
 					}
-				}
-			} catch (_) { }
+				} catch (_) { }
+			}
 		}
 		this.configureRuleSortPersistence(ruleSortStorageKey)
 		this.columnFilterCleanup = autorun(() => {
@@ -345,21 +405,58 @@ export interface ViewerProps {
 	}
 
 	private getFieldSelectionStorageKey(): string | undefined {
-		if (this.props.fieldSelectionStorageKey === false) return undefined
-		return this.props.fieldSelectionStorageKey
-			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:selected-result-fields`
+		const keys = this.getFieldSelectionStorageKeys()
+		return keys && keys.length ? keys[0].key : undefined
+	}
+
+	private getFieldSelectionStorageKeys(): StorageLookup[] | undefined {
+		return this.getStorageKeys(this.props.fieldSelectionStorageKey, 'selected-result-fields')
 	}
 
 	private getFitAllColumnsStorageKey(): string | undefined {
-		if (this.props.fitAllColumnsStorageKey === false) return undefined
-		return this.props.fitAllColumnsStorageKey
-			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:fit-all-columns`
+		const keys = this.getFitAllColumnsStorageKeys()
+		return keys && keys.length ? keys[0].key : undefined
+	}
+
+	private getFitAllColumnsStorageKeys(): StorageLookup[] | undefined {
+		return this.getStorageKeys(this.props.fitAllColumnsStorageKey, 'fit-all-columns')
 	}
 
 	private getRuleSortStorageKey(): string | undefined {
-		if (this.props.ruleSortStorageKey === false) return undefined
-		return this.props.ruleSortStorageKey
-			?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:rule-sort`
+		const keys = this.getRuleSortStorageKeys()
+		return keys && keys.length ? keys[0].key : undefined
+	}
+
+	private getRuleSortStorageKeys(): StorageLookup[] | undefined {
+		return this.getStorageKeys(this.props.ruleSortStorageKey, 'rule-sort')
+	}
+
+	private getFindingTriageStorage(): {namespace: string, legacyNamespace?: string} {
+		if (typeof this.props.findingTriageStorageKey === 'string') return {namespace: this.props.findingTriageStorageKey}
+		const namespace = `${defaultStorageNamespace}:finding-triage`
+		const legacyNamespace = `${legacyStorageNamespace}:finding-triage`
+		return this.props.sessionStorageKey ? {namespace} : {namespace, legacyNamespace}
+	}
+
+	private getStorageKeys(storageKey: string | false | undefined, suffix: string): StorageLookup[] | undefined {
+		if (storageKey === false) return undefined
+		if (storageKey !== undefined) return [{key: storageKey}]
+		const namespace = this.props.sessionStorageKey ?? defaultStorageNamespace
+		const keys: StorageLookup[] = [{key: `${namespace}:${suffix}`}]
+		if (!this.props.sessionStorageKey) keys.push({key: `${legacyStorageNamespace}:${suffix}`, legacy: true})
+		return keys
+	}
+
+	private getSourceFolderStorageKeys(): StorageLookup[] {
+		return this.props.sessionStorageKey
+			? [{key: `${this.props.sessionStorageKey}:source-folder-name`}]
+			: [{key: `${defaultStorageNamespace}:source-folder-name`}, {key: `${legacyStorageNamespace}:source-folder-name`, legacy: true}]
+	}
+
+	private getSourceFolderStorageKey(): string {
+		return this.props.sessionStorageKey
+			? `${this.props.sessionStorageKey}:source-folder-name`
+			: `${defaultStorageNamespace}:source-folder-name`
 	}
 
 	private restoreResultFieldSelection() {
@@ -439,9 +536,8 @@ export interface ViewerProps {
 	}
 
 	private rememberSourceFolderName(name: string) {
-		if (!this.props.sessionStorageKey) return
 		try {
-			window.sessionStorage.setItem(`${this.props.sessionStorageKey}:source-folder-name`, name)
+			window.sessionStorage.setItem(this.getSourceFolderStorageKey(), name)
 		} catch (_) { }
 	}
 
