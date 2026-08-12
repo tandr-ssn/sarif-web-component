@@ -8,6 +8,7 @@ import * as React from 'react'
 import { ActionProps } from './Viewer.Types';
 import { Link } from 'azure-devops-ui/Link';
 import { Result } from 'sarif'
+import {safeLinkHref} from './SafeLink'
 
 const emptyPng = require('./assets/empty.png')
 const vsCodePng = require('./assets/vscode-icon.png')
@@ -21,12 +22,14 @@ const images = {
 
 function renderAction(props: ActionProps) {
     const { text, linkUrl, imageName, className } = props
-    return <Link href={linkUrl} target="_blank" className={className}>
+	const href = safeLinkHref(linkUrl)
+	if (!href) return <>{text}</>
+    return <Link href={href} target="_blank" rel="noopener noreferrer" className={className}>
             <img src={images[imageName ?? 'empty']} alt={text} />
             {text}
         </Link>
 }
 
 export function renderActionsCell(result: Result) {
-    return result.actions?.map(actionProps => <div className="action">{renderAction(actionProps)}</div>);
+    return result.actions?.map((actionProps, index) => <div className="action" key={`${actionProps.text}-${index}`}>{renderAction(actionProps)}</div>);
 }

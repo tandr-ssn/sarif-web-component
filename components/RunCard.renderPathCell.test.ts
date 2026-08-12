@@ -27,8 +27,9 @@ test('renders an embedded, middle-ellipsized path with its source position', () 
 	} as unknown as Result
 	const wrapper = mount(renderPathCell(result, true))
 
-	expect(wrapper.hasClass('swcFindingPath')).toBe(true)
-	expect(wrapper.prop('data-swc-tooltip')).toBe('src/features/deep/Handler.cs:42:7')
+	const path = wrapper.find('div.swcFindingPath')
+	expect(path).toHaveLength(1)
+	expect(path.prop('data-swc-tooltip')).toBe('src/features/deep/Handler.cs:42:7')
 	const pathText = wrapper.find(Hi).map(part => React.Children.toArray(part.prop('children')).join('')).join('')
 	expect(pathText).toBe('src/features/deep/Handler.cs:42:7')
 })
@@ -52,7 +53,7 @@ test('updates the displayed path when the selected source root changes', () => {
 	expect(displayedPath()).toBe('calgary/src/Handler.cs:42')
 	wrapper.setProps({root: 'src'})
 	expect(displayedPath()).toBe('src/Handler.cs:42')
-	expect(wrapper.find('.swcFindingPath').prop('data-swc-tooltip')).toBe('/home/user/calgary/src/Handler.cs:42')
+	expect(wrapper.find('div.swcFindingPath').prop('data-swc-tooltip')).toBe('src/Handler.cs:42')
 })
 
 test('does not treat an artifact description as a root-relative path', () => {

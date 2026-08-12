@@ -31,7 +31,7 @@ test('explains local folder access before asking for a source folder', () => {
 	expect(selectSourceFiles).toHaveBeenCalledTimes(1)
 })
 
-test('displays a formatted path while preserving the full path tooltip', () => {
+test('uses the formatted path in the tooltip without exposing the full local path', () => {
 	const run: any = {}
 	const ploc: any = {
 		artifactLocation: {uri: '/home/user/calgary/src/file.ts', properties: {href: '#source'}},
@@ -44,5 +44,5 @@ test('displays a formatted path while preserving the full path tooltip', () => {
 	)
 
 	expect(wrapper.text()).toBe('calgary/src/file.ts:12:7')
-	expect(wrapper.find('a').prop('data-swc-tooltip')).toBe('/home/user/calgary/src/file.ts:12:7')
+	expect(wrapper.find('a').prop('data-swc-tooltip')).toBe('calgary/src/file.ts:12:7')
 })

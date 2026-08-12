@@ -90,8 +90,8 @@ test('uses the root-relative source path as an encoded browser fragment', async 
 		() => 'calgary/src/My file#1.ts',
 	)
 
-	expect(childWindow.location.hash).toBe('#calgary/src/My%20file%231.ts')
-	expect(childDocument.getElementById('calgary/src/My file#1.ts')).not.toBeNull()
+	expect(childWindow.location.hash).toBe('#source-file-1')
+	expect(childDocument.getElementById('source-file-1')).not.toBeNull()
 	expect(childDocument.title).toBe('My file#1.ts')
 	const sourcePath = childDocument.querySelector('[data-current-file]')
 	expect(sourcePath?.textContent).toBe('calgary/src/My file#1.ts:1')
@@ -217,8 +217,8 @@ test('highlights every trace entry in a file and links between trace files', asy
 	)
 
 	expect(childDocument.querySelectorAll('.source-file')).toHaveLength(3)
-	expect(childWindow.location.hash).toBe('#src/app.ts')
-	const appSection = childDocument.getElementById('src/app.ts')
+	expect(childWindow.location.hash).toBe('#source-file-1')
+	const appSection = childDocument.getElementById('source-file-1')
 	expect(Array.from(appSection.querySelectorAll('.trace-badge > button')).map(badge => badge.textContent)).toEqual(['1', '4'])
 	expect(appSection.querySelector('.trace-start')).not.toBeNull()
 	expect(appSection.querySelector('[data-line="3"] .trace-active')).not.toBeNull()
@@ -227,20 +227,20 @@ test('highlights every trace entry in a file and links between trace files', asy
 	const appMarkStyles = Array.from(appSection.querySelectorAll('mark')).map(mark => mark.getAttribute('style'))
 	expect(new Set(appMarkStyles).size).toBe(2)
 	expect(Array.from(appSection.querySelectorAll('a')).map(link => link.getAttribute('href'))).toEqual([
-		'#src/lib.ts',
-		'#src/lib.ts',
-		'#src/end.ts',
+		'#source-file-2',
+		'#source-file-2',
+		'#source-file-3',
 	])
-	expect(childDocument.getElementById('src/end.ts').querySelector('.trace-end')).not.toBeNull()
+	expect(childDocument.getElementById('source-file-3').querySelector('.trace-end')).not.toBeNull()
 	expect(childDocument.querySelector('.trace-missing')?.textContent).toContain('4 of 5 trace locations readable')
 	expect(childDocument.querySelector('.trace-missing')?.textContent).toContain('src/missing.ts')
 	expect(childDocument.querySelector('[data-trace-position]')?.textContent).toBe('Entry 4 of 5 · File 1 of 3')
 	;(childDocument.querySelector('[data-trace-action="next"]') as HTMLButtonElement).click()
-	expect(childWindow.location.hash).toBe('#src/end.ts')
-	expect(childDocument.getElementById('src/end.ts').querySelector('.trace-active')).not.toBeNull()
+	expect(childWindow.location.hash).toBe('#source-file-3')
+	expect(childDocument.getElementById('source-file-3').querySelector('.trace-active')).not.toBeNull()
 	expect(childDocument.querySelector('[data-current-file]')?.textContent).toBe('src/end.ts:1')
 	childDocument.dispatchEvent(new KeyboardEvent('keydown', { key: '[' }))
-	expect(childWindow.location.hash).toBe('#src/app.ts')
+	expect(childWindow.location.hash).toBe('#source-file-1')
 	appSection.querySelector('[data-activate-trace="0"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 	const copyPathAndLine = childDocument.querySelector('[data-copy="path-line"]') as HTMLButtonElement
 	expect(copyPathAndLine).not.toBeNull()
@@ -342,7 +342,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 	expect(arrows.map(arrow => arrow.className)).toEqual(['trace-next', 'trace-previous', 'trace-next', 'trace-previous'])
 	expect(arrows.map(arrow => arrow.getAttribute('data-activate-trace'))).toEqual(['1', '0', '2', '1'])
 	expect(arrows.map(arrow => arrow.getAttribute('href'))).toEqual([
-		'#src/app.ts', '#src/app.ts', '#src/app.ts', '#src/app.ts',
+		'#source-file-1', '#source-file-1', '#source-file-1', '#source-file-1',
 	])
 	expect(arrows.map(arrow => arrow.getAttribute('aria-label'))).toEqual([
 		'Next trace entry', 'Previous trace entry', 'Next trace entry', 'Previous trace entry',

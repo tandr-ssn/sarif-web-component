@@ -1,6 +1,7 @@
 import unified from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
+import {safeLinkHref} from './SafeLink'
 
 interface MarkdownNode {
 	type: string
@@ -78,7 +79,8 @@ function escapeHtml(value: string): string {
 }
 
 function safeHref(value: string | undefined): string | undefined {
-	return value && /^(https?:|mailto:|#|\/)/i.test(value) ? escapeHtml(value) : undefined
+	const href = safeLinkHref(value)
+	return href ? escapeHtml(href) : undefined
 }
 
 function inlineHtml(node: MarkdownNode): string {

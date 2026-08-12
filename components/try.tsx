@@ -3,16 +3,18 @@
 
 import * as React from 'react'
 import {Link} from 'azure-devops-ui/Link'
+import {safeLinkHref} from './SafeLink'
 
 export const tryLink = (fHref: () => string, inner: string | JSX.Element, className?: string, onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void) => {
 	try {
-		const href = fHref()
+		const href = safeLinkHref(fHref())
 		if (!href) throw null
 		return <Link
 			className={className} // "bolt-table-link bolt-table-inline-link"
 			excludeTabStop
-			href={fHref()}
+			href={href}
 			target="_blank"
+			rel="noopener noreferrer"
 			onClick={onClick}>
 			{inner}
 		</Link>

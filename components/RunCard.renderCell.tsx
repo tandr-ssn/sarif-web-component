@@ -32,6 +32,7 @@ import {AcahSummary} from './AcahSummary'
 import {getRuleTooltip} from './RunCard.rowPresentation'
 import {FindingTriage} from './FindingTriage'
 import {FindingTriageAction} from './FindingTriageAction'
+import {safeLinkHref} from './SafeLink'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
 
@@ -47,7 +48,10 @@ type ResultTreeColumn<T> = ITreeColumn<T> & {
 }
 
 const markdownRenderers = {
-	link: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,
+	link: ({href, children}) => {
+		const safeHref = safeLinkHref(href)
+		return safeHref ? <a href={safeHref} target="_blank" rel="noopener noreferrer">{children}</a> : <>{children}</>
+	},
 }
 
 function renderResultFieldValue(fieldId: string, value: string): JSX.Element {
@@ -176,9 +180,13 @@ export function renderCell<T extends ISimpleTableCell>(
 						case 'Baseline':
 							return <Hi>{result.baselineState && capitalize(result.baselineState) || 'New'}</Hi>
 						case 'Bug':
-							return tryOr(() => <Link href={result.workItemUris[0]} target="_blank">
+							return tryOr(() => {
+								const href = safeLinkHref(result.workItemUris[0])
+								if (!href) throw undefined
+								return <Link href={href} target="_blank" rel="noopener noreferrer">
 								<Icon iconName="LadybugSolid" size={IconSize.medium} style={{ color: '#E81123' }} />
-							</Link>)
+								</Link>
+							})
 						case 'Age':
 							return <Hi>{result.sla}</Hi>
 						case 'First Observed':
@@ -235,8 +243,9 @@ function renderMessageWithEmbeddedLinks(result: Result, message: string) {
 					return getRepoUri(physicalLocation?.artifactLocation?.uri, result.run, physicalLocation?.region)
 				})()
 
-				return href
-					? <a key={i} href={href} target="_blank">{text}</a>
+				const safeHref = safeLinkHref(href)
+				return safeHref
+					? <a key={i} href={safeHref} target="_blank" rel="noopener noreferrer">{text}</a>
 					: text
 			})
 		: message

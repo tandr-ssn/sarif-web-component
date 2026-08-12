@@ -1003,8 +1003,8 @@ export async function openSourceFile(
 				const location = artifactsByKey.get(key)
 				const formattedName = location?.uri && formatPath?.(location.uri, run, location)
 				const name = formattedName || sourceFile.name || `source-file-${index + 1}`
-				let id = name
-				for (let duplicate = 2; usedViewIds.has(id); duplicate++) id = `${name} (${duplicate})`
+					let id = `source-file-${index + 1}`
+					for (let duplicate = 2; usedViewIds.has(id); duplicate++) id = `source-file-${index + 1}-${duplicate}`
 				usedViewIds.add(id)
 				return {id, key, name, sourceFile, highlights: []}
 			})

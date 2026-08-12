@@ -22,6 +22,20 @@ function SourcePathText(props: {uri?: string, position: string, rootRelative?: b
 	</span>
 }
 
+function PathTooltip(props: {
+	className?: string
+	element?: 'div' | 'span'
+	ploc?: PhysicalLocation
+	run: Result['run']
+	fallback?: string
+	children: React.ReactNode
+}) {
+	const formatPath = React.useContext(SourcePathFormatterContext)
+	const text = getSourceLocationText(props.ploc, props.run, formatPath) ?? props.fallback
+	const Element = props.element ?? 'span'
+	return <Element className={props.className} data-swc-tooltip={text}>{props.children}</Element>
+}
+
 // TODO:
 // Unify runArt vs resultArt.
 // Distinguish uri and text.
@@ -52,14 +66,13 @@ export function renderPathCell(result: Result, embedded = false) {
 	const sourcePhysicalLocation = ploc ?? (result.analysisTarget
 		? { artifactLocation: result.analysisTarget } as PhysicalLocation
 		: undefined)
-	const sourceLocationText = getSourceLocationText(sourcePhysicalLocation, result.run)
 	const sourceTrace = getResultSourceTrace(result)
 	if (embedded) {
-		return <div className="swcFindingPath" data-swc-tooltip={sourceLocationText ?? uri}>
+		return <PathTooltip element="div" className="swcFindingPath" ploc={sourcePhysicalLocation} run={result.run} fallback={uri}>
 			<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>
 				{uriWithEllipsis}
 			</SourceLocationLink>
-		</div>
+		</PathTooltip>
 	}
 
 	const rowClasses = 'bolt-table-two-line-cell-item flex-row scroll-hidden'
@@ -74,16 +87,16 @@ export function renderPathCell(result: Result, embedded = false) {
 			{tryOr(() => {
 				if (!uri) throw undefined
 				return <div className={rowClasses}>
-					<span className="fontSize font-size secondary-text swcColorUnset swcWidth100" data-swc-tooltip={sourceLocationText ?? uri}>
+					<PathTooltip className="fontSize font-size secondary-text swcColorUnset swcWidth100" ploc={sourcePhysicalLocation} run={result.run} fallback={uri}>
 						<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
-					</span>
+					</PathTooltip>
 				</div>
 			})}
 		</div>,
 		() => <div className="flex-row scroll-hidden">{/* From Advanced table demo. */}
-			<span className="swcColorUnset" data-swc-tooltip={sourceLocationText ?? uri}>
+			<PathTooltip className="swcColorUnset" ploc={sourcePhysicalLocation} run={result.run} fallback={uri}>
 				<SourceLocationLink ploc={sourcePhysicalLocation} run={result.run} trace={sourceTrace}>{uriWithEllipsis}</SourceLocationLink>
-			</span>
+			</PathTooltip>
 		</div>
 	)
 }

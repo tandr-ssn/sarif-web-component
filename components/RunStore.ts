@@ -72,9 +72,7 @@ export class RunStore {
 			}
 			catch (TypeError) { }
 
-			let resultIndex = 0;
-
-			run.results?.forEach(result => {
+			run.results?.forEach((result, resultIndex) => {
 				// Collate by Rule
 				const {ruleIndex} = result
 				const ruleId = result.ruleId ?? '(No Rule)' // Ignores 3.5.4 Hierarchical strings.
@@ -90,16 +88,27 @@ export class RunStore {
 
 				// Try to build a 'Fix in VS Code' action
 				if (isRepositoryDetailsComplete(repoDetails) && buildId && artifactName && filePath) {
+					const parameters = new URLSearchParams({
+						buildId: String(buildId),
+						artifactName: String(artifactName),
+						filePath: String(filePath),
+						organization: repoDetails.organizationName,
+						project: repoDetails.projectName,
+						repoName: repoDetails.repositoryName,
+						runIndex: String(run._index),
+						resultIndex: String(resultIndex),
+						source: '1esscans',
+					})
 					const fixInVsCodeAction = {
 						text: 'Fix in VS Code',
-						linkUrl: `https://waveanalysis.microsoft.com/vscode/import?buildId=${buildId}&artifactName=${artifactName}&filePath=${filePath}&organization=${repoDetails.organizationName}&project=${repoDetails.projectName}&repoName=${repoDetails.repositoryName}&runIndex=${run._index}&resultIndex=${resultIndex++}&source=1esscans`,
+						linkUrl: `https://waveanalysis.microsoft.com/vscode/import?${parameters}`,
 						imageName: 'vscode',
 						className: 'vscode-action'
 					}
 
                     const fixInVsAction = {
 						text: 'Fix in Visual Studio',
-						linkUrl: `https://waveanalysis.microsoft.com/vs/import?buildId=${buildId}&artifactName=${artifactName}&filePath=${filePath}&organization=${repoDetails.organizationName}&project=${repoDetails.projectName}&repoName=${repoDetails.repositoryName}&runIndex=${run._index}&resultIndex=${resultIndex++}&source=1esscans`,
+						linkUrl: `https://waveanalysis.microsoft.com/vs/import?${parameters}`,
 						imageName: 'vs',
 						className: 'vs-action'
 					}

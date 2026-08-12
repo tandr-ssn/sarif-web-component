@@ -6,6 +6,7 @@ import {Location, PhysicalLocation, Run} from 'sarif'
 import {Dialog} from 'azure-devops-ui/Dialog'
 import {getRepoUri} from './getRepoUri'
 import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatter, SourcePathFormatterContext, SourceTrace} from './SourceFile'
+import {safeLinkHref} from './SafeLink'
 
 export function getSourceLocationText(ploc: PhysicalLocation | undefined, run: Run, formatPath?: SourcePathFormatter): string | undefined {
 	const artifactLocation = getArtifactLocation(ploc, run)
@@ -29,7 +30,7 @@ function SourceLocationLinkWithReader(props: {
 	const [confirmSourceSelection, setConfirmSourceSelection] = React.useState(false)
 	const {ploc, run, reader, selectSourceFiles, formatPath, trace} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
-	const sourceLocationText = getSourceLocationText(ploc, run)
+	const sourceLocationText = getSourceLocationText(ploc, run, formatPath)
 	const text = props.children ?? getSourceLocationText(ploc, run, formatPath)
 	if (!text) return null
 	if (!artifactLocation) return <>{text}</>
@@ -44,7 +45,7 @@ function SourceLocationLinkWithReader(props: {
 	}
 
 	const explicitHref = artifactLocation.properties?.['href'] as string | undefined
-	const remoteHref = explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region)
+	const remoteHref = safeLinkHref(explicitHref ?? getRepoUri(artifactLocation.uri, run, ploc.region))
 	if (remoteHref) return <a href={remoteHref} className={props.className} target="_blank" rel="noopener noreferrer" data-swc-tooltip={sourceLocationText}>{text}</a>
 	if (selectSourceFiles) {
 		return <>
