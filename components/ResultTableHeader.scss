@@ -23,6 +23,20 @@
 		padding-bottom: 0;
 		padding-top: 0;
 	}
+	.bolt-table-header-sizer {
+		align-items: center;
+		right: -5px;
+		width: 10px;
+
+		&::before {
+			background: $neutral-30;
+			content: '';
+			height: 22px;
+			margin: auto;
+			width: 2px;
+		}
+		&:hover::before, &:focus-visible::before { background: $communication-background; }
+	}
 	.bolt-table-header-border { border-bottom: 0; }
 	.swcTreeHorizontalScroll {
 		overflow-x: scroll;

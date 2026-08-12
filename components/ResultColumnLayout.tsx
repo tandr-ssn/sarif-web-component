@@ -12,6 +12,7 @@ export class ResultColumnLayout {
 	private preferredWidths = new Map<string, number>()
 	private scrollElements = new Set<HTMLElement>()
 	private synchronizingScroll = false
+	private fitHeader?: {element: HTMLElement, ids: string[]}
 
 	constructor(readonly fitAllColumns: IObservableValue<boolean>) { }
 
@@ -32,6 +33,29 @@ export class ResultColumnLayout {
 		this.preferredWidths.set(id, width)
 		const observableWidth = this.widths.get(id)
 		if (observableWidth) observableWidth.value = width
+	}
+
+	registerFitHeader(element: HTMLElement, ids: string[]): () => void {
+		const registration = {element, ids}
+		this.fitHeader = registration
+		return () => {
+			if (this.fitHeader === registration) this.fitHeader = undefined
+		}
+	}
+
+	setFitAll(value: boolean) {
+		if (!value && this.fitAllColumns.get()) this.captureRenderedFitWidths()
+		this.fitAllColumns.set(value)
+	}
+
+	private captureRenderedFitWidths() {
+		const registration = this.fitHeader
+		if (!registration) return
+		registration.element.querySelectorAll<HTMLElement>('.bolt-table-header-cell[data-column-index]').forEach(cell => {
+			const id = registration.ids[Number(cell.dataset.columnIndex)]
+			const width = cell.getBoundingClientRect().width
+			if (id && width > 0) this.preferredWidths.set(id, Math.round(width))
+		})
 	}
 
 	registerScrollElement(element: HTMLElement): () => void {

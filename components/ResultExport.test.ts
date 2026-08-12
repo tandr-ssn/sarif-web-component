@@ -19,6 +19,7 @@ const runStore = {
 		{id: 'Details', filterString: result => result.message},
 	],
 	run: {results: [first, second]},
+	visibleResults: [first, second],
 	filteredResults: [second],
 } as unknown as RunStore
 
@@ -50,6 +51,7 @@ test('exports rendered Markdown as readable text in CSV cells', () => {
 			filterString: () => '### Versions\n\n| Version | Status |\n| --- | --- |\n| 1.0 | **affected** |',
 		}],
 		run: {results: [{}]},
+		visibleResults: [{}],
 		filteredResults: [],
 	} as unknown as RunStore
 
@@ -65,6 +67,7 @@ test('exports rendered findings as TSV, HTML, and plain text', () => {
 			{id: 'rule.help.text', filterString: () => '### Versions\n\n| Version | Status |\n| --- | --- |\n| 1.0 | **affected** |'},
 		],
 		run: {results: [{}]},
+		visibleResults: [{}],
 		filteredResults: [],
 	} as unknown as RunStore
 
@@ -89,6 +92,7 @@ test('exports selected fields as a Markdown report without flattening Markdown v
 			{id: 'rule.helpUri', filterString: () => 'https://example.test/advisory'},
 		],
 		run: {results: [{}]},
+		visibleResults: [{}],
 		filteredResults: [],
 	} as unknown as RunStore
 

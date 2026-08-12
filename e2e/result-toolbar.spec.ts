@@ -23,6 +23,7 @@ const syntheticSarif = {
 		}},
 		results: [{
 			ruleId: 'river-1',
+			fingerprints: {primary: 'synthetic-river-finding'},
 			level: 'warning',
 			kind: 'fail',
 			message: {text: 'Affected Ottawa dependency'},
@@ -44,6 +45,7 @@ const syntheticSarif = {
 		}},
 		results: [{
 			ruleId: 'willow-1',
+			fingerprints: {primary: 'synthetic-willow-finding'},
 			level: 'note',
 			kind: 'review',
 			message: {text: 'Affected Calgary dependency'},
@@ -138,7 +140,15 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	await expect(page.locator('.swcTreeHorizontalScroll')).toHaveCount(0)
 	await page.getByRole('button', {name: 'Result view options'}).click()
 	await expect(page.getByRole('menuitemcheckbox', {name: 'Fit all columns'})).toBeChecked()
-	await page.keyboard.press('Escape')
+	const fittedWidths = await page.locator('.swcGlobalResultHeader .bolt-table-header-cell[data-column-index]')
+		.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width))
+	await page.getByRole('menuitemcheckbox', {name: 'Fit all columns'}).click()
+	await expect(page.locator('.swcGlobalResultHeader .bolt-table-header-sizer')).toHaveCount(selectedFields.length - 1)
+	const scrollingWidths = await page.locator('.swcGlobalResultHeader .bolt-table-header-cell[data-column-index]')
+		.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width))
+	expect(scrollingWidths.every((width, index) => Math.abs(width - fittedWidths[index]) <= 1)).toBe(true)
+	await page.getByRole('button', {name: 'Result view options'}).click()
+	await page.getByRole('menuitemcheckbox', {name: 'Fit all columns'}).click()
 
 	await page.getByRole('button', {name: 'Filter Details'}).click()
 	await page.getByRole('searchbox', {name: 'Filter Details'}).fill('Ottawa')
@@ -179,6 +189,27 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	expect(controlsTop).toBeGreaterThanOrEqual(0)
 	expect(headerTop).toBeGreaterThan(controlsTop)
 	await expect(page.getByRole('button', {name: 'Filter Details'})).toBeVisible()
+})
+
+test('persists hidden findings and restores the current SARIF state', async ({page}) => {
+	const finding = page.getByText('Affected Ottawa dependency', {exact: true})
+	await expect(finding).toBeVisible()
+	await page.getByRole('button', {name: 'Hide', exact: true}).first().click()
+	await expect(finding).toHaveCount(0)
+
+	await page.reload()
+	await expect(finding).toHaveCount(0)
+	await page.getByLabel('Finding visibility').selectOption('hidden')
+	await expect(finding).toBeVisible()
+	await page.getByRole('button', {name: 'Restore', exact: true}).first().click()
+	await expect(finding).toHaveCount(0)
+	await page.getByLabel('Finding visibility').selectOption('visible')
+	await expect(finding).toBeVisible()
+
+	await page.getByRole('button', {name: 'Hide', exact: true}).first().click()
+	await page.getByRole('button', {name: 'Result view options'}).click()
+	await page.getByRole('menuitem', {name: 'Restore all findings in this SARIF'}).click()
+	await expect(finding).toBeVisible()
 })
 
 test('uses a full-width relative path and matching controls in the source popup', async ({page}) => {

@@ -520,7 +520,7 @@ export interface ViewerProps {
 									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={visibleResultCount}
 										filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
 									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresInOrder} fitAllColumns={this.fitAllColumns}
-										findingTriage={this.findingTriage} results={currentResults} />} />
+										columnLayout={this.resultColumnLayout} findingTriage={this.findingTriage} results={currentResults} />} />
 								{!!this.runStoresInOrder.length && <ResultTableHeader runStores={this.runStoresInOrder} layout={this.resultColumnLayout} />}
 							</div>
 							{this.warnOldVersion && <MessageCard

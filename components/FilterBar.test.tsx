@@ -24,6 +24,16 @@ test('uses the integrated keyword clear control and renders result actions besid
 	expect(actions.slice(1).map(child => child.prop('id'))).toEqual(['fields', 'export', 'view-options'])
 })
 
+test('adds the implicit visible finding state to host-provided starting filters', () => {
+	const filter = new MobxFilter(undefined, {
+		Baseline: {value: ['new', 'unchanged', 'updated']},
+		Suppression: {value: ['unsuppressed']},
+	})
+
+	expect(filter.getFilterItemValue('Triage')).toEqual(['visible'])
+	expect(filter.hasChangesToReset()).toBe(false)
+})
+
 test('describes active filters in the clear-filters dropdown', () => {
 	const filter = new MobxFilter({}, {})
 	filter.setFilterItemState('Keywords', {value: 'Calgary'})

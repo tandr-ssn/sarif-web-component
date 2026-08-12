@@ -22,6 +22,8 @@ export function setResultColumnSort(runStores: RunStore[], columnId: string, sor
 	runStores: RunStore[]
 	layout: ResultColumnLayout
 }> {
+	private host?: HTMLDivElement
+	private unregisterFitHeader?: () => void
 	private itemProvider = new TreeItemProvider<ResultOrRuleOrMore>([])
 	private columnCache = new Map<string, ITreeColumn<ResultOrRuleOrMore>>()
 	private currentColumns: ITreeColumn<ResultOrRuleOrMore>[] = []
@@ -56,7 +58,11 @@ export function setResultColumnSort(runStores: RunStore[], columnId: string, sor
 					sortProps: {ariaLabelAscending: 'Sorted A to Z', ariaLabelDescending: 'Sorted Z to A'},
 				} as ITreeColumn<ResultOrRuleOrMore>)
 			}
-			const column = this.columnCache.get(id)
+			const column = {
+				...this.columnCache.get(id),
+				sortProps: {...this.columnCache.get(id).sortProps},
+			} as ITreeColumn<ResultOrRuleOrMore>
+			this.columnCache.set(id, column)
 			column.name = name
 			column.width = layout.width(id, width)
 			column.onSize = fitAll ? undefined : (event, columnIndex, newWidth) => layout.resize(id, newWidth)
@@ -66,10 +72,21 @@ export function setResultColumnSort(runStores: RunStore[], columnId: string, sor
 		return this.currentColumns
 	}
 
+	componentDidMount() { this.registerFitHeader() }
+	componentDidUpdate() { this.registerFitHeader() }
+	componentWillUnmount() { this.unregisterFitHeader?.() }
+
+	private registerFitHeader() {
+		this.unregisterFitHeader?.()
+		this.unregisterFitHeader = this.host
+			? this.props.layout.registerFitHeader(this.host, this.currentColumns.map(column => column.id))
+			: undefined
+	}
+
 	render() {
 		const {layout} = this.props
 		const fitAll = layout.fitAllColumns.get()
-		return <div className="swcGlobalResultHeader">
+		return <div className="swcGlobalResultHeader" ref={element => this.host = element ?? undefined}>
 			<ResultColumnScroll layout={layout}>
 				<Tree<ResultOrRuleOrMore> className="swcGlobalResultHeaderTree"
 					containerClassName={fitAll ? undefined : 'swcTreeHorizontalScroll'}

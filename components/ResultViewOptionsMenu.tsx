@@ -7,12 +7,14 @@ import {IMenuItem, MenuItemType, MoreButton} from 'azure-devops-ui/Menu'
 import {RunStore, SortRuleBy} from './RunStore'
 import {Result} from 'sarif'
 import {FindingTriage} from './FindingTriage'
+import {ResultColumnLayout} from './ResultColumnLayout'
 
 let menuId = 0
 
 @observer export class ResultViewOptionsMenu extends React.Component<{
 	runStores: RunStore[]
 	fitAllColumns: IObservableValue<boolean>
+	columnLayout?: ResultColumnLayout
 	findingTriage?: FindingTriage
 	results?: Result[]
 }> {
@@ -53,7 +55,9 @@ let menuId = 0
 		const hiddenInCurrent = findingTriage?.hiddenCount(results) ?? 0
 		const items: IMenuItem[] = [
 			{id: 'fitAllColumns', text: 'Fit all columns', checked: fitAll,
-				onActivate: () => fitAllColumns.set(!fitAll)},
+				onActivate: () => this.props.columnLayout
+					? this.props.columnLayout.setFitAll(!fitAll)
+					: fitAllColumns.set(!fitAll)},
 			{id: 'viewDivider', itemType: MenuItemType.Divider},
 			...(showGroupChoices ? [
 				{id: 'groupByAge', text: 'Group by age', checked: groupedByAge, onActivate: () => this.setGroupByAge(true)},

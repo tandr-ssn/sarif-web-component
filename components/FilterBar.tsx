@@ -22,8 +22,16 @@ export class MobxFilter extends Filter {
 	private atom = createAtom('MobxFilter')
 	constructor(defaultState?: IFilterState, startingState?: IFilterState) {
 		super()
-		this.setDefaultState(defaultState || recommendedDefaultState)
-		this.setState(startingState || defaultState || recommendedDefaultState, true)
+		const effectiveDefault = {
+			...(defaultState || recommendedDefaultState),
+			Triage: defaultState?.Triage ?? recommendedDefaultState.Triage,
+		}
+		const effectiveStarting = {
+			...(startingState || effectiveDefault),
+			Triage: startingState?.Triage ?? effectiveDefault.Triage,
+		}
+		this.setDefaultState(effectiveDefault)
+		this.setState(effectiveStarting, true)
 		this.subscribe(() => {
 			this.atom.reportChanged()
 		}, FILTER_CHANGE_EVENT)
