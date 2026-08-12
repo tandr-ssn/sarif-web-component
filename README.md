@@ -1,5 +1,5 @@
 
-[![npm version](https://img.shields.io/npm/v/@microsoft/sarif-web-component.svg?style=flat)](https://www.npmjs.com/package/@microsoft/sarif-web-component)
+[![npm version](https://img.shields.io/npm/v/@acah/sarif-web-component.svg?style=flat)](https://www.npmjs.com/package/@acah/sarif-web-component)
 
 # SARIF Web Component
 
@@ -8,13 +8,13 @@ A React-based component for viewing [SARIF](https://www.sarif.info) files. This 
 ## Usage
 
 ```
-npm install @microsoft/sarif-web-component
+npm install @acah/sarif-web-component
 ```
 
 ```js
 import * as React from 'react'
 import {createRoot} from 'react-dom/client'
-import {Viewer} from '@microsoft/sarif-web-component'
+import {Viewer} from '@acah/sarif-web-component'
 
 createRoot(document.body.firstChild).render(<Viewer logs={arrayOfLogs} />)
 ```

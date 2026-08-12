@@ -1,5 +1,5 @@
 {
-	"name": "@microsoft/sarif-web-component",
+	"name": "@acah/sarif-web-component",
 	"version": "0.6.0-29",
 	"author": "Microsoft",
 	"description": "SARIF Viewer",
