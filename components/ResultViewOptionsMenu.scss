@@ -2,5 +2,12 @@
 	align-self: center;
 	margin-left: 4px;
 
-	.bolt-button { height: 30px; min-width: 30px; }
+	.bolt-button {
+		box-sizing: border-box;
+		height: 32px;
+		min-width: 32px;
+		min-height: 32px;
+		width: 32px;
+		padding: 0;
+	}
 }
