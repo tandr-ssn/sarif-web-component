@@ -23,7 +23,7 @@ export function loadRememberedSarifFromSession(storage: Storage): RememberedSari
 	}
 }
 
-function clearSession(storage: Storage): void {
+export function clearRememberedSarifSession(storage: Storage): void {
 	try {
 		storage.removeItem(sarifSessionKey)
 		storage.removeItem(sarifNameSessionKey)
@@ -35,7 +35,7 @@ export async function rememberSarif(value: RememberedSarif, storage: Storage, fa
 		storage.setItem(sarifSessionKey, value.text)
 		storage.setItem(sarifNameSessionKey, value.name)
 	} catch (_) {
-		clearSession(storage)
+		clearRememberedSarifSession(storage)
 		try {
 			await fallback.put(value)
 		} catch (error) {

@@ -10,7 +10,7 @@ import {Button} from 'azure-devops-ui/Button'
 import { Viewer } from '../components/Viewer'
 import {FileSystemFileHandleLike} from '../components/LocalSourceFile'
 import Shield from './Shield'
-import {docsSessionKey, indexedDbRememberedSarifStore, loadRememberedSarifFromSession, rememberSarif} from './SarifSession'
+import {clearRememberedSarifSession, docsSessionKey, indexedDbRememberedSarifStore, loadRememberedSarifFromSession, rememberSarif} from './SarifSession'
 
 declare global {
 	interface Window {
@@ -51,12 +51,25 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 	reader.readAsText(file)
 })
 
+export function parseSarif(text: string): Log {
+	let value: unknown
+	try { value = JSON.parse(text) }
+	catch (error) { throw new Error(`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`) }
+	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The document must be a SARIF JSON object.')
+	const log = value as Partial<Log>
+	if (typeof log.version !== 'string' || !log.version) throw new Error('The SARIF document must specify its version.')
+	if (!Array.isArray(log.runs)) throw new Error('The SARIF document must contain a runs array.')
+	if (log.runs.some(run => !run?.tool?.driver?.name)) throw new Error('Every SARIF run must identify tool.driver.name.')
+	return log as Log
+}
+
 @observer export class Index extends React.Component {
 	@observable.ref sample = (() => {
-		try { return rememberedSessionSarif ? JSON.parse(rememberedSessionSarif.text) : demoLog }
+		try { return rememberedSessionSarif ? parseSarif(rememberedSessionSarif.text) : demoLog }
 		catch (_) { return demoLog }
 	})()
 	@observable currentSarifFileName = rememberedSessionSarif?.name
+	@observable loadError?: string
 	private sourcePickerContainer?: HTMLSpanElement
 	private sarifFileHandle?: FileSystemFileHandleLike
 	private currentSarifFile?: File
@@ -68,7 +81,7 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 		if (!rememberedSessionSarif) void indexedDbRememberedSarifStore.get().then(remembered => {
 			if (!remembered || this.loadRevision !== 0) return
 			try {
-				this.sample = JSON.parse(remembered.text)
+				this.sample = parseSarif(remembered.text)
 				this.currentSarifFileName = remembered.name
 			} catch (_) {
 				void indexedDbRememberedSarifStore.remove()
@@ -77,14 +90,25 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 	}
 	@autobind async loadFile(file, handle?: FileSystemFileHandleLike) {
 		if (!file) return
-		if (!file.name.match(/.(json|sarif)$/i)) {
-			alert('File name must end with ".json" or ".sarif"')
+		this.loadError = undefined
+		if (!file.name.match(/\.(json|sarif)$/i)) {
+			this.loadError = 'File name must end with “.json” or “.sarif”.'
 			return
 		}
 		const revision = ++this.loadRevision
-		const text = await readAsText(file)
+		let text: string
+		try { text = await readAsText(file) }
+		catch (error) {
+			if (revision === this.loadRevision) this.loadError = `Unable to read ${file.name}: ${error instanceof Error ? error.message : String(error)}`
+			return
+		}
 		if (revision !== this.loadRevision) return
-		const sample = JSON.parse(text)
+		let sample: Log
+		try { sample = parseSarif(text) }
+		catch (error) {
+			this.loadError = `${file.name}: ${error instanceof Error ? error.message : String(error)}`
+			return
+		}
 		let persistenceError: unknown
 		this.persistence = this.persistence.then(async () => {
 			if (revision !== this.loadRevision) return
@@ -103,6 +127,17 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 		if (persistenceError) {
 			alert(`The SARIF file was opened, but could not be remembered for refresh: ${persistenceError instanceof Error ? persistenceError.message : String(persistenceError)}`)
 		}
+	}
+	private closeFile = async () => {
+		++this.loadRevision
+		this.sample = demoLog
+		this.currentSarifFile = undefined
+		this.currentSarifFileName = undefined
+		this.sarifFileHandle = undefined
+		this.loadError = undefined
+		clearRememberedSarifSession(window.sessionStorage)
+		try { await indexedDbRememberedSarifStore.remove() }
+		catch (error) { this.loadError = `The report was closed, but its fallback copy could not be removed: ${error instanceof Error ? error.message : String(error)}` }
 	}
 	private openInputFilePicker = () => (this.refs.inputFile as any).click()
 	private openFile = async () => {
@@ -157,9 +192,12 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 				{this.currentSarifFileName && <span className="demoSarifName" data-swc-tooltip={this.currentSarifFileName}>
 					SARIF: <strong>{this.currentSarifFileName}</strong>
 				</span>}
+				{this.currentSarifFileName && <Button text="Close and forget" onClick={() => void this.closeFile()} />}
 				<span className="demoSourcePicker" ref={element => this.sourcePickerContainer = element ?? undefined}></span>
 				<span style={{ flexGrow: 1 }}></span>
 			</div>
+			{this.loadError && <div className="demoLoadError" role="alert">{this.loadError}</div>}
+			{this.currentSarifFileName && <div className="demoRetentionNotice" role="status">This report is stored only in this browser so it can survive refresh. Use “Close and forget” to remove the remembered copy.</div>}
 			<Viewer logs={[this.sample]} showSuppression showLocalSourcePicker
 				localSourcePickerContainer={this.state.sourcePickerReady ? this.sourcePickerContainer : null}
 				sessionStorageKey={docsSessionKey}

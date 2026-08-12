@@ -1,4 +1,4 @@
-import {Index} from './Index'
+import {Index, parseSarif} from './Index'
 import {loadRememberedSarifFromSession} from './SarifSession'
 
 class DeferredFileReader {
@@ -39,4 +39,10 @@ test('an earlier file read cannot replace the latest opened SARIF file', async (
 		;(window as any).FileReader = OriginalFileReader
 		window.sessionStorage.clear()
 	}
+})
+
+test('reports malformed and structurally invalid SARIF clearly', () => {
+	expect(() => parseSarif('{broken')).toThrow('Invalid JSON')
+	expect(() => parseSarif('{"version":"2.1.0"}')).toThrow('runs array')
+	expect(() => parseSarif('{"version":"2.1.0","runs":[{"tool":{"driver":{}}}]}')).toThrow('tool.driver.name')
 })

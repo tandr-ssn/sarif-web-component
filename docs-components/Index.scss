@@ -61,3 +61,7 @@ button, input { font: inherit; } // Override user agent.
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
+
+.demoLoadError, .demoRetentionNotice { padding: 7px 15px; }
+.demoLoadError { background: #fde7e9; color: #a4262c; }
+.demoRetentionNotice { background: #eff6fc; color: #323130; font-size: 13px; }
