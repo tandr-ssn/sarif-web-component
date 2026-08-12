@@ -31,7 +31,12 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [x] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
-- [ ] Stage dependency modernization when repository automation is wanted; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
+- [ ] Complete runtime dependency modernization in separately validated batches. The build/tooling layer is already modernized for Node 22+, TypeScript 6, Jest 30, and Webpack 5; do not combine these remaining migrations:
+  - [ ] React 16 and Enzyme: move to a supported React release and replace the React-16-only Enzyme adapter/tests.
+  - [ ] MobX 5 and mobx-react 5: migrate decorators/observability independently from React.
+  - [ ] Azure DevOps UI 2.167: update the isolated local primitive boundary and visually verify the offline viewer.
+  - [ ] Markdown/unified stack: migrate react-markdown 5, unified 9, remark-parse 9, and remark-gfm 1 together because newer releases are ESM-first and have different renderer APIs.
+  - [ ] Highlight.js 10: update syntax registration and source-viewer highlighting separately.
 - [x] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.
 
 ## Later opportunities
@@ -41,4 +46,4 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Isolate Azure DevOps UI behind local primitives before considering replacement.
 - [x] Evaluate a finding-list and detail-pane layout. Retain the current grouped tree/card layout for now: a second navigation model would complicate selection, clipboard, export, filtering, and responsive behavior; revisit only with a dedicated interaction design.
 
-The current self-contained offline HTML is approximately 1.2 MB and is not itself a priority. `npm audit` reported no known vulnerabilities at the time of this review.
+The current self-contained offline HTML is approximately 1.3 MB and is not itself a priority. `npm audit` reported no known vulnerabilities on 2026-08-11 after the tooling modernization and viewer changes.
