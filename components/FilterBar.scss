@@ -64,6 +64,10 @@
 		@include swcToolbarDropdownControlButton;
 		font-weight: $fontWeightNormal;
 	}
+	.bolt-dropdown-filter-bar-item-placeholder,
+	.bolt-dropdown-filter-bar-item-selected-text {
+		color: $primary-text;
+	}
 	.bolt-button.active {
 		color: $primary-text;
 	}
