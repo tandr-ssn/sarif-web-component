@@ -31,6 +31,42 @@ test('renders embedded source as text in a new tab', async () => {
 	open.mockRestore()
 })
 
+test('reuses a report-and-finding-set source tab and navigates back to findings', async () => {
+	const childDocument = document.implementation.createHTMLDocument()
+	const focusFindings = jest.fn()
+	const childWindow = {
+		document: childDocument,
+		opener: {focus: focusFindings},
+		location: {hash: ''},
+		focus: jest.fn(),
+	} as any as Window
+	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
+	const run: any = {
+		artifacts: [{location: {uri: 'src/River.ts'}, contents: {text: 'one\ntwo\nthree'}}],
+	}
+	const firstLocation: any = {artifactLocation: {uri: 'src/River.ts', index: 0}, region: {startLine: 1}}
+	const secondLocation: any = {artifactLocation: {uri: 'src/River.ts', index: 0}, region: {startLine: 3}}
+	const findings: any[] = [
+		{id: 'finding-a', label: 'First finding', run, runIndex: 0, location: firstLocation},
+		{id: 'finding-b', label: 'Second finding', run, runIndex: 0, location: secondLocation},
+	]
+	const navigation: any = {
+		reportId: 'report-a',
+		byFile: new Map([['src/River.ts', findings]]),
+		byLocation: new WeakMap(),
+	}
+
+	await openSourceFile(firstLocation.artifactLocation, run, firstLocation.region, undefined, undefined, undefined, navigation, 'finding-a')
+
+	expect(open.mock.calls[0][1]).toMatch(/^swc-source-/)
+	expect(childWindow.opener).not.toBeNull()
+	expect(childDocument.title).toBe('River.ts — First finding')
+	expect(childDocument.querySelectorAll('.finding-marker')).toHaveLength(2)
+	;(childDocument.querySelector('[data-source-back]') as HTMLButtonElement).click()
+	expect(focusFindings).toHaveBeenCalledTimes(1)
+	open.mockRestore()
+})
+
 test('adds line numbers and preserves multi-line region highlighting', async () => {
 	const childDocument = document.implementation.createHTMLDocument()
 	const childWindow = { document: childDocument, opener: window } as Window

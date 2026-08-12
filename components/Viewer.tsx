@@ -21,7 +21,7 @@ const noResultsPng = require('./Viewer.ZeroData.png')
 import {Card, MessageCard, MessageCardSeverity, Page, SurfaceBackground, SurfaceContext,
 	IFilterState, ZeroData, ObservableValue, Button, SortOrder} from './AzureDevOpsUi'
 import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot, getSourcePathFromSarifRoot } from './LocalSourceFile'
-import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
+import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourceNavigation, SourceNavigationContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'
 import {ResultFieldSelector} from './ResultFieldSelector'
 import {createResultCsv, createResultHtml, createResultHtmlTable, createResultMarkdown, createResultText, createResultTsv, downloadResultFile, ResultExportFormat, ResultExportScope} from './ResultExport'
@@ -32,6 +32,7 @@ import {ResultTableHeader} from './ResultTableHeader'
 import {installTooltips} from './Tooltip'
 import {FindingTriage, FindingTriageStore, indexedDbFindingTriageStore} from './FindingTriage'
 import {FindingVisibilityFilter} from './FindingVisibilityFilter'
+import {buildSourceNavigation} from './SourceNavigation'
 
 export interface ViewerProps {
 	logs?: Log[]
@@ -141,6 +142,8 @@ export interface ViewerProps {
 	@observable private rememberedSourceFolderName?: string
 	@observable private sourceDirectoryError?: string
 	private sourceDirectoryInput?: HTMLInputElement
+	private resultsControls?: HTMLDivElement
+	private resultsControlsObserver?: ResizeObserver
 	private runStoreCache?: {
 		logs?: Log[]
 		hideBaseline?: boolean
@@ -148,6 +151,7 @@ export interface ViewerProps {
 		showActions?: boolean
 		stores: RunStore[]
 	}
+	private sourceNavigationCache?: {stores: RunStore[], navigation: SourceNavigation}
 	@observable private oldVersionWarningDismissed = false
 
 	constructor(props) {
@@ -240,6 +244,7 @@ export interface ViewerProps {
 	}
 
 	componentDidUpdate(previousProps: ViewerProps) {
+		this.updateStickyFindingOffset()
 		const storesChanged = previousProps.logs !== this.props.logs
 			|| previousProps.showActions !== this.props.showActions
 			|| previousProps.hideBaseline !== this.props.hideBaseline
@@ -253,12 +258,30 @@ export interface ViewerProps {
 	}
 
 	componentWillUnmount() {
+		this.resultsControlsObserver?.disconnect()
 		this.resultFieldPersistence?.()
 		this.fitAllColumnsPersistence?.()
 		this.ruleSortPersistence?.()
 		this.columnFilterCleanup?.()
 		this.invalidateRunStores()
 		this.findingTriage?.dispose()
+	}
+
+	private setResultsControls = (element: HTMLDivElement | null) => {
+		if (this.resultsControls === element) return
+		this.resultsControlsObserver?.disconnect()
+		this.resultsControls = element ?? undefined
+		if (element && typeof ResizeObserver !== 'undefined') {
+			this.resultsControlsObserver = new ResizeObserver(this.updateStickyFindingOffset)
+			this.resultsControlsObserver.observe(element)
+		}
+		this.updateStickyFindingOffset()
+	}
+
+	private updateStickyFindingOffset = () => {
+		const controls = this.resultsControls
+		const page = controls?.closest('.bolt-page') as HTMLElement | null
+		if (controls && page) page.style.setProperty('--swc-results-controls-height', `${Math.ceil(controls.getBoundingClientRect().height)}px`)
 	}
 
 	private createRunStores(logs: Log[] | undefined): RunStore[] {
@@ -289,6 +312,14 @@ export interface ViewerProps {
 	private invalidateRunStores() {
 		this.runStoreCache?.stores.forEach(store => store.dispose())
 		this.runStoreCache = undefined
+		this.sourceNavigationCache = undefined
+	}
+
+	private getSourceNavigation(stores: RunStore[]): SourceNavigation {
+		if (this.sourceNavigationCache?.stores === stores) return this.sourceNavigationCache.navigation
+		const navigation = buildSourceNavigation(stores.map(store => store.run))
+		this.sourceNavigationCache = {stores, navigation}
+		return navigation
 	}
 
 	private get resultFieldPaths(): string[] {
@@ -454,6 +485,7 @@ export interface ViewerProps {
 		const visibleResultCount = this.runStoresInOrder.reduce((total, runStore) => total + runStore.visibleResults.length, 0)
 		const filteredResultCount = this.runStoresInOrder.reduce((total, runStore) => total + runStore.filteredResults.length, 0)
 		const currentResults = this.runStoresInOrder.flatMap(runStore => runStore.run.results ?? [])
+		const sourceNavigation = this.getSourceNavigation(this.runStoresInOrder)
 		const filterKeywords = currentfilterState.Keywords?.value
 		const nearElement = (() => {
 			const {runStoresInOrder} = this
@@ -523,11 +555,12 @@ export interface ViewerProps {
 			<SourceFileSelectionContext.Provider value={showLocalSourcePicker ? this.selectSourceDirectory : undefined}>
 				<SourcePathFormatterContext.Provider value={sourcePathFormatter}>
 					<SourceFileReaderContext.Provider value={effectiveSourceReader}>
+					<SourceNavigationContext.Provider value={sourceNavigation}>
 						<SurfaceContext.Provider value={{ background: SurfaceBackground.neutral }}>
 							<Page>
 							<div className="swcShim"></div>
 							{renderedSourcePicker}
-							<div className="swcResultsControls">
+							<div className="swcResultsControls" ref={this.setResultsControls}>
 								<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
 									resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
 									findingVisibilityFilter={<FindingVisibilityFilter filter={this.filter}
@@ -551,6 +584,7 @@ export interface ViewerProps {
 							{nearElement}
 							</Page>
 						</SurfaceContext.Provider>
+					</SourceNavigationContext.Provider>
 					</SourceFileReaderContext.Provider>
 				</SourcePathFormatterContext.Provider>
 			</SourceFileSelectionContext.Provider>

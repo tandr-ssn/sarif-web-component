@@ -5,7 +5,7 @@ import * as React from 'react'
 import {Location, PhysicalLocation, Run} from 'sarif'
 import {Dialog} from './AzureDevOpsUi'
 import {getRepoUri} from './getRepoUri'
-import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatter, SourcePathFormatterContext, SourceTrace} from './SourceFile'
+import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourceNavigation, SourceNavigationContext, SourcePathFormatter, SourcePathFormatterContext, SourceTrace} from './SourceFile'
 import {safeLinkHref} from './SafeLink'
 
 export function getSourceLocationText(ploc: PhysicalLocation | undefined, run: Run, formatPath?: SourcePathFormatter): string | undefined {
@@ -23,12 +23,13 @@ function SourceLocationLinkWithReader(props: {
 	reader?: SourceFileReader
 	selectSourceFiles?: () => void
 	formatPath?: SourcePathFormatter
+	navigation?: SourceNavigation
 	trace?: SourceTrace
 	children?: React.ReactNode
 	className?: string
 }) {
 	const [confirmSourceSelection, setConfirmSourceSelection] = React.useState(false)
-	const {ploc, run, reader, selectSourceFiles, formatPath, trace} = props
+	const {ploc, run, reader, selectSourceFiles, formatPath, trace, navigation} = props
 	const artifactLocation = getArtifactLocation(ploc, run)
 	const sourceLocationText = getSourceLocationText(ploc, run, formatPath)
 	const text = props.children ?? getSourceLocationText(ploc, run, formatPath)
@@ -40,7 +41,7 @@ function SourceLocationLinkWithReader(props: {
 		return <a href="#" className={props.className} onClick={event => {
 			event.preventDefault()
 			event.stopPropagation()
-			void openSourceFile(artifactLocation, run, ploc.region, reader, trace, formatPath)
+			void openSourceFile(artifactLocation, run, ploc.region, reader, trace, formatPath, navigation, navigation?.byLocation.get(ploc)?.id)
 		}} data-swc-tooltip={sourceLocationText}>{text}</a>
 	}
 
@@ -83,6 +84,7 @@ export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, t
 	const reader = React.useContext(SourceFileReaderContext)
 	const selectSourceFiles = React.useContext(SourceFileSelectionContext)
 	const formatPath = React.useContext(SourcePathFormatterContext)
+	const navigation = React.useContext(SourceNavigationContext)
 	if (!props.ploc) return props.children ? <>{props.children}</> : null
 	return <SourceLocationLinkWithReader
 		ploc={props.ploc}
@@ -90,6 +92,7 @@ export function SourceLocationLink(props: { ploc?: PhysicalLocation, run: Run, t
 		reader={reader}
 		selectSourceFiles={selectSourceFiles}
 		formatPath={formatPath}
+		navigation={navigation}
 		trace={props.trace}
 		children={props.children}
 		className={props.className} />

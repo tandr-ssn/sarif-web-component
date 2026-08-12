@@ -8,11 +8,13 @@ export function escapeSourceHtml(value: string): string {
 		.replace(/'/g, '&#039;')
 }
 
-export function sourceDocumentTitle(path: string | undefined): string {
+export function sourceDocumentTitle(path: string | undefined, context?: string): string {
 	if (!path) return 'Source file'
 	let decoded = path
 	try { decoded = decodeURIComponent(path) } catch (_) { }
-	return decoded.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Source file'
+	const file = decoded.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Source file'
+	const compactContext = context?.replace(/\s+/g, ' ').trim()
+	return compactContext ? `${file} — ${compactContext.slice(0, 80)}` : file
 }
 
 export function sourceLines(text: string): string[] {

@@ -8,6 +8,7 @@ import {AcahTraceRole, getTraceStepAcah, getTraceStepRole} from './Acah'
 import {installTooltips} from './Tooltip'
 import {escapeSourceHtml as escapeHtml, sourceDocumentTitle, sourceLines} from './SourceHtml'
 import {getArtifactContents, getArtifactLocation, readSourceFile, SourceFile, SourceFileReader, sourceViewKey} from './SourceFileResolver'
+import {stableSha256} from './StableHash'
 export {getArtifactContents, getArtifactLocation, SourceFile, SourceFileReader} from './SourceFileResolver'
 
 export interface SourceTrace {
@@ -24,10 +25,26 @@ export interface SourceTrace {
 	}
 }
 
+export interface SourceFindingNavigation {
+	id: string
+	label: string
+	run: Run
+	runIndex: number
+	location: PhysicalLocation
+	trace?: SourceTrace
+}
+
+export interface SourceNavigation {
+	reportId: string
+	byFile: Map<string, SourceFindingNavigation[]>
+	byLocation: WeakMap<object, SourceFindingNavigation>
+}
+
 export const SourceFileReaderContext = React.createContext<SourceFileReader | undefined>(undefined)
 export const SourceFileSelectionContext = React.createContext<(() => void) | undefined>(undefined)
 export type SourcePathFormatter = (uri: string, run?: Run, artifactLocation?: ArtifactLocation) => string
 export const SourcePathFormatterContext = React.createContext<SourcePathFormatter | undefined>(undefined)
+export const SourceNavigationContext = React.createContext<SourceNavigation | undefined>(undefined)
 
 function fragmentHref(id: string): string {
 	return `#${encodeURIComponent(id).replace(/%2F/gi, '/')}`
@@ -59,6 +76,7 @@ interface SourceFileView {
 	name: string
 	sourceFile: SourceFile
 	highlights: SourceHighlight[]
+	findingMarkers: SourceFindingNavigation[]
 }
 
 interface MissingTraceLocation {
@@ -180,7 +198,7 @@ function renderTraceBadge(highlight: SourceHighlight): string {
 	return `<span class="${classes}" data-trace-index="${highlight.traceIndex}"${sourceColumn} data-swc-tooltip="${escapeHtml(title)}" style="background-color: ${highlight.color}">${previous}<button type="button" data-activate-trace="${highlight.traceIndex}" aria-label="Focus trace entry ${highlight.traceIndex + 1}. ${escapeHtml(title)}">${highlight.traceIndex + 1}</button>${next}</span>`
 }
 
-function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], showTraceColumn: boolean, fileName: string): string {
+function renderSourceLine(text: string, lineNumber: number, highlights: SourceHighlight[], findingMarkers: SourceFindingNavigation[], showTraceColumn: boolean, fileName: string, activeFindingId?: string): string {
 	const traceBadges = highlights
 		.filter(highlight => highlight.region.startLine === lineNumber && highlight.traceIndex !== undefined)
 		.filter((highlight, index, lineHighlights) => lineHighlights.findIndex(candidate => candidate.traceIndex === highlight.traceIndex) === index)
@@ -190,11 +208,15 @@ function renderSourceLine(text: string, lineNumber: number, highlights: SourceHi
 			|| left.traceIndex - right.traceIndex)
 		.map(renderTraceBadge)
 		.join('')
-	const traceColumn = showTraceColumn ? `<span class="trace-column">${traceBadges}</span>` : ''
+	const findingBadges = findingMarkers
+		.filter(finding => finding.location.region?.startLine === lineNumber)
+		.map(finding => `<button type="button" class="finding-marker${finding.id === activeFindingId ? ' finding-marker-active' : ''}" data-finding-id="${escapeHtml(finding.id)}" data-swc-tooltip="${escapeHtml(finding.label)}" aria-label="Open finding: ${escapeHtml(finding.label)}"></button>`)
+		.join('')
+	const traceColumn = showTraceColumn ? `<span class="trace-column">${findingBadges}${traceBadges}</span>` : ''
 	return `<span class="source-line" data-line="${lineNumber}">${traceColumn}<span class="line-number" data-line="${lineNumber}"></span>${renderHighlightedText(text, lineNumber, highlights, fileName)}</span>`
 }
 
-function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView, trace?: SourceTraceSummary): string {
+function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView, trace?: SourceTraceSummary, findings: SourceFindingNavigation[] = [], activeFindingId?: string): string {
 	const activeFileIndex = Math.max(0, views.indexOf(activeView))
 	const activeHighlight = activeView.highlights.find(highlight => highlight.traceIndex === trace?.activeIndex)
 		?? activeView.highlights[0]
@@ -220,9 +242,18 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 		<summary>${trace.readableEntries} of ${trace.totalEntries} trace locations readable</summary>
 		<ol>${trace.missing.map(location => `<li data-trace-index="${location.traceIndex}">${location.traceIndex + 1}. ${escapeHtml(location.name)}</li>`).join('')}</ol>
 	</details>` : ''
+	const findingNavigation = findings.length ? `<label class="finding-navigation">Finding
+		<select data-finding-navigation aria-label="Finding in this file">${findings.map((finding, index) => {
+			const line = finding.location.region?.startLine
+			const selected = finding.id === activeFindingId ? ' selected' : ''
+			return `<option value="${escapeHtml(finding.id)}"${selected}>${index + 1}. ${escapeHtml(finding.label)}${line ? ` (line ${line})` : ''}</option>`
+		}).join('')}</select>
+	</label>` : ''
 	return `<div class="source-toolbar" data-active-line="${activeLine}"${activeColumn ? ` data-active-column="${activeColumn}"` : ''} data-file-count="${views.length}" data-trace-count="${trace?.totalEntries ?? 0}">
 		<div class="source-path" data-current-file>${escapeHtml(activeLocation)}</div>
 		<div class="source-toolbar-row">
+			${findings.length ? '<button type="button" data-source-back>&#x2190; Findings</button>' : ''}
+			${findingNavigation}
 			${traceNavigation}
 			<span class="source-actions">
 				<button type="button" data-copy="path">Copy path</button>
@@ -235,7 +266,7 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 	</div>`
 }
 
-function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefined, activeView: SourceFileView): void {
+function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefined, activeView: SourceFileView, findings: SourceFindingNavigation[], activeFindingId?: string, onNavigateFinding?: (finding: SourceFindingNavigation) => void): void {
 	const document = target.document
 	installTooltips(target)
 	const toolbar = document.querySelector('.source-toolbar') as HTMLElement
@@ -296,7 +327,7 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		if (position && trace) {
 			position.textContent = `Entry ${index + 1} of ${trace.totalEntries} · File ${+(section.getAttribute('data-file-index') ?? 0) + 1} of ${toolbar.getAttribute('data-file-count')}`
 		}
-		target.document.title = sourceDocumentTitle(fileName)
+		target.document.title = sourceDocumentTitle(fileName, findings.find(finding => finding.id === activeFindingId)?.label)
 		const navigablePosition = traceIndices.indexOf(index)
 		setButtonDisabled('previous', navigablePosition <= 0)
 		setButtonDisabled('next', navigablePosition < 0 || navigablePosition >= traceIndices.length - 1)
@@ -350,6 +381,18 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 
 	document.addEventListener('click', event => {
 		const element = event.target as HTMLElement | null
+		const findingId = element?.closest('[data-finding-id]')?.getAttribute('data-finding-id')
+		if (findingId) {
+			event.preventDefault()
+			const finding = findings.find(candidate => candidate.id === findingId)
+			if (finding) onNavigateFinding?.(finding)
+			return
+		}
+		if (element?.closest('[data-source-back]')) {
+			event.preventDefault()
+			target.opener?.focus?.()
+			return
+		}
 		const highlight = element?.closest('.trace-highlight') as HTMLElement | null
 		if (highlight) {
 			const rawIndices = highlight.getAttribute('data-location-trace-indices')
@@ -377,6 +420,11 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		if (action === 'previous') moveTrace(-1)
 		if (action === 'next') moveTrace(1)
 	})
+	const findingSelect = document.querySelector('[data-finding-navigation]') as HTMLSelectElement | null
+	if (findingSelect) findingSelect.onchange = () => {
+		const finding = findings.find(candidate => candidate.id === findingSelect.value)
+		if (finding) onNavigateFinding?.(finding)
+	}
 	document.querySelectorAll('[data-copy]').forEach(button => (button as HTMLElement).onclick = () => {
 		const status = document.querySelector('[data-copy-status]')
 		if (status) status.textContent = 'Copying...'
@@ -407,9 +455,9 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 	}
 }
 
-function renderSourceDocument(target: Window, views: SourceFileView[], activeKey: string, trace?: SourceTraceSummary): void {
+function renderSourceDocument(target: Window, views: SourceFileView[], activeKey: string, trace?: SourceTraceSummary, findings: SourceFindingNavigation[] = [], activeFindingId?: string, onNavigateFinding?: (finding: SourceFindingNavigation) => void): void {
 	const activeView = views.find(view => view.key === activeKey) ?? views[0]
-	const showTraceColumn = views.some(view => view.highlights.some(highlight => highlight.traceIndex !== undefined))
+	const showTraceColumn = views.some(view => view.highlights.some(highlight => highlight.traceIndex !== undefined) || view.findingMarkers.length)
 	const maxLines = Math.max(...views.map(view => sourceLines(view.sourceFile.text).length))
 	const lineNumberWidth = String(maxLines).length + 3
 	const maxTraceIndex = Math.max(0, ...views.flatMap(view => view.highlights.map(highlight => highlight.traceIndex ?? 0)))
@@ -426,8 +474,10 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 	const maxBadgesPerRow = 4
 	const badgesPerRow = Math.min(maxBadgesPerRow, maxBadgesOnLine)
 	const traceColumnWidth = Math.max(9, badgesPerRow * (traceIndexWidth + 3) + 1)
-	target.document.title = sourceDocumentTitle(activeView?.name)
+	const activeFinding = findings.find(finding => finding.id === activeFindingId)
+	target.document.title = sourceDocumentTitle(activeView?.name, activeFinding?.label)
 	const style = target.document.createElement('style')
+	style.setAttribute('data-source-style', '')
 	style.textContent = `
 		:root { color-scheme: light dark; }
 		body { background: #ffffff; color: #202020; font-family: "Segoe UI", "-apple-system", BlinkMacSystemFont, Roboto, "Helvetica Neue", Helvetica, Ubuntu, Arial, sans-serif; font-size: 14px; margin: 0; }
@@ -438,6 +488,8 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.source-toolbar button:disabled { cursor: default; opacity: .45; }
 		.source-path { font-weight: 400; margin-bottom: 6px; overflow-wrap: anywhere; }
 		.source-actions { display: inline-flex; gap: 4px; }
+		.finding-navigation { align-items: center; display: inline-flex; gap: 6px; }
+		.finding-navigation select { font: inherit; max-width: min(42vw, 44em); padding: 5px 7px; }
 		.copy-status { min-width: 4em; }
 		.trace-legend { align-items: center; display: inline-flex; gap: 4px; white-space: nowrap; }
 		.legend-swatch { border-radius: 2px; display: inline-block; height: 12px; width: 12px; }
@@ -501,6 +553,9 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-badge > .trace-next { left: calc(100% - 1px); }
 		.trace-badge a:hover { text-decoration: underline; }
 		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
+		.finding-marker { background: #767676; border: 0; border-radius: 1px; cursor: pointer; height: 1.35em; margin: 0 2px; padding: 0; width: 3px; }
+		.finding-marker:hover, .finding-marker:focus-visible { background: #005fb8; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #005fb8; }
+		.finding-marker-active { background: #005fb8; width: 5px; }
 		.trace-start { border-left: 4px solid #107c10; }
 		.trace-end { border-right: 4px solid #c50f1f; }
 		.trace-source { border-left: 4px solid #107c10; }
@@ -568,12 +623,13 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			.trace-highlight .hljs-meta { color: #654910; }
 		}
 	`
+	target.document.querySelectorAll('style[data-source-style]').forEach(element => element.remove())
 	target.document.head.appendChild(style)
-	target.document.body.innerHTML = renderSourceToolbar(views, activeView, trace) + views.map((view, fileIndex) => {
+	target.document.body.innerHTML = renderSourceToolbar(views, activeView, trace, findings, activeFindingId) + views.map((view, fileIndex) => {
 		const lines = sourceLines(view.sourceFile.text)
-		return `<section class="source-file" id="${view.id}" data-file-index="${fileIndex}" data-file-name="${escapeHtml(view.name)}"><pre>${lines.map((line, index) => renderSourceLine(line, index + 1, view.highlights, showTraceColumn, view.name)).join('')}</pre></section>`
+		return `<section class="source-file" id="${view.id}" data-file-index="${fileIndex}" data-file-name="${escapeHtml(view.name)}"><pre>${lines.map((line, index) => renderSourceLine(line, index + 1, view.highlights, view.findingMarkers, showTraceColumn, view.name, activeFindingId)).join('')}</pre></section>`
 	}).join('')
-	if (activeView) wireSourceDocument(target, trace, activeView)
+	if (activeView) wireSourceDocument(target, trace, activeView, findings, activeFindingId, onNavigateFinding)
 	const activeSection = activeView && target.document.getElementById(activeView.id)
 	const mark = activeSection?.querySelector('.trace-active-highlight') ?? activeSection?.querySelector('mark')
 	if (mark) setTimeout(() => mark.scrollIntoView?.({ block: 'center' }))
@@ -861,11 +917,20 @@ export async function openSourceFile(
 	reader: SourceFileReader | undefined,
 	trace?: SourceTrace,
 	formatPath?: SourcePathFormatter,
+	navigation?: SourceNavigation,
+	activeFindingId?: string,
+	existingTarget?: Window,
 ): Promise<void> {
+	const activeKey = sourceViewKey(artifactLocation) ?? 'active-source-file'
+	const findings = navigation?.byFile.get(activeKey) ?? []
+	const sourceWindowName = navigation
+		? `swc-source-${stableSha256(JSON.stringify([navigation.reportId, activeKey, findings.map(finding => finding.id).sort()]))}`
+		: '_blank'
 	// Open synchronously during the click event so popup blockers do not reject it after the async read.
-	const target = window.open('about:blank', '_blank')
+	const target = existingTarget ?? window.open('about:blank', sourceWindowName)
 	if (!target) return
-	target.opener = null
+	if (!navigation) target.opener = null
+	target.focus?.()
 	target.document.title = sourceDocumentTitle(artifactLocation.uri)
 	target.document.body.textContent = 'Loading source file...'
 
@@ -876,7 +941,6 @@ export async function openSourceFile(
 			return
 		}
 
-		const activeKey = sourceViewKey(artifactLocation) ?? 'active-source-file'
 		const resolvedTrace: ResolvedTraceLocation[] = trace?.locations.map((physicalLocation, traceIndex) => {
 			const resolvedArtifactLocation = getArtifactLocation(physicalLocation, run)
 			const step = trace.steps?.[traceIndex]
@@ -934,9 +998,15 @@ export async function openSourceFile(
 					let id = `source-file-${index + 1}`
 					for (let duplicate = 2; usedViewIds.has(id); duplicate++) id = `source-file-${index + 1}-${duplicate}`
 				usedViewIds.add(id)
-				return {id, key, name, sourceFile, highlights: []}
+				return {id, key, name, sourceFile, highlights: [], findingMarkers: []}
 			})
 		const viewsByKey = new Map(views.map(view => [view.key, view] as [string, SourceFileView]))
+		findings.forEach(finding => {
+			const findingArtifact = getArtifactLocation(finding.location, finding.run)
+			const findingKey = findingArtifact && sourceViewKey(findingArtifact)
+			const view = findingKey && viewsByKey.get(findingKey)
+			if (view?.sourceFile && finding.location.region?.startLine) view.findingMarkers.push(finding)
+		})
 		const adjacentEntry = (traceIndex: number, direction: -1 | 1): SourceNavigationTarget | undefined => {
 			for (let index = traceIndex + direction; index >= 0 && index < resolvedTrace.length; index += direction) {
 				const location = resolvedTrace[index]
@@ -1008,7 +1078,22 @@ export async function openSourceFile(
 						: 'No source location',
 				})),
 		}
-		renderSourceDocument(target, views, activeKey, traceSummary)
+		const navigateFinding = (finding: SourceFindingNavigation) => {
+			const findingArtifact = getArtifactLocation(finding.location, finding.run)
+			if (!findingArtifact) return
+			void openSourceFile(
+				findingArtifact,
+				finding.run,
+				finding.location.region,
+				reader,
+				finding.trace,
+				formatPath,
+				navigation,
+				finding.id,
+				target,
+			)
+		}
+		renderSourceDocument(target, views, activeKey, traceSummary, findings, activeFindingId, navigateFinding)
 	} catch (error) {
 		target.document.body.textContent = `Unable to open source file: ${error instanceof Error ? error.message : String(error)}`
 	}
