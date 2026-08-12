@@ -71,7 +71,8 @@
 	"files": [
 		"dist/components",
 		"dist/index.js",
-		"dist/index.mjs"
+		"dist/index.mjs",
+		"schema/*.json"
 	],
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",

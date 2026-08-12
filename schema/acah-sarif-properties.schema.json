@@ -1,0 +1,730 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://secusolutions.local/acah/schema/acah-sarif-properties.schema.json",
+  "title": "ACAH SARIF property-bag extensions",
+  "description": "Authoritative ACAH format-v4 contract for custom data stored in SARIF property bags. Use properties.acah at run, rule, result, and thread-flow-location level; older ACAH formats are not supported.",
+  "type": "object",
+  "required": ["acah"],
+  "properties": {
+    "acah": {
+      "description": "ACAH-owned extension. Its shape depends on the SARIF object containing this property bag.",
+      "anyOf": [
+        {"$ref": "#/$defs/runExtension"},
+        {"$ref": "#/$defs/ruleExtension"},
+        {"$ref": "#/$defs/resultExtension"},
+        {"$ref": "#/$defs/traceStepExtension"}
+      ]
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "runPropertyBag": {
+      "description": "Schema reference for run.properties.",
+      "type": "object",
+      "required": ["acah"],
+      "properties": {"acah": {"$ref": "#/$defs/runExtension"}},
+      "additionalProperties": true
+    },
+    "rulePropertyBag": {
+      "description": "Schema reference for reportingDescriptor.properties.",
+      "type": "object",
+      "required": ["acah"],
+      "properties": {"acah": {"$ref": "#/$defs/ruleExtension"}},
+      "additionalProperties": true
+    },
+    "resultPropertyBag": {
+      "description": "Schema reference for result.properties.",
+      "type": "object",
+      "required": ["acah"],
+      "properties": {"acah": {"$ref": "#/$defs/resultExtension"}},
+      "additionalProperties": true
+    },
+    "traceStepPropertyBag": {
+      "description": "Schema reference for threadFlowLocation.properties.",
+      "type": "object",
+      "required": ["acah"],
+      "properties": {"acah": {"$ref": "#/$defs/traceStepExtension"}},
+      "additionalProperties": true
+    },
+    "runExtension": {
+      "description": "Run-wide ACAH provenance, coverage, cache, and filtering diagnostics. Viewers normally show this as report metadata rather than as finding columns.",
+      "type": "object",
+      "required": ["formatVersion"],
+      "properties": {
+        "formatVersion": {
+          "const": 4,
+          "description": "ACAH extension contract version. Version 4 introduces producer-independent canonical claims and four application verdicts; older formats are not supported."
+        },
+        "engine": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional native evidence producer identifier for a run contributed by a language analyzer."
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target path recorded by a contributing analyzer. Display only as provenance; artifact URIs remain authoritative finding locations."
+        },
+        "report": {
+          "$ref": "#/$defs/reportIdentity",
+          "description": "Stable output-report identity and user-facing title."
+        },
+        "section": {
+          "$ref": "#/$defs/reportSection",
+          "description": "Stable section identity used to group runs in unified or split reports."
+        },
+        "producer": {
+          "$ref": "#/$defs/producerIdentity",
+          "description": "Stable identity of the analysis producer or rule source represented by this run."
+        },
+        "runTitle": {
+          "type": "string",
+          "minLength": 1,
+          "description": "User-facing run title combining the stable section and producer titles."
+        },
+        "nativeAnalysis": {
+          "$ref": "#/$defs/nativeAnalysis",
+          "description": "Per-language native analyzer coverage and outcome. Use this to expose analysis gaps; never infer that no findings means analysis succeeded."
+        },
+        "dependencyAnalysis": {
+          "$ref": "#/$defs/dependencyAnalysis",
+          "description": "OSV dependency-scan coverage and reachability disclaimer for the dependency report."
+        },
+        "publicRuleAnalysis": {
+          "$ref": "#/$defs/publicRuleAnalysis",
+          "description": "Registry-pack inputs and verification status for public Semgrep findings."
+        },
+        "semgrepCache": {
+          "$ref": "#/$defs/semgrepCache",
+          "description": "Whether raw Semgrep evidence was scanned or reused. This is provenance, not finding confidence."
+        },
+        "registryRuleCache": {
+          "$ref": "#/$defs/registryRuleCache",
+          "description": "How Semgrep registry packs were resolved and whether cached rule snapshots were fresh, refreshed, stale, or bypassed."
+        },
+        "scanConfiguration": {
+          "$ref": "#/$defs/scanConfiguration",
+          "description": "Explicit scan scope that affects target and rule selection. Display path exclusions prominently when explaining coverage."
+        },
+        "workspaceDiagnostics": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Human-readable analyzer coverage/build diagnostics. Current combined reports retain this detailed list only on the primary run; show it once in a report-level diagnostics panel."
+        },
+        "testSourcePartition": {
+          "$ref": "#/$defs/testSourcePartition",
+          "description": "Counts and origin for findings moved between production and test-source reports."
+        },
+        "filteredStaleConstruction": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Construction matches removed because the apparent flow propagated through the sink receiver rather than the sensitive value."
+        },
+        "filteredParameterizedSqlFindings": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Risk matches removed after native evidence proved use of a parameterized SQL API boundary."
+        },
+        "filteredTypedSinkMismatches": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Risk matches removed after native type resolution disproved the expected sink family."
+        },
+        "filteredReclassifiedInventoryDuplicates": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Inventory matches removed because a more accurately typed sink record covers the same operation."
+        },
+        "filteredProcessStartInfoOverlaps": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Generic process-executable or construction matches removed because typed ProcessStartInfo configuration and execution records preserve the correct field roles. Argument-only web flow is not promoted to executable taint."
+        },
+        "filteredRedundantWrapperCandidates": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Wrapper findings removed because a deeper proven flow already contains the same handoff."
+        },
+        "filteredRedundantReviewCandidates": {
+          "$ref": "#/$defs/filteredFindings",
+          "description": "Construction-only review findings removed because an exact-location public Pro taint flow proves the same vulnerability family."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ruleExtension": {
+      "description": "Rule-level default semantics. Result-level ACAH data is authoritative when both are present.",
+      "type": "object",
+      "required": ["classification", "resolution"],
+      "properties": {
+        "classification": {"$ref": "#/$defs/classification"},
+        "status": {"$ref": "#/$defs/status"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "sinkFamily": {"$ref": "#/$defs/sinkFamily"},
+        "effect": {"$ref": "#/$defs/effect"},
+        "construction": {"$ref": "#/$defs/construction"},
+        "resolution": {"$ref": "#/$defs/resolution"},
+        "verification": {"$ref": "#/$defs/verification"},
+        "reachability": {"$ref": "#/$defs/reachability"},
+        "category": {"type": ["string", "null"], "description": "Original Semgrep category retained for filtering public rules."},
+        "subcategory": {"$ref": "#/$defs/stringArray", "description": "Original Semgrep subcategories retained for filtering public rules."},
+        "technology": {"$ref": "#/$defs/stringArray", "description": "Framework/language tags supplied by the rule author."},
+        "cwe": {"$ref": "#/$defs/stringArray", "description": "CWE identifiers supplied by the rule author; not proof of exploitability."},
+        "owasp": {"$ref": "#/$defs/stringArray", "description": "OWASP category tags supplied by the rule author."},
+        "likelihood": {"type": ["string", "null"], "description": "Original public-rule likelihood label."},
+        "impact": {"type": ["string", "null"], "description": "Original public-rule impact label."}
+      },
+      "additionalProperties": false
+    },
+    "resultExtension": {
+      "description": "Finding classification and native evidence used for prioritization. Canonical application findings also carry claim and detectedBy; status is their authoritative verdict. Viewers should primarily show status, claim reason, detector provenance, sinkFamily, trace, source/origin, and resolution; deeper evidence belongs in an expandable details view.",
+      "type": "object",
+      "required": ["classification", "status", "resolution"],
+      "properties": {
+        "classification": {"$ref": "#/$defs/classification"},
+        "originalClassification": {"type": "string", "minLength": 1, "description": "Classification before native promotion, downgrade, or disproof. Use for audit history, not current severity."},
+        "status": {"$ref": "#/$defs/status"},
+        "claim": {"$ref": "#/$defs/canonicalClaim", "description": "Canonical security claim represented by this result. Required on final application findings after canonicalization; absent on inventory, dependency, and test-only records that do not represent a canonical application claim."},
+        "detectedBy": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/detectorObservation"}, "description": "Every analyzer or rule observation consolidated into this canonical claim. Producer and rule identity are provenance only and never determine the claim verdict."},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "sinkFamily": {"$ref": "#/$defs/sinkFamily"},
+        "effect": {"$ref": "#/$defs/effect"},
+        "construction": {"$ref": "#/$defs/construction"},
+        "resolution": {"$ref": "#/$defs/resolution"},
+        "verification": {"$ref": "#/$defs/verification"},
+        "semgrepLevel": {"type": "string", "description": "Original Semgrep SARIF level preserved when ACAH changes the displayed level."},
+        "valueOrigin": {"$ref": "#/$defs/valueOrigin"},
+        "valuePreview": {"type": ["string", "null"], "description": "Optional bounded value preview from native analysis. Treat as potentially sensitive source data."},
+        "nativeResolution": {"type": ["string", "null"], "description": "Native analyzer mechanism that classified the value."},
+        "nativeReason": {"type": ["string", "null"], "description": "Human-readable explanation for the native value classification."},
+        "sanitizerEvidence": {"type": "array", "items": {"$ref": "#/$defs/sanitizerEvidence"}, "description": "Exact configured sanitizer proofs that directly supplied sensitive sink values."},
+        "summaryEvidence": {"type": "array", "items": {"$ref": "#/$defs/summaryEvidence"}, "description": "Exact configured opaque-boundary sink declarations matched by native analysis."},
+        "nativeVerification": {"type": ["string", "null"], "description": "Public-rule adapter outcome such as confirmed, reviewed-construction, constant, validated, disproved, or review."},
+        "native": {"$ref": "#/$defs/officialNativeEvidence"},
+        "metadataClassification": {"type": ["string", "null"], "description": "Classification derived only from public-rule metadata before native verification."},
+        "reachability": {"$ref": "#/$defs/reachability"},
+        "duplicateOccurrences": {"type": "integer", "minimum": 1, "description": "Number of deep-equal dependency result rows removed while retaining this representative result. Absent when no duplicate was removed."},
+        "scope": {"enum": ["production", "test"], "description": "Source scope. test means the finding was confidently assigned to the separate test-source report."},
+        "testSource": {"$ref": "#/$defs/testSource"},
+        "section": {"$ref": "#/$defs/reportSection", "description": "Section inherited from the containing report run; use this when results are indexed without run context."},
+        "trace": {"$ref": "#/$defs/trace"},
+        "source": {"$ref": "#/$defs/sourceEvidence"},
+        "origin": {"$ref": "#/$defs/originEvidence"},
+        "sink": {"$ref": "#/$defs/sinkEvidence"},
+        "supportingConstruction": {"type": "array", "items": {"$ref": "#/$defs/supportingConstruction"}, "description": "Lower-priority construction evidence folded into a stronger source-to-sink result or a dominant same-sink construction variant."},
+        "confirmedWrapperHandoffs": {"type": "array", "items": {"$ref": "#/$defs/wrapperHandoff"}, "description": "Confirmed wrapper evidence correlated with a deeper raw-sink flow and suppressed as a duplicate."},
+        "category": {"type": ["string", "null"], "description": "Original Semgrep category for public-rule review."},
+        "subcategory": {"$ref": "#/$defs/stringArray", "description": "Original Semgrep subcategories."},
+        "technology": {"$ref": "#/$defs/stringArray", "description": "Technology tags from the originating rule."},
+        "cwe": {"$ref": "#/$defs/stringArray", "description": "CWE tags from the originating rule."},
+        "owasp": {"$ref": "#/$defs/stringArray", "description": "OWASP tags from the originating rule."},
+        "likelihood": {"type": ["string", "null"], "description": "Original public-rule likelihood label."},
+        "impact": {"type": ["string", "null"], "description": "Original public-rule impact label."}
+      },
+      "additionalProperties": false
+    },
+    "traceStepExtension": {
+      "description": "Semantic role for a SARIF thread-flow location. Viewers should use this to color and label source, propagation, boundary, and sink steps.",
+      "type": "object",
+      "required": ["role"],
+      "properties": {
+        "role": {"enum": ["source", "propagation", "sink", "boundary"], "description": "Meaning of this trace step."},
+        "symbol": {"type": "string", "minLength": 1, "description": "Exact identifier represented by the step when the producer can resolve it. The SARIF region and state should select the same symbol."},
+        "resolution": {"type": "string", "minLength": 1, "description": "Analyzer or model that assigned the role/symbol."
+        }
+      },
+      "additionalProperties": false
+    },
+    "reportIdentity": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "description": "Stable machine-readable report identity. Use for report-level filtering."},
+        "title": {"type": "string", "minLength": 1, "description": "User-facing report title. Use for the report heading."}
+      },
+      "additionalProperties": false
+    },
+    "reportSection": {
+      "type": "object",
+      "required": ["id", "title", "order"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "description": "Stable machine-readable section identity. Use for section filtering and persistence."},
+        "title": {"type": "string", "minLength": 1, "description": "User-facing section title. Use for run and group headings."},
+        "order": {"type": "integer", "minimum": 0, "description": "Ascending display order for sections within a report."}
+      },
+      "additionalProperties": false
+    },
+    "producerIdentity": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "description": "Stable machine-readable producer identity."},
+        "title": {"type": "string", "minLength": 1, "description": "Short user-facing producer title appended to the section heading."}
+      },
+      "additionalProperties": false
+    },
+    "classification": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ACAH queue category. Proven flows use taint-high-confidence or security-high-confidence; unresolved flows use taint-unverified/taint-candidate; inventories and public/official adapter classifications retain their explicit names."
+    },
+    "status": {
+      "enum": ["proven", "plausible", "unknown", "disproven", "review", "inventory", "cleared", "disproved", "unresolved", "dependency-present"],
+      "description": "Current ACAH disposition. Canonical application claims use proven, plausible, unknown, or disproven. Other values are accepted only on noncanonical analyzer evidence, inventory, or dependency results."
+    },
+    "canonicalClaim": {
+      "type": "object",
+      "required": ["id", "vulnerabilityClass", "reason"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Stable producer-independent SHA-256 claim identity. Final SARIF repeats this value as partialFingerprints acahClaim/v1."},
+        "vulnerabilityClass": {"type": "string", "minLength": 1, "description": "Normalized security claim family used for canonical rule identity and equivalence, such as sql-injection or cross-site-scripting."},
+        "reason": {"type": "string", "minLength": 1, "description": "Concise explanation for the current status verdict. Display beside or immediately below the verdict."},
+        "validationConflict": {"type": "boolean", "description": "True only when applicable validators produced contradictory conclusions. Conflicted claims use plausible status."}
+      },
+      "additionalProperties": false
+    },
+    "detectorObservation": {
+      "type": "object",
+      "required": ["id", "producer", "ruleId", "originalFingerprint", "classification", "message", "codeFlowIndices"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "description": "Stable identifier for this detector observation within the canonical claim."},
+        "producer": {"$ref": "#/$defs/producerIdentity", "description": "Analyzer or rule-source identity that emitted the original result."},
+        "ruleId": {"type": "string", "minLength": 1, "description": "Original detector rule identifier."},
+        "originalFingerprint": {"type": "string", "minLength": 1, "description": "Best original result fingerprint before canonicalization."},
+        "classification": {"type": "string", "minLength": 1, "description": "Original ACAH or detector classification retained for provenance and rule-quality analysis."},
+        "confidence": {"type": ["string", "null"], "description": "Original detector confidence when supplied."},
+        "message": {"type": "string", "minLength": 1, "description": "Original detector result message."},
+        "codeFlowIndices": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true, "description": "Zero-based indices into the canonical result codeFlows that preserve this observation's distinct trace evidence."}
+      },
+      "additionalProperties": false
+    },
+    "confidence": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Producer confidence label, normally HIGH, MEDIUM, LOW, UNSPECIFIED, or UNVERIFIED. Use status and SARIF level/kind as the primary queue controls."
+    },
+    "sinkFamily": {"type": "string", "minLength": 1, "description": "Normalized operation family such as SQL, filesystem, process execution, SSRF, deserialization, or cryptography."},
+    "effect": {
+      "type": "object",
+      "required": ["status", "kind", "reason"],
+      "properties": {
+        "status": {"enum": ["unresolved", "modeled", "confirmed"], "description": "Whether the eventual security-sensitive effect is unresolved, matched by a static model, or confirmed by native endpoint resolution."},
+        "kind": {"type": "string", "minLength": 1, "description": "Expected or resolved effect family, such as sql-execution or raw-html-output."},
+        "reason": {"type": "string", "minLength": 1, "description": "Why ACAH assigned the effect status."}
+      },
+      "additionalProperties": false
+    },
+    "construction": {"type": "string", "minLength": 1, "description": "How the sensitive value was built, for example untrusted-input, concatenated, interpolated, observable-result, or unresolved."},
+    "resolution": {"type": "string", "minLength": 1, "description": "Model/analyzer decision that produced the current classification. This is concise provenance, not a user-facing explanation by itself."},
+    "verification": {"type": "string", "minLength": 1, "description": "Whether a public finding was independently verified. unverified must never be displayed as proven."},
+    "reachability": {"type": "string", "minLength": 1, "description": "Call/dependency reachability state. unverified or not established means presence only."},
+    "valueOrigin": {
+      "enum": ["constant-only", "generated-only", "trusted-only", "constrained-only", "dynamic", "tainted", "unresolved"],
+      "description": "Native classification of the value reaching the operation. Constant/generated/trusted/constrained values can clear construction noise; constrained means a conversion limits the output alphabet but does not prove authorization. Dynamic does not imply attacker control."
+    },
+    "trace": {
+      "type": "object",
+      "required": ["status", "scope", "reason"],
+      "properties": {
+        "status": {"enum": ["complete", "partial"], "description": "complete means all endpoints required by ACAH's bounded model are represented; it is not runtime exploit proof."},
+        "scope": {"enum": ["construction-to-sink", "modeled-source-to-construction", "modeled-source-to-sink"], "description": "Whether the code flow ends at unresolved dangerous construction or at a modeled security-sensitive effect, and whether it begins at construction or at a recognized untrusted/modelled source."},
+        "reason": {"type": "string", "minLength": 1, "description": "Human-readable explanation of why the trace is complete or partial."}
+      },
+      "additionalProperties": false
+    },
+    "location": {
+      "type": ["object", "null"],
+      "properties": {
+        "path": {"type": "string", "description": "Artifact path or URI as recorded by the analyzer."},
+        "line": {"type": "integer", "minimum": 1, "description": "One-based start line."},
+        "column": {"type": "integer", "minimum": 1, "description": "One-based start column."},
+        "endLine": {"type": "integer", "minimum": 1, "description": "One-based inclusive source line containing the exclusive end column."},
+        "endColumn": {"type": "integer", "minimum": 1, "description": "One-based exclusive end column used to highlight the exact symbol/expression."},
+        "logicalName": {"type": "string", "minLength": 1, "description": "Semantic fully qualified name of the containing callable, when resolved by a native analyzer."}
+      },
+      "additionalProperties": false
+    },
+    "originEvidence": {
+      "type": ["object", "null"],
+      "description": "Earliest boundary ACAH can prove when no recognized untrusted caller source is available. An unresolved method parameter is a review boundary, not taint proof.",
+      "properties": {
+        "kind": {"type": "string", "description": "Boundary kind, usually method-parameter."},
+        "name": {"type": "string", "description": "Source-level identifier to highlight."},
+        "symbol": {"type": "string", "description": "Fully qualified semantic symbol when resolved."},
+        "trust": {"type": "string", "description": "Trust conclusion; unresolved means the caller was not established."},
+        "resolution": {"type": "string", "description": "Native mechanism that found the boundary."},
+        "reason": {"type": ["string", "null"], "description": "Human-readable boundary explanation."},
+        "location": {"$ref": "#/$defs/location"}
+      },
+      "additionalProperties": false
+    },
+    "sourceEvidence": {
+      "type": ["object", "null"],
+      "description": "Native evidence for a recognized framework input endpoint.",
+      "properties": {
+        "classification": {"type": "string", "description": "Source family, such as ASP.NET request input or servlet binding."},
+        "symbol": {"type": ["string", "null"], "description": "Resolved source method/property/parameter symbol."},
+        "receiverType": {"type": ["string", "null"], "description": "Resolved receiver type for a source method/property."},
+        "valueType": {"type": ["string", "null"], "description": "Resolved type of the value leaving the source."},
+        "operationKind": {"type": ["string", "null"], "description": "Source syntax/semantic operation, such as parameter-reference or method-invocation."},
+        "resolution": {"type": ["string", "null"], "description": "Native source-resolution mechanism."},
+        "reason": {"type": ["string", "null"], "description": "Human-readable source explanation."},
+        "binding": {"$ref": "#/$defs/sourceBinding"},
+        "handoff": {"$ref": "#/$defs/commandHandoff"},
+        "location": {"$ref": "#/$defs/location"}
+      },
+      "additionalProperties": false
+    },
+    "sourceBinding": {
+      "type": ["object", "null"],
+      "description": "Framework binding annotation/attribute that corroborates an endpoint parameter as input.",
+      "properties": {
+        "kind": {"type": "string", "description": "Binding mechanism category."},
+        "attribute": {"type": ["string", "null"], "description": "Resolved annotation/attribute name."},
+        "resolution": {"type": "string", "description": "Semantic resolution mechanism."},
+        "reason": {"type": ["string", "null"], "description": "Binding explanation."}
+      },
+      "additionalProperties": false
+    },
+    "commandHandoff": {
+      "type": ["object", "null"],
+      "description": "Bounded native trace through a command/dispatcher/handler pattern.",
+      "properties": {
+        "kind": {"type": "string", "description": "Handoff model kind."},
+        "status": {"type": "string", "description": "confirmed or unresolved handoff state."},
+        "resolution": {"type": "string", "description": "Native handoff resolver."},
+        "reason": {"type": "string", "description": "Why the handoff was confirmed or left unresolved."},
+        "commandType": {"type": "string", "description": "Resolved command/message type."},
+        "commandProperty": {"type": "string", "description": "Command property carrying the value."},
+        "handlerType": {"type": "string", "description": "Resolved handler type."},
+        "handlerMethod": {"type": "string", "description": "Resolved handler method."},
+        "dispatchSymbol": {"type": "string", "description": "Resolved dispatcher send/publish symbol."},
+        "serviceSymbol": {"type": ["string", "null"], "description": "Optional concrete service method reached from the handler."},
+        "serviceParameter": {"type": ["string", "null"], "description": "Optional service parameter carrying the value."},
+        "commandCreation": {"$ref": "#/$defs/location"},
+        "dispatchCall": {"$ref": "#/$defs/location"},
+        "serviceCall": {"$ref": "#/$defs/location"},
+        "sinkUse": {"$ref": "#/$defs/location"}
+      },
+      "additionalProperties": false
+    },
+    "sinkEvidence": {
+      "type": ["object", "null"],
+      "description": "Native semantic evidence for the security-sensitive operation and each sensitive argument.",
+      "properties": {
+        "symbol": {"type": ["string", "null"], "description": "Resolved canonical sink symbol."},
+        "receiverType": {"type": ["string", "null"], "description": "Resolved receiver/declaring type."},
+        "overload": {"type": ["string", "null"], "description": "Resolved overload/signature."},
+        "sensitiveArgument": {"type": ["integer", "null"], "minimum": 0, "description": "Zero-based first sensitive argument retained for early consumers."},
+        "sensitiveParameter": {"type": ["string", "null"], "description": "Parameter corresponding to sensitiveArgument."},
+        "arguments": {"type": "array", "items": {"$ref": "#/$defs/sinkArgument"}, "description": "All security-sensitive arguments, including independent value-origin evidence."},
+        "execution": {"$ref": "#/$defs/relatedOperation"},
+        "objectUse": {"$ref": "#/$defs/relatedOperation"},
+        "objectUses": {
+          "type": "array",
+          "description": "All locally linked downstream effects on the selected object or resource, ordered by impact.",
+          "items": {"$ref": "#/$defs/relatedOperation"}
+        },
+        "selection": {"$ref": "#/$defs/sinkSelection"},
+        "parameterization": {"$ref": "#/$defs/sinkParameterization"},
+        "operationKind": {"type": "string", "description": "Invocation, object creation, assignment, or unresolved syntax kind."},
+        "resolution": {"type": ["string", "null"], "description": "Native sink-resolution mechanism."},
+        "reason": {"type": ["string", "null"], "description": "Human-readable sink explanation."}
+      },
+      "additionalProperties": false
+    },
+    "sinkArgument": {
+      "type": "object",
+      "description": "Evidence for one matched sensitive value.",
+      "properties": {
+        "metavar": {"type": "string", "description": "Semgrep metavariable that selected the value."},
+        "ordinal": {"type": ["integer", "null"], "minimum": 0, "description": "Resolved zero-based argument ordinal."},
+        "parameter": {"type": ["string", "null"], "description": "Resolved parameter name."},
+        "valueOrigin": {"$ref": "#/$defs/valueOrigin"},
+        "valueReason": {"type": "string", "description": "Why the argument received its value-origin classification."},
+        "valuePreview": {"type": ["string", "null"], "description": "Optional bounded preview; may contain sensitive source text."},
+        "resolution": {"type": "string", "description": "Analyzer mechanism used for argument mapping."},
+        "reason": {"type": ["string", "null"], "description": "Additional argument-resolution detail."}
+      },
+      "additionalProperties": false
+    },
+    "relatedOperation": {
+      "type": ["object", "null"],
+      "description": "A later execution/object operation linked conservatively within the same local semantic scope.",
+      "properties": {
+        "symbol": {"type": ["string", "null"], "description": "Resolved operation symbol."},
+        "receiverType": {"type": ["string", "null"], "description": "Resolved receiver type."},
+        "overload": {"type": ["string", "null"], "description": "Resolved overload/signature."},
+        "operationKind": {"type": "string", "description": "Invocation or unresolved operation kind."},
+        "resolution": {"type": "string", "description": "Linking mechanism, often same-block symbol analysis."},
+        "reason": {"type": ["string", "null"], "description": "Why the operation was or was not linked."},
+        "location": {"$ref": "#/$defs/location"}
+      },
+      "additionalProperties": false
+    },
+    "sinkSelection": {
+      "type": ["object", "null"],
+      "description": "Native check that the textual match is owned by the expected API/framework family.",
+      "properties": {
+        "expectedFamily": {"type": "string", "description": "Sink family expected by the Semgrep rule."},
+        "actualFamily": {"type": ["string", "null"], "description": "Family established from resolved types/symbols."},
+        "status": {"enum": ["confirmed", "disproved", "reclassified", "unresolved"], "description": "Typed ownership outcome."},
+        "resolution": {"type": "string", "description": "Semantic analyzer mechanism."},
+        "reason": {"type": "string", "description": "Human-readable ownership explanation."},
+        "traceSteps": {"type": "array", "items": {"$ref": "#/$defs/sinkTraceStep"}, "description": "Native wrapper steps used to extend an otherwise truncated code flow."}
+      },
+      "additionalProperties": false
+    },
+    "sinkTraceStep": {
+      "type": "object",
+      "properties": {
+        "kind": {"enum": ["wrapper-call", "resolved-sink"], "description": "Whether the step crosses another wrapper or reaches the concrete sink."},
+        "symbol": {"type": "string", "description": "Resolved method/function symbol."},
+        "location": {"$ref": "#/$defs/location"}
+      },
+      "additionalProperties": false
+    },
+    "sinkParameterization": {
+      "type": ["object", "null"],
+      "description": "Native proof about whether a SQL API binds values separately from command text.",
+      "properties": {
+        "status": {"enum": ["parameterized", "raw-text", "unresolved"], "description": "Parameterized clears the SQL construction risk; raw-text does not prove taint."},
+        "resolution": {"type": "string", "description": "Analyzer mechanism."},
+        "reason": {"type": "string", "description": "Human-readable parameterization explanation."}
+      },
+      "additionalProperties": false
+    },
+    "supportingConstruction": {
+      "type": "object",
+      "properties": {
+        "ruleId": {"type": "string", "description": "Suppressed construction rule identifier."},
+        "construction": {"type": ["string", "null"], "description": "Construction kind contributed by the suppressed result."},
+        "confidence": {"type": ["string", "null"], "description": "Confidence of the supporting result."},
+        "resolution": {"type": ["string", "null"], "description": "How the supporting result was resolved."},
+        "valueOrigin": {"type": ["string", "null"], "description": "Native value origin from the supporting result."},
+        "nativeReason": {"type": ["string", "null"], "description": "Native explanation from the supporting result."}
+      },
+      "additionalProperties": false
+    },
+    "officialNativeEvidence": {
+      "type": ["object", "null"],
+      "description": "Native evidence retained by the optional official/public-rule adapter. Prefer the result's top-level source and sink fields in the primary ACAH workflow.",
+      "properties": {
+        "valueOrigin": {"$ref": "#/$defs/valueOrigin"},
+        "resolution": {"type": "string", "description": "Native adapter resolution mechanism."},
+        "reason": {"type": "string", "description": "Native adapter explanation."},
+        "sanitizerEvidence": {"type": "array", "items": {"$ref": "#/$defs/sanitizerEvidence"}, "description": "Exact configured sanitizer proofs retained from native analysis."},
+        "summaryEvidence": {"type": "array", "items": {"$ref": "#/$defs/summaryEvidence"}, "description": "Exact configured opaque-boundary sink declarations retained from native analysis."},
+        "sink": {"$ref": "#/$defs/sinkEvidence"},
+        "source": {"$ref": "#/$defs/sourceEvidence"}
+      },
+      "additionalProperties": false
+    },
+    "sanitizerEvidence": {
+      "type": "object",
+      "required": ["id", "language", "guarantee", "symbol", "resolution", "configurationSha256"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "User-assigned sanitizer identifier."},
+        "language": {"enum": ["csharp", "go", "java", "php"], "description": "Language frontend that proved the configured match."},
+        "guarantee": {"const": "path-contained", "description": "Narrow security property asserted by this sanitizer declaration."},
+        "symbol": {"type": "string", "minLength": 1, "description": "Exact semantic method symbol selected by the native frontend."},
+        "resolution": {"enum": ["roslyn-exact-symbol-direct", "roslyn-exact-symbol-stable-local", "go-types-exact-function-direct", "go-types-exact-function-stable-local", "javac-exact-symbol-direct", "javac-exact-symbol-stable-local", "php-tokenizer-exact-function-direct", "php-tokenizer-exact-function-stable-local"], "description": "Conservative native data-use pattern that preserved the sanitizer guarantee."},
+        "configurationSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 digest of the sanitizer configuration used for this proof."}
+      },
+      "additionalProperties": false
+    },
+    "summaryEvidence": {
+      "type": "object",
+      "required": ["id", "language", "effect", "symbol", "sensitiveParameter", "resolution", "configurationSha256"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$", "description": "User-assigned summary identifier."},
+        "language": {"enum": ["csharp", "go", "java", "php"], "description": "Language frontend that matched the declaration."},
+        "effect": {"const": "project-sql-wrapper-sink", "description": "Narrow opaque effect declared by this summary."},
+        "symbol": {"type": "string", "minLength": 1, "description": "Exact semantic method symbol selected by the native frontend."},
+        "sensitiveParameter": {"type": "integer", "minimum": 0, "description": "Zero-based parameter declared as the sensitive sink value."},
+        "resolution": {"enum": ["roslyn-configured-sink-summary", "go-configured-sink-summary", "javac-configured-sink-summary", "php-configured-sink-summary"], "description": "Native matching mechanism."},
+        "configurationSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 digest of the summary configuration used for this match."}
+      },
+      "additionalProperties": false
+    },
+    "wrapperHandoff": {
+      "type": "object",
+      "description": "A confirmed wrapper result retained as supporting evidence on a deeper source-to-sink result.",
+      "properties": {
+        "ruleId": {"type": "string", "description": "Wrapper rule identifier."},
+        "path": {"type": "string", "description": "Wrapper finding artifact path."},
+        "line": {"type": "integer", "minimum": 1, "description": "Wrapper finding start line."},
+        "sink": {"$ref": "#/$defs/sinkEvidence"},
+        "source": {"$ref": "#/$defs/sourceEvidence"},
+        "supportingConstruction": {"type": ["array", "null"], "items": {"$ref": "#/$defs/supportingConstruction"}, "description": "Construction evidence originally attached to the wrapper result."}
+      },
+      "additionalProperties": false
+    },
+    "testSource": {
+      "type": "object",
+      "required": ["confidence", "language", "reasons"],
+      "properties": {
+        "confidence": {"const": "high", "description": "Only high-confidence test detection is partitioned."},
+        "language": {"type": "string", "description": "Language whose test-layout conventions were applied."},
+        "reasons": {"type": "array", "items": {"type": "string"}, "description": "Concrete path/project/attribute evidence for test classification."}
+      },
+      "additionalProperties": false
+    },
+    "nativeAnalysis": {
+      "type": "object",
+      "properties": {
+        "csharp": {"$ref": "#/$defs/languageAnalysis"},
+        "go": {"$ref": "#/$defs/languageAnalysis"},
+        "java": {"$ref": "#/$defs/languageAnalysis"},
+        "php": {"$ref": "#/$defs/languageAnalysis"}
+      },
+      "additionalProperties": false
+    },
+    "languageAnalysis": {
+      "type": "object",
+      "properties": {
+        "mode": {"enum": ["auto", "off", "required"], "description": "Requested analyzer policy."},
+        "inputDetected": {"type": "boolean", "description": "Whether matching source/project input existed."},
+        "succeeded": {"type": "boolean", "description": "Whether native evidence generation completed."},
+        "status": {"enum": ["succeeded", "failed", "disabled", "unavailable", "no-input", "partial"], "description": "Coverage outcome shown to the auditor."},
+        "workspaceDiagnostics": {"type": "array", "items": {"type": "string"}, "description": "Optional language-specific build/load diagnostics retained by raw analyzer evidence. Final reports keep compact language status here and place detailed diagnostics once on the primary run."},
+        "version": {"type": ["string", "null"], "description": "Optional analyzer/compiler version."}
+      },
+      "additionalProperties": false
+    },
+    "dependencyAnalysis": {
+      "type": "object",
+      "properties": {
+        "engine": {"type": "string", "description": "Dependency scanner, currently osv-scanner."},
+        "status": {"enum": ["succeeded", "failed", "disabled", "unavailable"], "description": "Dependency coverage outcome."},
+        "coverage": {"type": "string", "description": "Manifest/lockfile coverage statement."},
+        "reachability": {"type": "string", "description": "Explicit statement that vulnerable call reachability was or was not established."},
+        "duplicateResultsRemoved": {"type": "integer", "minimum": 0, "description": "Count of deep-equal OSV result rows removed from this run. Results that differ in any evidence field remain separate."}
+      },
+      "additionalProperties": false
+    },
+    "publicRuleAnalysis": {
+      "type": "object",
+      "properties": {
+        "engine": {"type": "string", "description": "Public-rule engine, currently semgrep-pro."},
+        "status": {"enum": ["succeeded", "failed", "disabled", "unavailable"], "description": "Public-pack scan outcome."},
+        "triggerLanguages": {"type": "array", "items": {"type": "string"}, "description": "Language selections that caused registry packs to be included."},
+        "registryConfigs": {"type": "array", "items": {"type": "string"}, "description": "Registry config names used by the scan."},
+        "excludedRuleIds": {"type": "array", "items": {"type": "string"}, "description": "Exact registry rule IDs omitted from this scan. Display in run diagnostics when nonempty."},
+        "verification": {"type": "string", "description": "Overall verification policy. Individual results remain review items unless an allow-listed native adapter confirms both source and sink."}
+      },
+      "additionalProperties": false
+    },
+    "semgrepCache": {
+      "type": "object",
+      "required": ["status", "key", "semgrepVersion", "reused"],
+      "properties": {
+        "status": {"enum": ["hit", "miss", "refreshed", "no-rules"], "description": "hit reused evidence; miss scanned and stored it; refreshed bypassed an existing entry; no-rules produced empty evidence."},
+        "key": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Content-addressed key over target state, languages/configs, local rule contents, Semgrep version/binary, and scan flags."},
+        "semgrepVersion": {"type": "string", "minLength": 1, "description": "Semgrep CLI version included in the cache key."},
+        "reused": {"type": "boolean", "description": "True only when raw evidence came from a complete cache entry."}
+      },
+      "additionalProperties": false
+    },
+    "registryRuleCache": {
+      "type": "object",
+      "required": ["mode", "status", "packs"],
+      "properties": {
+        "mode": {
+          "enum": ["cached", "mixed", "live", "live-fallback", "not-applicable"],
+          "description": "cached uses local authenticated snapshots; mixed combines cached snapshots with live fallbacks for individual unavailable packs; live bypasses the pack cache by configuration; live-fallback means every requested cached pack had to use the registry directly; not-applicable means no registry pack was selected."
+        },
+        "status": {
+          "enum": ["ok", "partial", "registry-live", "unavailable", "not-applicable"],
+          "description": "Overall registry pack resolution outcome. Partial means at least one selected pack used a live fallback; inspect each pack status."
+        },
+        "packs": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/registryRuleCachePack"},
+          "description": "Resolved pack snapshots. Empty when live registry loading was used or no packs applied."
+        }
+      },
+      "additionalProperties": false
+    },
+    "scanConfiguration": {
+      "type": "object",
+      "required": ["languages", "registryPacks", "excludedRuleIds", "excludedPaths"],
+      "properties": {
+        "languages": {"type": "array", "items": {"type": "string"}, "description": "Resolved language selection used for this scan."},
+        "registryPacks": {"type": "array", "items": {"type": "string", "pattern": "^[prs]/"}, "description": "Selected Semgrep registry pack identifiers before cache resolution."},
+        "excludedRuleIds": {"type": "array", "items": {"type": "string"}, "description": "Exact public registry rule IDs intentionally excluded from the scan."},
+        "excludedPaths": {"type": "array", "items": {"type": "string"}, "description": "User-supplied path or glob exclusions. Generated exclusions for ACAH output and cache directories are not included."},
+        "sanitizers": {"$ref": "#/$defs/sanitizerConfiguration"}
+        ,"summaries": {"$ref": "#/$defs/summaryConfiguration"}
+      },
+      "additionalProperties": false
+    },
+    "sanitizerConfiguration": {
+      "type": "object",
+      "required": ["version", "sha256", "ids"],
+      "properties": {
+        "version": {"const": 1, "description": "Sanitizer configuration contract version."},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Digest of the exact sanitizer configuration used for native classification."},
+        "ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "Sorted user-defined sanitizer identifiers loaded for this scan."}
+      },
+      "additionalProperties": false
+    },
+    "summaryConfiguration": {
+      "type": "object",
+      "required": ["version", "sha256", "ids"],
+      "properties": {
+        "version": {"const": 1, "description": "Opaque summary configuration contract version."},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$", "description": "Digest of the exact summary configuration used for native matching."},
+        "ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "Sorted user-defined summary identifiers loaded for this scan."}
+      },
+      "additionalProperties": false
+    },
+    "registryRuleCachePack": {
+      "type": "object",
+      "required": ["id", "path", "sha256", "status"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[prs]/", "description": "Original Semgrep registry identifier."},
+        "path": {"type": "string", "minLength": 1, "description": "Private local snapshot path, or the registry identifier when this pack used a live fallback."},
+        "sha256": {"type": "string", "pattern": "^(?:[a-f0-9]{64})?$", "description": "Snapshot content digest included in the raw-evidence cache key. Empty only for a live fallback without a local snapshot."},
+        "etag": {"type": ["string", "null"], "description": "Registry HTTP validator when supplied by Semgrep."},
+        "status": {
+          "enum": ["fresh", "fetched", "not-modified", "offline-stale", "stale-on-error", "live-fallback"],
+          "description": "How this pack was resolved for the current scan. Live-fallback means Semgrep loaded the registry identifier because no local snapshot was available."
+        }
+      },
+      "additionalProperties": false
+    },
+    "testSourcePartition": {
+      "type": "object",
+      "properties": {
+        "status": {"enum": ["separated", "test-only"], "description": "separated describes a production report; test-only describes a run copied into the test report."},
+        "movedFindings": {"type": "integer", "minimum": 0, "description": "Findings removed from this production report."},
+        "sourceReport": {"type": "string", "description": "Risk or inventory report from which a test-only run originated."},
+        "findingCount": {"type": "integer", "minimum": 0, "description": "Findings contained in the test-only run."}
+      },
+      "additionalProperties": false
+    },
+    "filteredFindings": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/filteredFinding"},
+      "description": "Diagnostic records for findings intentionally removed from the visible queue. Preserve for transparency; viewers may summarize counts and expose details on demand."
+    },
+    "filteredFinding": {
+      "type": "object",
+      "description": "Union of fields used by run-level filtering diagnostics.",
+      "properties": {
+        "ruleId": {"type": "string", "description": "Removed finding rule identifier."},
+        "classification": {"type": ["string", "null"], "description": "Classification before removal."},
+        "path": {"type": "string", "description": "Removed finding artifact path."},
+        "line": {"type": "integer", "minimum": 1, "description": "Removed finding start line."},
+        "symbol": {"type": ["string", "null"], "description": "Resolved sink symbol when relevant."},
+        "overload": {"type": ["string", "null"], "description": "Resolved overload when relevant."},
+        "expectedFamily": {"type": ["string", "null"], "description": "Sink family expected by the textual rule."},
+        "actualFamily": {"type": ["string", "null"], "description": "Sink family established by native analysis."},
+        "actualSymbol": {"type": ["string", "null"], "description": "Resolved symbol that disproved or reclassified the match."},
+        "actualReceiverType": {"type": ["string", "null"], "description": "Resolved receiver type that disproved or reclassified the match."},
+        "supersededByRuleId": {"type": ["string", "null"], "description": "Higher-confidence rule identifier that made this review-only finding redundant."},
+        "reason": {"type": "string", "description": "Human-readable reason for removal."}
+      },
+      "additionalProperties": false
+    },
+    "stringArray": {
+      "type": ["array", "null"],
+      "items": {"type": "string"}
+    }
+  }
+}
