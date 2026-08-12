@@ -18,7 +18,7 @@ test('discovers nested scalar fields and ignores viewer back-links', () => {
 	riverRule.treeItem = {childItems: [{data: result}], childItemsAll: [{data: result}]}
 	result.run = {
 		tool: {driver: {name: 'River', rules: [riverRule]}},
-		properties: {acah: {formatVersion: 3}},
+		properties: {acah: {formatVersion: 4}},
 		results: [result],
 	}
 	result._rule = {id: 'internal'}

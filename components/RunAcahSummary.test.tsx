@@ -6,7 +6,7 @@ import {Run} from 'sarif'
 import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 
 Enzyme.configure({adapter: new Adapter()})
-const runWithAcah = (acah: object) => ({properties: {acah: {formatVersion: 3, ...acah}}} as unknown as Run)
+const runWithAcah = (acah: object) => ({properties: {acah: {formatVersion: 4, ...acah}}} as unknown as Run)
 
 test('summarizes native status, diagnostics, and filtering without cache provenance', () => {
 	const summary = getRunAcahSummary(runWithAcah({
@@ -15,7 +15,7 @@ test('summarizes native status, diagnostics, and filtering without cache provena
 		filteredParameterizedSqlFindings: [{ruleId: 'sql'}],
 	}))
 	expect(summary).toEqual({label: 'ACAH analysis succeeded · 2 diagnostics', lines: [
-		'Format: ACAH SARIF v3', 'Native Csharp: Succeeded · version 5.0',
+		'Format: ACAH SARIF v4', 'Native Csharp: Succeeded · version 5.0',
 		'Filtered evidence: 1 parameterized SQL',
 		'Diagnostics: 2 (details retained in SARIF)',
 	], incomplete: false})
@@ -28,7 +28,7 @@ test('marks partial native coverage as incomplete', () => {
 	expect(summary?.incomplete).toBe(true)
 })
 
-test('shows v3 identity without optional analysis metadata', () => {
-	expect(getRunAcahSummary(runWithAcah({}))).toEqual({label: 'ACAH v3', lines: ['Format: ACAH SARIF v3'], incomplete: false})
-	expect(getRunAcahSummary({properties: {otherTool: {formatVersion: 3}}} as unknown as Run)).toBeUndefined()
+test('shows v4 identity without optional analysis metadata', () => {
+	expect(getRunAcahSummary(runWithAcah({}))).toEqual({label: 'ACAH v4', lines: ['Format: ACAH SARIF v4'], incomplete: false})
+	expect(getRunAcahSummary({properties: {otherTool: {formatVersion: 4}}} as unknown as Run)).toBeUndefined()
 })

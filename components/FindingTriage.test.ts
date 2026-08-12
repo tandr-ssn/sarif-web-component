@@ -40,6 +40,15 @@ test('fingerprints preserve identity when presentation details change', () => {
 	expect(before.some(key => after.includes(key))).toBe(true)
 })
 
+test('prefers the producer-independent ACAH claim fingerprint', () => {
+	const claimId = 'd'.repeat(64)
+	const finding = result('detector-specific')
+	finding.partialFingerprints = {'acahClaim/v1': claimId, 'acahResult/v1': claimId}
+	const keys = findingIdentityKeys(finding)
+
+	expect(keys[0]).toBe(`v2\0acah-claim\0${JSON.stringify(['https://example.invalid/river', claimId])}`)
+})
+
 test('hidden state persists, restores within a namespace, and can be forgotten globally', async () => {
 	const store = new MemoryFindingTriageStore()
 	const finding = result('finding-a')

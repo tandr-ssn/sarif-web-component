@@ -2,7 +2,6 @@ import {observable} from 'mobx'
 import {Result, Run} from 'sarif'
 import {MobxFilter} from './FilterBar'
 import {RunStore, resultColumnFilterKey} from './RunStore'
-import {isResultVariantGroup} from './ResultVariantGroup'
 
 test('filters selected result columns by values and text', () => {
 	const run = {
@@ -27,7 +26,7 @@ test('filters selected result columns by values and text', () => {
 	expect((runStore.rulesFiltered[0].childItemsAll[0].data as Result).message.text).toBe('Blocked result')
 })
 
-test('filters public review variants before grouping them', () => {
+test('filters canonical results without presentation grouping', () => {
 	const results = ['Alpha interpretation', 'Beta interpretation'].map(text => ({
 		ruleId: 'public.rule',
 		message: {text},
@@ -39,16 +38,15 @@ test('filters public review variants before grouping them', () => {
 	}))
 	const run = {
 		tool: {driver: {name: 'ACAH'}},
-		properties: {acah: {formatVersion: 3}},
+		properties: {acah: {formatVersion: 4}},
 		results,
 	} as unknown as Run
 	const filter = new MobxFilter({}, {})
 	const selected = observable.box(['Details'])
 	const runStore = new RunStore(run, 0, filter, observable.box(false), true, false, false, selected)
 
-	expect(isResultVariantGroup(runStore.rulesFiltered[0].childItemsAll[0].data)).toBe(true)
+	expect(runStore.rulesFiltered[0].childItemsAll).toHaveLength(2)
 	filter.setFilterItemState(resultColumnFilterKey('Details'), {value: 'beta'})
 	expect(runStore.filteredCount).toBe(1)
-	expect(isResultVariantGroup(runStore.rulesFiltered[0].childItemsAll[0].data)).toBe(false)
 	expect((runStore.filteredResults[0] as Result).message.text).toBe('Beta interpretation')
 })

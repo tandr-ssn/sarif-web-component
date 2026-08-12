@@ -3,7 +3,7 @@ import {getResultAcahOrigin, getResultSourceTrace} from './ResultSourceTrace'
 
 test('converts ACAH origin metadata into an exact source identifier', () => {
 	const result = {
-		run: {properties: {acah: {formatVersion: 3}}},
+		run: {properties: {acah: {formatVersion: 4}}},
 		properties: {acah: {classification: 'taint-unverified', status: 'review', resolution: 'native', origin: {
 			kind: 'method-parameter',
 			name: 'filePath',
@@ -25,7 +25,7 @@ test('prefers an exact ACAH step symbol over inferred state', () => {
 	const location: any = {artifactLocation: {uri: 'src/file.ts'}, region: {startLine: 2}}
 	const step: any = {location: {physicalLocation: location}, properties: {acah: {role: 'propagation', symbol: 'path'}}}
 	const result = {
-		run: {properties: {acah: {formatVersion: 3}}},
+		run: {properties: {acah: {formatVersion: 4}}},
 		locations: [{physicalLocation: location}],
 		codeFlows: [{threadFlows: [{locations: [step]}]}],
 	} as unknown as Result

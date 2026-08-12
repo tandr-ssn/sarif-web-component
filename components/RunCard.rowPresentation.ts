@@ -3,7 +3,6 @@
 
 import {Result} from 'sarif'
 import {Rule} from './Viewer.Types'
-import {isResultVariantGroup} from './ResultVariantGroup'
 
 export function getRuleTooltip(rule: Rule): string {
 	return rule.fullDescription?.text?.trim()
@@ -14,9 +13,7 @@ export function getRuleTooltip(rule: Rule): string {
 export function getTreeRowClass(data: unknown): string | undefined {
 	if ((data as Rule | undefined)?.isRule) return 'swcRuleRow'
 
-	const result = isResultVariantGroup(data)
-		? data.representative
-		: data && typeof data === 'object' && 'message' in data ? data as Result : undefined
+	const result = data && typeof data === 'object' && 'message' in data ? data as Result : undefined
 	if (!result) return undefined
 
 	switch (result.level ?? 'warning') {

@@ -29,19 +29,15 @@ import { ExecutionTrace } from './ExecutionTrace'
 import {getResultFieldValue, looksLikeMarkdown} from './ResultFields'
 import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
-import {isResultVariantGroup, variantResults} from './ResultVariantGroup'
-import {getSourceLocationText, SourceLocationLink} from './SourceLocationLink'
 import {getRuleTooltip} from './RunCard.rowPresentation'
 import {FindingTriage} from './FindingTriage'
 import {FindingTriageAction} from './FindingTriageAction'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
 
-const visibleResultCount = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.reduce(
-	(total, item) => total + (isResultVariantGroup(item.data) ? item.data.results.length : 1), 0)
+const visibleResultCount = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.length
 
-const itemResults = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.flatMap(item =>
-	variantResults(item.data as Result))
+const itemResults = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.map(item => item.data as Result)
 
 type ResultTreeColumn<T> = ITreeColumn<T> & {
 	copyString?: (result: Result) => string
@@ -113,26 +109,6 @@ export function renderCell<T extends ISimpleTableCell>(
 					</span>
 					<Pill size={PillSize.compact}>{visibleResultCount(rule.treeItem.childItemsAll)}</Pill>
 					<FindingTriageAction triage={findingTriage} results={itemResults(rule.treeItem.childItemsAll)} />
-				</div>,
-				colspan,
-				...commonProps,
-			})
-			: null
-	}
-
-	// ROW PUBLIC REVIEW VARIANT GROUP
-	if (isResultVariantGroup(data)) {
-		const result = data.representative
-		const physicalLocation = result.locations?.[0]?.physicalLocation
-		const locationText = getSourceLocationText(physicalLocation, result.run) ?? 'same source location'
-		const ruleCount = new Set(data.results.map(variant => variant.ruleId ?? variant._rule?.id ?? '')).size
-		return columnIndex === 0
-			? ExpandableTreeCell({
-				children: <div className="swcRowRule">
-					<span>{ruleCount > 1 ? 'Equivalent public reviews' : 'Public review variants'} at&nbsp;</span>
-					<SourceLocationLink ploc={physicalLocation} run={result.run}>{locationText}</SourceLocationLink>
-					<Pill size={PillSize.compact}>{data.results.length}</Pill>
-					<FindingTriageAction triage={findingTriage} results={data.results} />
 				</div>,
 				colspan,
 				...commonProps,

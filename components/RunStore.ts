@@ -3,7 +3,7 @@
 
 import {Artifact, Result, Run} from 'sarif'
 import {IObservableValue, autorun, computed, observable} from 'mobx'
-import {RepositoryDetails, ResultOrRuleOrMore, ResultVariantGroup, Rule} from './Viewer.Types'
+import {RepositoryDetails, ResultOrRuleOrMore, Rule} from './Viewer.Types'
 import { getRepositoryDetailsFromRemoteUrl, isRepositoryDetailsComplete } from './getRepositoryDetailsFromRemoteUrl'
 
 import {ITreeItem} from 'azure-devops-ui/Utilities/TreeItemProvider'
@@ -13,7 +13,6 @@ import { getRepoUri } from './getRepoUri'
 import {tryOr} from './try'
 import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} from './ResultFields'
 import {resultDetailsCopyText} from './ResultTraceText'
-import {groupPublicReviewVariants, isResultVariantGroup, resultVariantCount, variantResults} from './ResultVariantGroup'
 import {getSourcePathFromSarifRoot} from './LocalSourceFile'
 import {getRunAcah} from './Acah'
 import {FindingTriage} from './FindingTriage'
@@ -225,14 +224,9 @@ export class RunStore {
 			filteredByTreeItem.set(treeItem, filteredResults)
 		})
 
-		const allFilteredResults = [...filteredByTreeItem.values()].flat()
 		treeItems.forEach(treeItem => {
 			const filteredResults = filteredByTreeItem.get(treeItem) ?? []
-			treeItem.childItemsAll = groupPublicReviewVariants(filteredResults, allFilteredResults).map(value => {
-				if (!isResultVariantGroup(value)) return {data: value}
-				const children = value.results.map(result => ({data: result}))
-				return {data: value, expanded: false, childItems: children, childItemsAll: children}
-			})
+			treeItem.childItemsAll = filteredResults.map(result => ({data: result}))
 		})
 
 		const treeItemsVisible = treeItems.filter(rule => rule.childItemsAll.length)
@@ -283,8 +277,7 @@ export class RunStore {
 	}
 
 	@computed get filteredResults(): Result[] {
-		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.flatMap(item =>
-			variantResults(item.data as Result | ResultVariantGroup)))
+		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.map(item => item.data as Result))
 	}
 
 	@computed get visibleResults(): Result[] {
@@ -292,8 +285,7 @@ export class RunStore {
 	}
 
 	resultCount(items: ITreeItem<ResultOrRuleOrMore>[] = []): number {
-		return items.reduce((total, item) =>
-			total + resultVariantCount(item.data as Result | ResultVariantGroup), 0)
+		return items.length
 	}
 
 	@observable showAllRevision = 0

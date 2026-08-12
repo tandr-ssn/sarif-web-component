@@ -26,12 +26,6 @@ export interface More {
 	onClick: any
 }
 
-export interface ResultVariantGroup {
-	isResultVariantGroup: true
-	results: Result[]
-	representative: Result
-}
-
 export interface ActionProps {
 	text: string
 	linkUrl: string
@@ -46,7 +40,7 @@ export interface RepositoryDetails {
     errorMessage?: string
 }
 
-export type ResultOrRuleOrMore = Result | ResultVariantGroup | Rule | More
+export type ResultOrRuleOrMore = Result | Rule | More
 
 declare module 'azure-devops-ui/Utilities/TreeItemProvider' {
 	interface ITreeItem<T> {

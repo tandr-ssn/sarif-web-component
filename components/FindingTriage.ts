@@ -1,5 +1,6 @@
 import {observable, runInAction} from 'mobx'
 import {Result, Run} from 'sarif'
+import {getResultClaim} from './Acah'
 
 export interface StoredFindingTriage {
 	keys: string[]
@@ -46,6 +47,11 @@ function fallbackIdentity(result: Result): unknown[] {
 export function findingIdentityKeys(result: Result): string[] {
 	const context = findingContext(result)
 	const keys: string[] = []
+	const claimId = result.partialFingerprints?.['acahClaim/v1'] ?? getResultClaim(result)?.id
+	if (typeof claimId === 'string' && /^[0-9a-f]{64}$/.test(claimId)) {
+		const repository = result.run?.versionControlProvenance?.[0]?.repositoryUri ?? ''
+		keys.push(`v2\0acah-claim\0${JSON.stringify([repository, claimId])}`)
+	}
 	if (result.guid) keys.push(`v1\0guid\0${JSON.stringify([...context, result.guid])}`)
 	for (const [name, value] of sortedEntries(result.fingerprints)) {
 		keys.push(`v1\0fingerprint\0${JSON.stringify([...context, name, value])}`)

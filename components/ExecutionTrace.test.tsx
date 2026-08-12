@@ -11,7 +11,7 @@ Enzyme.configure({ adapter: new Adapter() })
 
 test('renders result stacks and code flows', () => {
 	const run: any = {
-		properties: {acah: {formatVersion: 3}},
+		properties: {acah: {formatVersion: 4}},
 		threadFlowLocations: [{
 			location: {
 				message: { text: 'Enter handler' },
@@ -102,7 +102,7 @@ test('renders result stacks and code flows', () => {
 
 test('labels a complete ACAH trace without implying runtime proof', () => {
 	const result = {
-		run: {properties: {acah: {formatVersion: 3}}},
+		run: {properties: {acah: {formatVersion: 4}}},
 		properties: {acah: {classification: 'taint-high-confidence', status: 'proven', resolution: 'native',
 			trace: {status: 'complete', scope: 'modeled-source-to-sink', reason: 'all modeled endpoints are present'}}},
 		codeFlows: [{threadFlows: [{locations: []}]}],

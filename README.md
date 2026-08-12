@@ -42,13 +42,7 @@ Selected fields may be exported as plain-text CSV, raw-value CSV, TSV, a rendere
 
 Copying complete finding-table cells supplies spreadsheet-friendly TSV as `text/plain` and the rendered cells as an HTML table, allowing targets such as Excel to choose the representation they support. When Path is selected but displayed inside Details, it remains a separate logical clipboard column. A single Markdown-valued cell also supplies its original source as `text/markdown`. Partial text selections retain the browser's normal copy behavior.
 
-ACAH SARIF format v3 receives additional offline presentation when `run.properties.acah.formatVersion` is `3`. Finding summaries merge rule defaults with result metadata, while result values remain authoritative. Trace roles and exact symbols drive source, propagation, boundary, and sink presentation; an unresolved boundary is not presented as a proven input source. Potentially sensitive `valuePreview` data is never placed in automatic summaries or tooltips.
-
-Low-confidence ACAH `public-rule-review` results with the same rule and exact
-primary source span are shown as one expandable review site. Every original
-result remains available beneath the site, participates in filtering and
-counts, and is preserved in exports; the viewer does not suppress or merge its
-messages, traces, levels, or metadata.
+ACAH SARIF format v4 receives additional offline presentation when `run.properties.acah.formatVersion` is `4`. The viewer shows each canonical verdict, stable claim ID, and every contributing detector from `properties.acah.detectedBy`. ACAH determines claim identity, merging, queue membership, and top-level section order; the viewer does not regroup those results. Trace roles and exact symbols drive source, propagation, boundary, and sink presentation. Potentially sensitive `valuePreview` data is never placed in automatic summaries or tooltips.
 
 To build and open the standalone viewer locally, install Node.js 22.15 or newer and npm, then run this from a fresh checkout:
 

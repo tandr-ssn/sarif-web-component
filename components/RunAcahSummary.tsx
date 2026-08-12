@@ -26,7 +26,7 @@ const incompleteStatuses = new Set(['failed', 'error', 'unavailable', 'disabled'
 export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
 	const acah = getRunAcah(run)
 	if (!acah) return undefined
-	const lines: string[] = ['Format: ACAH SARIF v3']
+	const lines: string[] = ['Format: ACAH SARIF v4']
 	const statuses: string[] = []
 	const native = acah.nativeAnalysis && typeof acah.nativeAnalysis === 'object' ? acah.nativeAnalysis : {}
 	Object.keys(native).sort().forEach(language => {
@@ -72,7 +72,7 @@ export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
 		? new Set(acah.workspaceDiagnostics.filter(item => typeof item === 'string' && item)).size : 0
 	if (diagnostics) lines.push(`Diagnostics: ${diagnostics} (details retained in SARIF)`)
 	const incomplete = statuses.some(status => incompleteStatuses.has(status.toLowerCase()))
-	const label = statuses.length ? `ACAH analysis ${incomplete ? 'incomplete' : 'succeeded'}` : 'ACAH v3'
+	const label = statuses.length ? `ACAH analysis ${incomplete ? 'incomplete' : 'succeeded'}` : 'ACAH v4'
 	return {label: `${label}${diagnostics ? ` · ${diagnostics} diagnostics` : ''}`, lines, incomplete}
 }
 

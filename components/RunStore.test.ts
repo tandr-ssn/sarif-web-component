@@ -11,7 +11,6 @@ import { Viewer } from './Viewer'
 import { MobxFilter } from './FilterBar'
 import {observable} from 'mobx'
 import {SortOrder} from 'azure-devops-ui/Table'
-import {isResultVariantGroup} from './ResultVariantGroup'
 import {createResultCsv, createResultHtmlTable} from './ResultExport'
 import {RunCard} from './RunCard'
 import {ResultColumnLayout} from './ResultColumnLayout'
@@ -48,20 +47,19 @@ it('uses the descriptive SARIF driver name in visible run headers', () => {
 	expect(new RunStore(overriddenRun, 0, new MobxFilter()).driverName).toBe('Imported review')
 })
 
-it('prefers an ACAH run title that distinguishes producers in one section', () => {
+it('prefers the authoritative ACAH section title', () => {
 	const run = {
 		tool: {driver: {name: 'ACAH', fullName: 'ACAH — Application findings'}},
 		properties: {acah: {
-			formatVersion: 3,
-			section: {id: 'application-findings', title: 'ACAH — Application findings', order: 10},
-			producer: {id: 'acah-csharp-roslyn', title: 'C# native'},
-			runTitle: 'ACAH — Application findings — C# native',
+			formatVersion: 4,
+			section: {id: 'confirmed-findings', title: 'ACAH — Confirmed findings', order: 10},
+			runTitle: 'ACAH — Confirmed findings',
 		}},
 		results: [],
 	} as unknown as Run
 
 	expect(new RunStore(run, 0, new MobxFilter()).driverName)
-		.toBe('ACAH — Application findings — C# native')
+		.toBe('ACAH — Confirmed findings')
 })
 
 it('keeps Path as a visible fallback when Details is not selected', () => {
@@ -141,7 +139,7 @@ it('uses selected nested result fields as columns', () => {
 	const selected = observable.box(['Path', 'result.properties.acah.sink.selection.status'])
 	const run = {
 		tool: {driver: {name: 'Sample Tool'}},
-		properties: {acah: {formatVersion: 3}},
+		properties: {acah: {formatVersion: 4}},
 		results: [{message: {text: 'Finding'}, properties: {acah: {
 			classification: 'taint-unverified', status: 'review', resolution: 'native', sink: {selection: {status: 'confirmed'}},
 		}}}],
@@ -194,7 +192,8 @@ it('sorts rule groups by ruleId when that column is selected', () => {
 	expect(ruleIds()).toEqual(['rule-c', 'rule-b', 'rule-a'])
 })
 
-it('groups public review variants while preserving finding counts and exports', () => {
+it('does not merge duplicate-looking v4 claims in the viewer', () => {
+	const claimId = 'a'.repeat(64)
 	const results = ['First interpretation', 'Second interpretation'].map(text => ({
 		ruleId: 'public.rule',
 		message: {text},
@@ -202,19 +201,18 @@ it('groups public review variants while preserving finding counts and exports', 
 			artifactLocation: {uri: 'src/service.ts'},
 			region: {startLine: 14, startColumn: 3, endLine: 14, endColumn: 18},
 		}}],
-		properties: {acah: {classification: 'public-rule-review'}},
+		partialFingerprints: {'acahClaim/v1': claimId},
+		properties: {acah: {status: 'unknown', claim: {id: claimId, vulnerabilityClass: 'cross-site-scripting'}}},
 	})) as unknown as Run['results']
 	const run = {
 		tool: {driver: {name: 'ACAH'}},
-		properties: {acah: {formatVersion: 3}},
+		properties: {acah: {formatVersion: 4}},
 		results,
 	} as unknown as Run
 	const filter = {getState: () => ({})} as MobxFilter
 	const runStore = new RunStore(run, 0, filter, observable.box(false))
 
-	const group = runStore.rulesFiltered[0].childItemsAll[0]
-	expect(isResultVariantGroup(group.data)).toBe(true)
-	expect(group.childItemsAll).toHaveLength(2)
+	expect(runStore.rulesFiltered[0].childItemsAll).toHaveLength(2)
 	expect(runStore.filteredCount).toBe(2)
 	expect(runStore.filteredResults).toEqual(results)
 })
@@ -251,8 +249,7 @@ it('filters hidden findings persistently and excludes them from visible exports'
 	expect(runStore.filteredResults).toEqual([run.results[0]])
 })
 
-it('presents producer-confirmed cross-rule reviews once while preserving counts and exports', () => {
-	const fingerprint = 'c'.repeat(64)
+it('does not coalesce results from different rules', () => {
 	const results = ['public.first', 'public.second'].map((ruleId, index) => ({
 		ruleId,
 		message: {text: `Interpretation ${index + 1}`},
@@ -260,23 +257,18 @@ it('presents producer-confirmed cross-rule reviews once while preserving counts 
 			artifactLocation: {uri: 'src/river.ts'},
 			region: {startLine: 18, startColumn: 4, endLine: 18, endColumn: 20},
 		}}],
-		properties: {acah: {
-			classification: 'public-taint-high-confidence',
-			reviewGroup: {kind: 'equivalent-public-taint-site', memberCount: 2, ruleCount: 2, fingerprint},
-		}},
+		properties: {acah: {status: 'unknown'}},
 	})) as unknown as Run['results']
 	const run = {
 		tool: {driver: {name: 'ACAH'}},
-		properties: {acah: {formatVersion: 3}},
+		properties: {acah: {formatVersion: 4}},
 		results,
 	} as unknown as Run
 	const filter = {getState: () => ({})} as MobxFilter
 	const runStore = new RunStore(run, 0, filter, observable.box(false))
 
-	expect(runStore.rulesFiltered).toHaveLength(1)
-	const group = runStore.rulesFiltered[0].childItemsAll[0]
-	expect(isResultVariantGroup(group.data)).toBe(true)
-	expect(group.childItemsAll).toHaveLength(2)
+	expect(runStore.rulesFiltered).toHaveLength(2)
+	expect(runStore.rulesFiltered.every(group => group.childItemsAll.length === 1)).toBe(true)
 	expect(runStore.filteredCount).toBe(2)
 	expect(runStore.filteredResults).toEqual(results)
 })

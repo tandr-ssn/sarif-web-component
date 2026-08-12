@@ -300,7 +300,7 @@ test('reuses an identifier color only inside code-flow regions and infers the fi
 		{location: {...locations[1], message: {text: 'const next = clean(path);\nconsume(next);'}}, nestingLevel: 1},
 		{location: {...locations[2], message: {text: 'Value reaches sink'}}, properties: {acah: {role: 'sink'}}},
 	]
-	const run: any = {properties: {acah: {formatVersion: 3}}}
+	const run: any = {properties: {acah: {formatVersion: 4}}}
 
 	await openSourceFile(
 		locations[1].artifactLocation,

@@ -31,9 +31,7 @@ test.each([
 	expect(getTreeRowClass(finding)).toBe(expected)
 })
 
-test('tones rule and variant-group rows without coloring unrelated groups', () => {
+test('tones rule rows without coloring unrelated groups', () => {
 	expect(getTreeRowClass({isRule: true})).toBe('swcRuleRow')
-	expect(getTreeRowClass({isResultVariantGroup: true, representative: result('warning'), results: []}))
-		.toBe('swcResultWarning')
 	expect(getTreeRowClass({isAge: true})).toBeUndefined()
 })
