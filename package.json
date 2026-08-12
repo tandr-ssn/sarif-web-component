@@ -29,7 +29,6 @@
 		"@types/react": "^16.8.18",
 		"@types/react-dom": "^16.8.4",
 		"@types/sarif": "^2.1.3",
-		"@typescript/native": "npm:typescript@^7.0.2",
 		"autobind-decorator": "^2.4.0",
 		"babel-jest": "30.4.1",
 		"cheerio": "1.0.0-rc.12",
@@ -56,13 +55,11 @@
 		"highlight.js": "^10.5.0",
 		"mobx": "^5.9.4",
 		"mobx-react": "^5.4.4",
-		"mobx-utils": "^5.5.5",
 		"react-markdown": "5.0.3",
 		"remark-gfm": "^1.0.0",
 		"remark-parse": "^9.0.0",
 		"sass": "^1.80.6",
-		"unified": "^9.2.2",
-		"vss-web-extension-sdk": "^5.141.0"
+		"unified": "^9.2.2"
 	},
 	"peerDependencies": {
 		"react": "^16.8.6",

@@ -9,8 +9,6 @@ import { observable, autorun, IObservableValue, runInAction, IReactionDisposer }
 import { observer } from 'mobx-react'
 import { Log, Run } from 'sarif'
 
-import './extension'
-
 // Contexts must come before renderCell or anything the uses this.
 export const FilterKeywordContext = React.createContext('')
 
