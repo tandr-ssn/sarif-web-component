@@ -136,7 +136,7 @@ export function getSnippetRegionSegments(region: Region, contextRegion: Region):
 				ref={code => {
 					if (!code) return
 					try {
-						hljs.highlightBlock(code)
+					hljs.highlightElement(code)
 					} catch (_) { /* Keep escaped, unhighlighted source when language detection fails. */ }
 				}}>
 				{body}

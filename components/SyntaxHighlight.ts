@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import * as hljs from 'highlight.js/lib/core'
+import hljs from 'highlight.js/lib/core'
 
 hljs.registerLanguage('csharp', require('highlight.js/lib/languages/csharp'))
 hljs.registerLanguage('go', require('highlight.js/lib/languages/go'))
