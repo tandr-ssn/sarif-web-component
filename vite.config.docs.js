@@ -26,7 +26,7 @@ module.exports = defineConfig(({command}) => ({
 	build: {
 		outDir: 'dist',
 		emptyOutDir: true,
-		target: 'es2020',
+		target: 'es2022',
 		assetsInlineLimit: 10_000_000,
 		rollupOptions: {
 			input: path.resolve(__dirname, 'docs-components/index.html'),
