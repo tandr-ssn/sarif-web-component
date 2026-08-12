@@ -287,6 +287,8 @@ test('uses a full-width relative path and matching controls in the source popup'
 	await expect(popup).toHaveTitle('River.ts — Synthetic river advisory')
 	await expect(popup.getByRole('button', {name: /Findings/})).toBeVisible()
 	await expect(popup.getByLabel('Finding in this file')).toHaveValue(/.+/)
+	await expect(popup.locator('.finding-navigation')).not.toHaveText(/^\s*Finding\b/)
+	await expect(popup.locator('.line-number .finding-marker').first()).toBeVisible()
 	const presentation = await popup.evaluate(() => {
 		const path = document.querySelector<HTMLElement>('[data-current-file]')
 		const row = document.querySelector<HTMLElement>('.source-toolbar-row')
@@ -309,4 +311,6 @@ test('uses a full-width relative path and matching controls in the source popup'
 	expect(presentation.buttonFontFamily).toBe(presentation.bodyFontFamily)
 	expect(presentation.buttonFontWeight).toBe('400')
 	expect(presentation.pathFontWeight).toBe('400')
+	await popup.getByRole('button', {name: /Findings/}).click()
+	await expect(popup).toBeClosed()
 })

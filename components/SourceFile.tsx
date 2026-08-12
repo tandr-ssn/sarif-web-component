@@ -212,8 +212,9 @@ function renderSourceLine(text: string, lineNumber: number, highlights: SourceHi
 		.filter(finding => finding.location.region?.startLine === lineNumber)
 		.map(finding => `<button type="button" class="finding-marker${finding.id === activeFindingId ? ' finding-marker-active' : ''}" data-finding-id="${escapeHtml(finding.id)}" data-swc-tooltip="${escapeHtml(finding.label)}" aria-label="Open finding: ${escapeHtml(finding.label)}"></button>`)
 		.join('')
-	const traceColumn = showTraceColumn ? `<span class="trace-column">${findingBadges}${traceBadges}</span>` : ''
-	return `<span class="source-line" data-line="${lineNumber}">${traceColumn}<span class="line-number" data-line="${lineNumber}"></span>${renderHighlightedText(text, lineNumber, highlights, fileName)}</span>`
+	const traceColumn = showTraceColumn ? `<span class="trace-column">${traceBadges}</span>` : ''
+	const findingGutter = findingBadges ? `<span class="finding-markers">${findingBadges}</span>` : ''
+	return `<span class="source-line" data-line="${lineNumber}">${traceColumn}<span class="line-number" data-line="${lineNumber}">${findingGutter}</span>${renderHighlightedText(text, lineNumber, highlights, fileName)}</span>`
 }
 
 function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView, trace?: SourceTraceSummary, findings: SourceFindingNavigation[] = [], activeFindingId?: string): string {
@@ -242,7 +243,7 @@ function renderSourceToolbar(views: SourceFileView[], activeView: SourceFileView
 		<summary>${trace.readableEntries} of ${trace.totalEntries} trace locations readable</summary>
 		<ol>${trace.missing.map(location => `<li data-trace-index="${location.traceIndex}">${location.traceIndex + 1}. ${escapeHtml(location.name)}</li>`).join('')}</ol>
 	</details>` : ''
-	const findingNavigation = findings.length ? `<label class="finding-navigation">Finding
+	const findingNavigation = findings.length ? `<label class="finding-navigation">
 		<select data-finding-navigation aria-label="Finding in this file">${findings.map((finding, index) => {
 			const line = finding.location.region?.startLine
 			const selected = finding.id === activeFindingId ? ' selected' : ''
@@ -391,6 +392,7 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 		if (element?.closest('[data-source-back]')) {
 			event.preventDefault()
 			target.opener?.focus?.()
+			target.close?.()
 			return
 		}
 		const highlight = element?.closest('.trace-highlight') as HTMLElement | null
@@ -457,7 +459,7 @@ function wireSourceDocument(target: Window, trace: SourceTraceSummary | undefine
 
 function renderSourceDocument(target: Window, views: SourceFileView[], activeKey: string, trace?: SourceTraceSummary, findings: SourceFindingNavigation[] = [], activeFindingId?: string, onNavigateFinding?: (finding: SourceFindingNavigation) => void): void {
 	const activeView = views.find(view => view.key === activeKey) ?? views[0]
-	const showTraceColumn = views.some(view => view.highlights.some(highlight => highlight.traceIndex !== undefined) || view.findingMarkers.length)
+	const showTraceColumn = views.some(view => view.highlights.some(highlight => highlight.traceIndex !== undefined))
 	const maxLines = Math.max(...views.map(view => sourceLines(view.sourceFile.text).length))
 	const lineNumberWidth = String(maxLines).length + 3
 	const maxTraceIndex = Math.max(0, ...views.flatMap(view => view.highlights.map(highlight => highlight.traceIndex ?? 0)))
@@ -553,9 +555,10 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 		.trace-badge > .trace-next { left: calc(100% - 1px); }
 		.trace-badge a:hover { text-decoration: underline; }
 		.trace-badge button { background: transparent; border: 0; color: #202020; cursor: pointer; font-weight: bold; margin: 0; padding: 0; }
-		.finding-marker { background: #767676; border: 0; border-radius: 1px; cursor: pointer; height: 1.35em; margin: 0 2px; padding: 0; width: 3px; }
+		.finding-markers { bottom: 0; display: flex; gap: 2px; left: 0; position: absolute; top: 0; }
+		.finding-marker { background: #767676; border: 0; border-radius: 1px; cursor: pointer; height: 100%; margin: 0; padding: 0; width: 3px; }
 		.finding-marker:hover, .finding-marker:focus-visible { background: #005fb8; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #005fb8; }
-		.finding-marker-active { background: #005fb8; width: 5px; }
+		.finding-marker-active { background: #005fb8; }
 		.trace-start { border-left: 4px solid #107c10; }
 		.trace-end { border-right: 4px solid #c50f1f; }
 		.trace-source { border-left: 4px solid #107c10; }
@@ -591,7 +594,9 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 			color: #767676;
 			display: inline-block;
 			margin-right: 12px;
+			padding-left: 8px;
 			padding-right: 8px;
+			position: relative;
 			text-align: right;
 			user-select: none;
 			width: ${lineNumberWidth}ch;

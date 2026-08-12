@@ -39,6 +39,7 @@ test('reuses a report-and-finding-set source tab and navigates back to findings'
 		opener: {focus: focusFindings},
 		location: {hash: ''},
 		focus: jest.fn(),
+		close: jest.fn(),
 	} as any as Window
 	const open = jest.spyOn(window, 'open').mockReturnValue(childWindow)
 	const run: any = {
@@ -64,6 +65,10 @@ test('reuses a report-and-finding-set source tab and navigates back to findings'
 	expect(childDocument.querySelectorAll('.finding-marker')).toHaveLength(2)
 	;(childDocument.querySelector('[data-source-back]') as HTMLButtonElement).click()
 	expect(focusFindings).toHaveBeenCalledTimes(1)
+	expect(childWindow.close).toHaveBeenCalledTimes(1)
+	expect(childDocument.querySelector('.finding-navigation')?.textContent?.trim()).not.toMatch(/^Finding\b/)
+	expect(childDocument.querySelector('.finding-marker')?.parentElement?.classList.contains('finding-markers')).toBe(true)
+	expect(childDocument.querySelector('.finding-markers')?.parentElement?.classList.contains('line-number')).toBe(true)
 	open.mockRestore()
 })
 
