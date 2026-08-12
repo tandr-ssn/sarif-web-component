@@ -46,7 +46,17 @@
 .swcFindingVisibility {
 	min-width: 120px;
 
-	.bolt-button { background: $neutral-8; }
+	.bolt-button {
+		background: $neutral-8;
+		box-sizing: border-box;
+		height: 32px;
+		min-height: 32px;
+		padding: 0 8px;
+	}
+	.bolt-dropdown-filter-bar-item .bolt-button {
+		font-weight: $fontWeightNormal;
+		line-height: 1;
+	}
 	.bolt-button:hover, .bolt-button:focus-visible { background: $neutral-10; }
 }
 
