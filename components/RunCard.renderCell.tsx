@@ -29,14 +29,26 @@ import { ExecutionTrace } from './ExecutionTrace'
 import {getResultFieldValue, looksLikeMarkdown} from './ResultFields'
 import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
-import {isResultVariantGroup} from './ResultVariantGroup'
+import {isResultVariantGroup, variantResults} from './ResultVariantGroup'
 import {getSourceLocationText, SourceLocationLink} from './SourceLocationLink'
 import {getRuleTooltip} from './RunCard.rowPresentation'
+import {FindingTriage} from './FindingTriage'
+import {FindingTriageAction} from './FindingTriageAction'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
 
 const visibleResultCount = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.reduce(
 	(total, item) => total + (isResultVariantGroup(item.data) ? item.data.results.length : 1), 0)
+
+const itemResults = (items: ITreeItem<ResultOrRuleOrMore>[] = []) => items.flatMap(item =>
+	variantResults(item.data as Result))
+
+type ResultTreeColumn<T> = ITreeColumn<T> & {
+	copyString?: (result: Result) => string
+	embedPath?: boolean
+	embeddedPathCopyString?: (result: Result) => string
+	findingTriage?: FindingTriage
+}
 
 const markdownRenderers = {
 	link: ({href, children}) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,
@@ -58,6 +70,8 @@ export function renderCell<T extends ISimpleTableCell>(
 	treeItem: ITreeItemEx<T>): JSX.Element {
 
 	const data = ObservableLike.getValue(treeItem.underlyingItem.data)
+	const resultTreeColumn = treeColumn as ResultTreeColumn<T>
+	const findingTriage = resultTreeColumn.findingTriage
 	const commonProps = {
 		className: treeColumn.className,
 		columnIndex,
@@ -74,6 +88,7 @@ export function renderCell<T extends ISimpleTableCell>(
 				children: <div className="swcRowRule">{/* Div for flow layout. */}
 					{age.name}
 					<Pill size={PillSize.compact}>{visibleResultCount(age.treeItem.childItemsAll)}</Pill>
+					<FindingTriageAction triage={findingTriage} results={itemResults(age.treeItem.childItemsAll)} />
 				</div>,
 				colspan,
 				...commonProps,
@@ -97,6 +112,7 @@ export function renderCell<T extends ISimpleTableCell>(
 						}))}
 					</span>
 					<Pill size={PillSize.compact}>{visibleResultCount(rule.treeItem.childItemsAll)}</Pill>
+					<FindingTriageAction triage={findingTriage} results={itemResults(rule.treeItem.childItemsAll)} />
 				</div>,
 				colspan,
 				...commonProps,
@@ -116,6 +132,7 @@ export function renderCell<T extends ISimpleTableCell>(
 					<span>{ruleCount > 1 ? 'Equivalent public reviews' : 'Public review variants'} at&nbsp;</span>
 					<SourceLocationLink ploc={physicalLocation} run={result.run}>{locationText}</SourceLocationLink>
 					<Pill size={PillSize.compact}>{data.results.length}</Pill>
+					<FindingTriageAction triage={findingTriage} results={data.results} />
 				</div>,
 				colspan,
 				...commonProps,
@@ -129,11 +146,7 @@ export function renderCell<T extends ISimpleTableCell>(
 	if (isResult(data)) {
 		const result = data
 		const rule = result._rule
-		const resultColumn = treeColumn as ITreeColumn<T> & {
-			copyString?: (result: Result) => string
-			embedPath?: boolean
-			embeddedPathCopyString?: (result: Result) => string
-		}
+		const resultColumn = resultTreeColumn
 		const copyString = resultColumn.copyString
 		const rawCopyValue = copyString?.(result) ?? ''
 		const markdownCopyValue = looksLikeMarkdown(treeColumn.id, rawCopyValue)
@@ -198,10 +211,14 @@ export function renderCell<T extends ISimpleTableCell>(
 					return renderResultFieldValue(treeColumn.id, getResultFieldValue(result, treeColumn.id))
 			}
 		})()
+		const resultChildren = <div className="swcFindingWithTriage">
+			<div className="swcFindingTriageContent">{copyMarker}{children}</div>
+			{columnIndex === 0 && <FindingTriageAction triage={findingTriage} results={[result]} />}
+		</div>
 		return columnIndex === 0
-			? ExpandableTreeCell({children: <>{copyMarker}{children}</>, ...commonProps})
+			? ExpandableTreeCell({children: resultChildren, ...commonProps})
 			: TableCell({
-				children: <>{copyMarker}{children}</>,
+				children: resultChildren,
 				className: css(treeColumn.className, 'font-size'),
 				columnIndex,
 			})

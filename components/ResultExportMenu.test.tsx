@@ -35,11 +35,11 @@ test('offers a logical-column HTML table', () => {
 	wrapper.unmount()
 })
 
-test('offers a Markdown report for the complete result set', () => {
+test('offers a Markdown report for all visible findings', () => {
 	const onExport = jest.fn()
 	const wrapper = mount(<ResultExportMenu filteredCount={8} allCount={8} filtered={false} onExport={onExport} />)
 	const button = wrapper.find('.swcResultExport > button')
-	expect(button.text()).toContain('Export all')
+	expect(button.text()).toContain('Export visible')
 	button.simulate('click')
 	wrapper.update()
 	const markdown = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))

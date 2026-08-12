@@ -55,3 +55,33 @@ test('omits grouping choices when age grouping is unavailable', () => {
 	])
 	wrapper.unmount()
 })
+
+test('offers current-file restore and confirmed global forgetting for saved triage state', async () => {
+	const results = [{message: {text: 'River finding'}}] as any
+	const findingTriage = {
+		ready: true,
+		pending: false,
+		hasStoredEntries: true,
+		hiddenCount: () => 1,
+		setHidden: jest.fn().mockResolvedValue(undefined),
+		forgetAll: jest.fn().mockResolvedValue(undefined),
+	} as any
+	const stores = [{showAge: false, groupByAge: observable.box(false), sortRuleBy: SortRuleBy.Count}] as any
+	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} fitAllColumns={observable.box(true)}
+		findingTriage={findingTriage} results={results} />)
+	const items = menuItems(wrapper)
+
+	expect(items.slice(-3).map(item => item.id)).toEqual([
+		'triageDivider', 'restoreCurrentFindings', 'forgetAllFindingStates',
+	])
+	items.find(item => item.id === 'restoreCurrentFindings').onActivate()
+	await Promise.resolve()
+	expect(findingTriage.setHidden).toHaveBeenCalledWith(results, false)
+
+	const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true)
+	items.find(item => item.id === 'forgetAllFindingStates').onActivate()
+	await Promise.resolve()
+	expect(findingTriage.forgetAll).toHaveBeenCalled()
+	confirm.mockRestore()
+	wrapper.unmount()
+})

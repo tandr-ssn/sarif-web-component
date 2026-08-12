@@ -40,6 +40,8 @@ import {ResultViewOptionsMenu} from './ResultViewOptionsMenu'
 import {ResultColumnLayout} from './ResultColumnLayout'
 import {ResultTableHeader} from './ResultTableHeader'
 import {installTooltips} from './Tooltip'
+import {FindingTriage, FindingTriageStore, indexedDbFindingTriageStore} from './FindingTriage'
+import {FindingVisibilityFilter} from './FindingVisibilityFilter'
 
 export interface ViewerProps {
 	logs?: Log[]
@@ -103,6 +105,15 @@ export interface ViewerProps {
 	ruleSortStorageKey?: string | false
 
 	/**
+	 * IndexedDB namespace used to remember hidden findings across reports and browser restarts.
+	 * A component-wide default is used when omitted; set this to false to disable local triage.
+	 */
+	findingTriageStorageKey?: string | false
+
+	/** Optional storage override, primarily for hosts that provide their own local persistence. */
+	findingTriageStore?: FindingTriageStore
+
+	/**
 	 * When there are zero errors¹, show this message instead of just "No Results".
 	 * Intended to communicate definitive positive confidence since "No Results" may be interpreted as inconclusive.
 	 * 
@@ -130,6 +141,7 @@ export interface ViewerProps {
 	private fitAllColumnsPersistence?: () => void
 	private ruleSortPersistence?: () => void
 	private rememberedRuleSort = {by: SortRuleBy.Count, order: SortOrder.ascending}
+	private findingTriage?: FindingTriage
 	private runCardKeys = new WeakMap<Run, number>()
 	private nextRunCardKey = 0
 	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
@@ -143,6 +155,12 @@ export interface ViewerProps {
 		super(props)
 		const {defaultFilterState, filterState, showAge} = this.props
 		this.filter = new MobxFilter(defaultFilterState, filterState)
+		if (this.props.findingTriageStorageKey !== false) {
+			this.findingTriage = new FindingTriage(
+				this.props.findingTriageStorageKey
+					?? `${this.props.sessionStorageKey ?? '@microsoft/sarif-web-component'}:finding-triage`,
+				this.props.findingTriageStore ?? indexedDbFindingTriageStore)
+		}
 		this.groupByAge = observable.box(showAge)
 		const fitAllColumnsStorageKey = this.getFitAllColumnsStorageKey()
 		let fitAllColumns = true
@@ -217,6 +235,9 @@ export interface ViewerProps {
 	componentDidMount() {
 		installTooltips(window)
 		this.restoreResultFieldSelection()
+		this.findingTriage?.load().catch(error => {
+			window.alert(`Unable to load saved finding state: ${error instanceof Error ? error.message : error}`)
+		})
 	}
 
 	componentDidUpdate(previousProps: ViewerProps) {
@@ -244,7 +265,7 @@ export interface ViewerProps {
 		const runs = [].concat(...logs.filter(log => log.version === '2.1.0').map(log => { log.runs.forEach((run, index) => { run._index = index }); return log.runs })) as Run[]
 		const {filter, groupByAge} = this
 		return runs.map((run, i) => {
-			const store = new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields)
+			const store = new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields, this.findingTriage)
 			store.sortRuleBy = this.rememberedRuleSort.by
 			store.sortRuleOrder = this.rememberedRuleSort.order
 			return store
@@ -416,7 +437,9 @@ export interface ViewerProps {
 		// Computed values fail to cache if called from onRenderNearElement() for unknown reasons. Thus call them in advance.
 		const currentfilterState = this.filter.getState()
 		const allResultCount = this.runStoresInOrder.reduce((total, runStore) => total + (runStore.run.results?.length ?? 0), 0)
+		const visibleResultCount = this.runStoresInOrder.reduce((total, runStore) => total + runStore.visibleResults.length, 0)
 		const filteredResultCount = this.runStoresInOrder.reduce((total, runStore) => total + runStore.filteredResults.length, 0)
+		const currentResults = this.runStoresInOrder.flatMap(runStore => runStore.run.results ?? [])
 		const filterKeywords = currentfilterState.Keywords?.value
 		const nearElement = (() => {
 			const {runStoresInOrder} = this
@@ -493,9 +516,11 @@ export interface ViewerProps {
 							<div className="swcResultsControls">
 								<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
 									resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
-									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={allResultCount}
+									findingVisibilityFilter={<FindingVisibilityFilter filter={this.filter} />}
+									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={visibleResultCount}
 										filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
-									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresInOrder} fitAllColumns={this.fitAllColumns} />} />
+									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresInOrder} fitAllColumns={this.fitAllColumns}
+										findingTriage={this.findingTriage} results={currentResults} />} />
 								{!!this.runStoresInOrder.length && <ResultTableHeader runStores={this.runStoresInOrder} layout={this.resultColumnLayout} />}
 							</div>
 							{this.warnOldVersion && <MessageCard

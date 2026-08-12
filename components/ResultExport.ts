@@ -25,7 +25,7 @@ function exportRows(runStores: ReadonlyArray<RunStore>, scope: ResultExportScope
 	const baseFields = runStores[0]?.columns.map(column => column.id) ?? []
 	const exportResults = runStores.flatMap(runStore => {
 		const columns = new Map(runStore.columns.map(column => [column.id, column]))
-		const results = scope === 'filtered' ? runStore.filteredResults : runStore.run.results ?? []
+		const results = scope === 'filtered' ? runStore.filteredResults : runStore.visibleResults
 		return results.map((result: Result) => ({columns, result}))
 	})
 	const traceFields = [

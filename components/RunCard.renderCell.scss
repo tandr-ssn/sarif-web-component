@@ -42,6 +42,37 @@
 	align-items: center;
 	font-size: 12pt;
 	.bolt-pill { margin-left: 8px; }
+	.swcFindingTriageAction { margin-left: 10px; }
+}
+
+.swcFindingWithTriage {
+	align-items: flex-start;
+	display: flex;
+	gap: 8px;
+	max-width: 100%;
+	min-width: 0;
+	width: 100%;
+}
+
+.swcFindingTriageContent {
+	flex: 1 1 auto;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.swcFindingTriageAction {
+	background: transparent;
+	border: 1px solid var(--palette-neutral-30, #c8c8c8);
+	border-radius: 2px;
+	color: var(--palette-primary, #0078d4);
+	cursor: pointer;
+	flex: 0 0 auto;
+	font: inherit;
+	font-size: 11px;
+	padding: 2px 6px;
+
+	&:hover, &:focus-visible { background: var(--palette-neutral-8, #eaeaea); }
+	&:disabled { cursor: default; opacity: .55; }
 }
 
 .swcRuleTitle {

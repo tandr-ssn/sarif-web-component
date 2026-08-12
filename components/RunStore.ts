@@ -16,6 +16,7 @@ import {resultDetailsCopyText} from './ResultTraceText'
 import {groupPublicReviewVariants, isResultVariantGroup, resultVariantCount, variantResults} from './ResultVariantGroup'
 import {getSourcePathFromSarifRoot} from './LocalSourceFile'
 import {getRunAcah} from './Acah'
+import {FindingTriage} from './FindingTriage'
 
 declare module 'sarif' {
     interface Run {
@@ -43,7 +44,7 @@ export class RunStore {
 	@observable sortColumnIndex = 1
 	@observable sortOrder = SortOrder.ascending
 
-	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice())) {
+	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice()), readonly findingTriage?: FindingTriage) {
 		const {driver} = run.tool
 		const sarifDriverName = driver.fullName || driver.name
 		const acahRunTitle = getRunAcah(run)?.runTitle
@@ -174,6 +175,9 @@ export class RunStore {
 			const resultContainer = treeItem.data as { results: Result[] }
 			const filteredResults = resultContainer.results
 				.filter(result => {
+					const triageValues = filter.Triage?.value as string[] | undefined ?? ['visible']
+					const triageValue = this.findingTriage?.isHidden(result) ? 'hidden' : 'visible'
+					if (triageValues.length && !triageValues.includes(triageValue)) return false
 					for (const column of columns) {
 						const value = filter[resultColumnFilterKey(column.id)]?.value as string | string[] | undefined
 						const field = column.filterString(result)
@@ -187,6 +191,7 @@ export class RunStore {
 
 					for (const columnName in filter) {
 						if (columnName.startsWith('Column:')) continue
+						if (columnName === 'Triage') continue
 						if (columnName === 'Discussion') continue // Discussion filter does not apply to Results.
 						const selectedValues = filter[columnName].value
 						if (!Array.isArray(selectedValues)) continue
@@ -280,6 +285,10 @@ export class RunStore {
 	@computed get filteredResults(): Result[] {
 		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.flatMap(item =>
 			variantResults(item.data as Result | ResultVariantGroup)))
+	}
+
+	@computed get visibleResults(): Result[] {
+		return (this.run.results ?? []).filter(result => !this.findingTriage?.isHidden(result))
 	}
 
 	resultCount(items: ITreeItem<ResultOrRuleOrMore>[] = []): number {

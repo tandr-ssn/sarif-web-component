@@ -19,12 +19,13 @@ import {ResultExportFormat, ResultExportScope} from './ResultExport'
 		const {filteredCount, allCount, filtered, onExport} = this.props
 		const scope = filtered ? 'filtered' : 'all'
 		const count = filtered ? filteredCount : allCount
+		const scopeLabel = filtered ? 'filtered' : 'visible'
 		return <div className="swcResultExport">
 			<button type="button" ref={element => this.anchor = element ?? undefined}
 				data-swc-tooltip={`Export ${count} findings using the selected Fields`}
 				aria-expanded={this.open} aria-haspopup="menu"
 				disabled={!count}
-				onClick={() => this.open = !this.open}>Export {scope} <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
+				onClick={() => this.open = !this.open}>Export {scopeLabel} <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
 			{this.open && this.anchor && <Callout anchorElement={this.anchor}
 				anchorOrigin={{horizontal: Location.end, vertical: Location.end}}
 				calloutOrigin={{horizontal: Location.end, vertical: Location.start}}

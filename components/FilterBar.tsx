@@ -15,6 +15,7 @@ import { Location } from 'azure-devops-ui/Utilities/Position'
 export const recommendedDefaultState = {
 	Baseline: { value: ['new', 'unchanged', 'updated'] },
 	Suppression: { value: ['unsuppressed'] },
+	Triage: { value: ['visible'] },
 }
 
 export class MobxFilter extends Filter {
@@ -114,16 +115,18 @@ export function clearFilterItem(filter: MobxFilter, key: string) {
 	showSuppression?: boolean
 	showAge?: boolean
 	resultFieldSelector?: React.ReactNode
+	findingVisibilityFilter?: React.ReactNode
 	resultExportMenu?: React.ReactNode
 	resultViewOptionsMenu?: React.ReactNode
 }> {
 	render() {
-		const {filter, resultFieldSelector, resultExportMenu, resultViewOptionsMenu} = this.props
+		const {filter, resultFieldSelector, findingVisibilityFilter, resultExportMenu, resultViewOptionsMenu} = this.props
 		return <div className="swcFilterToolbar">
 			<AzFilterBar className="swcKeywordFilter" filter={filter} hideClearAction={true}>
 				<KeywordFilterBarItem filterItemKey="Keywords" placeholder="Filter by keyword" clearable />
 			</AzFilterBar>
 			<div className="swcFilterToolbarActions">
+				{findingVisibilityFilter}
 				<ClearAllFiltersButton filter={filter} />
 				{resultFieldSelector}
 				{resultExportMenu}

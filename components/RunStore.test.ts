@@ -15,6 +15,7 @@ import {isResultVariantGroup} from './ResultVariantGroup'
 import {createResultCsv, createResultHtmlTable} from './ResultExport'
 import {RunCard} from './RunCard'
 import {ResultColumnLayout} from './ResultColumnLayout'
+import {FindingTriage, FindingTriageStore} from './FindingTriage'
 jest.mock('./FilterBar')
 
 it('does not explode', () => { // Bare bones perf is 0.2s
@@ -216,6 +217,38 @@ it('groups public review variants while preserving finding counts and exports', 
 	expect(group.childItemsAll).toHaveLength(2)
 	expect(runStore.filteredCount).toBe(2)
 	expect(runStore.filteredResults).toEqual(results)
+})
+
+it('filters hidden findings persistently and excludes them from visible exports', async () => {
+	const saved = new Set<string>()
+	const store: FindingTriageStore = {
+		load: async () => ({keys: [...saved], hasAny: !!saved.size}),
+		setHidden: async (_namespace, keys, hidden) => keys.forEach(key => hidden ? saved.add(key) : saved.delete(key)),
+		hasAny: async () => !!saved.size,
+		clearAll: async () => saved.clear(),
+	}
+	const triage = new FindingTriage('river', store)
+	await triage.load()
+	const visibility = observable.box<string[]>(['visible'])
+	const filter = {getState: () => ({Triage: {value: visibility.get()}})} as unknown as MobxFilter
+	const run = {
+		tool: {driver: {name: 'River'}},
+		results: [
+			{ruleId: 'RIVER001', fingerprints: {primary: 'a'}, message: {text: 'First finding'}},
+			{ruleId: 'RIVER001', fingerprints: {primary: 'b'}, message: {text: 'Second finding'}},
+		],
+	} as unknown as Run
+	const runStore = new RunStore(run, 0, filter, observable.box(false), false, false, false, undefined, triage)
+
+	await triage.setHidden([run.results[0]], true)
+	expect(runStore.visibleResults).toEqual([run.results[1]])
+	expect(runStore.filteredResults).toEqual([run.results[1]])
+	expect(createResultCsv([runStore], 'all')).not.toContain('First finding')
+
+	visibility.set(['visible', 'hidden'])
+	expect(runStore.filteredResults).toEqual(run.results)
+	visibility.set(['hidden'])
+	expect(runStore.filteredResults).toEqual([run.results[0]])
 })
 
 it('presents producer-confirmed cross-rule reviews once while preserving counts and exports', () => {

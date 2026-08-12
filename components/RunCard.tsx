@@ -54,6 +54,7 @@ import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {copyString: typeof col.filterString}).copyString = col.copyString ?? col.filterString
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {embedPath?: boolean}).embedPath = col.embedPath
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {embeddedPathCopyString?: typeof col.filterString}).embeddedPathCopyString = col.embeddedPathCopyString
+			;(column as ITreeColumn<ResultOrRuleOrMore> & {findingTriage?: typeof runStore.findingTriage}).findingTriage = runStore.findingTriage
 			return column
 		})
 	}
