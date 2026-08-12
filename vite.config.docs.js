@@ -19,14 +19,13 @@ module.exports = defineConfig(({command}) => ({
 	plugins: [replaceAzureDevOpsFluentIconCSS(), react()],
 	base: command === 'build' ? './' : '/',
 	css: {
-		lightningcss: {
-			errorRecovery: true,
-		},
+		transformer: 'postcss',
 	},
 	build: {
 		outDir: 'dist',
 		emptyOutDir: true,
 		target: 'es2022',
+		cssMinify: false,
 		assetsInlineLimit: 10_000_000,
 		rollupOptions: {
 			input: path.resolve(__dirname, 'docs-components/index.html'),
