@@ -8,7 +8,7 @@
 	<title>SARIF Viewer</title>
 	<meta charset="utf-8">
 	<script>
-		// The root page is the webpack development shell. Direct filesystem use belongs to the offline docs build.
+		// The root page is the Vite development shell. Direct filesystem use belongs to the offline docs build.
 		if (window.location.protocol === 'file:') {
 			window.location.replace(new URL('docs/index.html', window.location.href).href)
 		}
@@ -214,6 +214,6 @@
 </head>
 <body>
 	<div id="app"></div>
-	<script src="./dist/index.js"></script>
+	<script type="module" src="/index.tsx"></script>
 </body>
 </html>

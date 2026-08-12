@@ -16,14 +16,14 @@
 		"node": ">=24.0.0"
 	},
 	"scripts": {
-		"start": "tsc --noEmit && webpack-dev-server --mode development",
+		"start": "tsc --noEmit && vite",
 		"test": "jest",
-		"test:e2e": "npm run docs && playwright test",
+		"test:e2e": "npm run build && playwright test",
 		"test:watch": "jest --watchAll",
 		"typecheck": "tsc --noEmit",
 		"clean:npm": "node -e \"require('fs').rmSync('dist', {recursive:true, force:true})\"",
-		"npm": "npm run clean:npm && tsc --project tsconfig.npm.json --emitDeclarationOnly && webpack --config ./webpack.config.npm.js",
-		"docs": "tsc --noEmit && webpack --config ./webpack.config.docs.js"
+		"npm": "npm run clean:npm && tsc --project tsconfig.npm.json --emitDeclarationOnly && vite build --config ./vite.config.npm.js",
+		"build": "tsc --noEmit && vite build --config ./vite.config.docs.js"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.29.7",
@@ -38,23 +38,18 @@
 		"@types/react": "^18.3.31",
 		"@types/react-dom": "^18.3.7",
 		"@types/sarif": "^2.1.3",
+		"@typescript/native": "npm:typescript@^7.0.2",
+		"@vitejs/plugin-react": "^5.0.4",
 		"autobind-decorator": "^2.4.0",
 		"babel-jest": "30.4.1",
-		"css-loader": "7.1.4",
 		"identity-obj-proxy": "^3.0.0",
 		"jest": "^30.4.2",
-		"jest-environment-jsdom": "30.4.1",
+		"jest-environment-jsdom": "^30.4.1",
 		"react": "^18.3.1",
 		"react-dom": "^18.3.1",
-		"sass-loader": "17.0.0",
-		"style-loader": "4.0.0",
 		"ts-jest": "29.4.12",
-		"ts-loader": "^9.6.2",
 		"typescript": "npm:@typescript/typescript6@^6.0.2",
-		"webpack": "5.109.2",
-		"webpack-bundle-analyzer": "5.3.1",
-		"webpack-cli": "7.2.2",
-		"webpack-dev-server": "6.0.0"
+		"vite": "^5.4.0"
 	},
 	"dependencies": {
 		"azure-devops-ui": "^2.277.0",

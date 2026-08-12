@@ -48,12 +48,12 @@ To build and open the standalone viewer locally, install Node.js 24 LTS or newer
 
 ```
 npm ci --ignore-scripts
-npm run docs
+npm run build
 ```
 
 `--ignore-scripts` prevents dependencies from running lifecycle scripts during installation; this project does not require them to build the standalone viewer.
 
-Then open `docs/index.html` directly in the browser. Opening the repository's root `index.html` from the filesystem redirects there as a convenience; when served over HTTP, the root page remains the webpack development shell. The build bundles React and the other runtime dependencies so the resulting page works offline. Generated `docs/index.js` is intentionally ignored and must not be committed.
+Then open `docs/index.html` directly in the browser. Opening the repository's root `index.html` from the filesystem redirects there as a convenience; when served over HTTP, the root page remains the Vite development shell. The build bundles React and the other runtime dependencies so the resulting page works offline. Generated `docs/index.js` is intentionally ignored and must not be committed.
 
 The offline demo keeps the opened SARIF and selected source-folder name in browser storage across page reloads. If session storage quota is insufficient, the report uses an IndexedDB fallback and can survive a browser restart. Source contents and directory handles are not persisted. Use **Close and forget** to remove the remembered report; after a reload, use **Reconnect source folder...** to grant local read access again.
 
@@ -85,13 +85,7 @@ npm pack
 Our convention is to move/keep the tarballs in the `packages` directory.
 
 ## Bundle Size Analysis
-In `webpack.config.common.js` temporarily disable `stats: 'minimal'`.
-
-```
-npx webpack --profile --json > stats.json
-npx webpack-bundle-analyzer stats.json
-rm stats.json
-```
+Run `vite build` with output profiling from the Vite UI/bundler analyzer of your choice after updating `vite.config.docs.js` for your workflow.
 
 ## Contributing
 
