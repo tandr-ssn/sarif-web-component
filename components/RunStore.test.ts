@@ -309,6 +309,20 @@ it('requires every keyword to match somewhere in the finding context', () => {
 	expect(runStore.filteredResults.map(result => result.ruleId)).toEqual(['CAL001'])
 })
 
+it('filters a large synthetic report without truncating matching findings', () => {
+	const results = Array.from({length: 1500}, (_, index) => ({
+		ruleId: `CAL${String(index % 25).padStart(3, '0')}`,
+		message: {text: index % 100 === 0 ? `Needle finding ${index}` : `Ordinary finding ${index}`},
+		locations: [{physicalLocation: {artifactLocation: {uri: `src/River${index}.ts`}}}],
+	}))
+	const filter = {getState: () => ({Keywords: {value: 'needle'}})} as unknown as MobxFilter
+	const run = {tool: {driver: {name: 'Calgary'}}, results} as unknown as Run
+	const runStore = new RunStore(run, 0, filter)
+
+	expect(runStore.filteredResults).toHaveLength(15)
+	expect(runStore.filteredResults.every(result => result.message.text.includes('Needle'))).toBe(true)
+})
+
 it('handles multiple logs', () => {
 	const viewer = new Viewer({})
 	
