@@ -19,7 +19,7 @@ module.exports = defineConfig(({command}) => ({
 	plugins: [replaceAzureDevOpsFluentIconCSS(), react()],
 	base: command === 'build' ? './' : '/',
 	build: {
-		outDir: 'docs',
+		outDir: 'dist',
 		emptyOutDir: true,
 		target: 'ES6',
 		assetsInlineLimit: 10_000_000,

@@ -53,7 +53,7 @@ npm run build
 
 `--ignore-scripts` prevents dependencies from running lifecycle scripts during installation; this project does not require them to build the standalone viewer.
 
-Then open `docs/index.html` directly in the browser. Opening the repository's root `index.html` from the filesystem redirects there as a convenience; when served over HTTP, the root page remains the Vite development shell. The build bundles React and the other runtime dependencies so the resulting page works offline. Generated `docs/index.js` is intentionally ignored and must not be committed.
+Then open `dist/index.html` directly in the browser. Opening the repository's root `index.html` from the filesystem redirects there as a convenience; when served over HTTP, the root page remains the Vite development shell. The build bundles React and the other runtime dependencies so the resulting page works offline. Generated `dist/index.js` is intentionally ignored and must not be committed.
 
 The offline demo keeps the opened SARIF and selected source-folder name in browser storage across page reloads. If session storage quota is insufficient, the report uses an IndexedDB fallback and can survive a browser restart. Source contents and directory handles are not persisted. Use **Close and forget** to remove the remembered report; after a reload, use **Reconnect source folder...** to grant local read access again.
 

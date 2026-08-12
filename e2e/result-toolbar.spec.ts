@@ -2,7 +2,7 @@ import {expect, test} from '@playwright/test'
 import * as path from 'node:path'
 import {pathToFileURL} from 'node:url'
 
-const docsUrl = pathToFileURL(path.resolve(__dirname, '../docs/index.html')).href
+const docsUrl = pathToFileURL(path.resolve(__dirname, '../dist/index.html')).href
 const sessionKey = 'sarif-web-component:docs'
 const fitAllColumnsKey = `${sessionKey}:fit-all-columns`
 
