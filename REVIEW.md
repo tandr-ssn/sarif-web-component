@@ -29,7 +29,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Add CI using the supported Node version, clean installation, type checking, unit tests, and package dry-run before publishing.
 - [x] Add focused tests for report replacement, prop changes, hostile paths and URLs, lifecycle cleanup, narrow viewports, keyboard operation, and large synthetic reports.
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
-- [ ] Split the source viewer into safer rendering, source resolution, and popup-controller units.
+- [x] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
 - [x] Stage dependency modernization; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
 - [x] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.

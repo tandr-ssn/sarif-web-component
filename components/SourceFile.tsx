@@ -6,13 +6,9 @@ import {ArtifactLocation, PhysicalLocation, Region, Run, ThreadFlowLocation} fro
 import {highlightSourceSegment} from './SyntaxHighlight'
 import {AcahTraceRole, getTraceStepAcah, getTraceStepRole} from './Acah'
 import {installTooltips} from './Tooltip'
-
-export interface SourceFile {
-	name: string
-	text: string
-}
-
-export type SourceFileReader = (artifactLocation: ArtifactLocation, run: Run) => Promise<SourceFile | undefined>
+import {escapeSourceHtml as escapeHtml, sourceDocumentTitle, sourceLines} from './SourceHtml'
+import {getArtifactContents, getArtifactLocation, readSourceFile, SourceFile, SourceFileReader, sourceViewKey} from './SourceFileResolver'
+export {getArtifactContents, getArtifactLocation, SourceFile, SourceFileReader} from './SourceFileResolver'
 
 export interface SourceTrace {
 	locations: Array<PhysicalLocation | undefined>
@@ -33,46 +29,8 @@ export const SourceFileSelectionContext = React.createContext<(() => void) | und
 export type SourcePathFormatter = (uri: string, run?: Run, artifactLocation?: ArtifactLocation) => string
 export const SourcePathFormatterContext = React.createContext<SourcePathFormatter | undefined>(undefined)
 
-const sourceFileCaches = new WeakMap<SourceFileReader, WeakMap<Run, Map<string, Promise<SourceFile | undefined>>>>()
-
-export function getArtifactLocation(ploc: PhysicalLocation | undefined, run: Run): ArtifactLocation | undefined {
-	const artifactLocation = ploc?.artifactLocation
-	if (!artifactLocation) return undefined
-	if (artifactLocation.uri !== undefined) return artifactLocation
-
-	const runArtifactLocation = run.artifacts?.[artifactLocation.index ?? -1]?.location
-	return runArtifactLocation
-		? { ...runArtifactLocation, ...artifactLocation }
-		: artifactLocation
-}
-
-export function getArtifactContents(artifactLocation: ArtifactLocation | undefined, run: Run): string | undefined {
-	if (!artifactLocation) return undefined
-	return run.artifacts?.[artifactLocation.index ?? -1]?.contents?.text
-}
-
-function escapeHtml(value: string): string {
-	return value
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#039;')
-}
-
 function fragmentHref(id: string): string {
 	return `#${encodeURIComponent(id).replace(/%2F/gi, '/')}`
-}
-
-function sourceDocumentTitle(path: string | undefined): string {
-	if (!path) return 'Source file'
-	let decoded = path
-	try { decoded = decodeURIComponent(path) } catch (_) { }
-	return decoded.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Source file'
-}
-
-function sourceLines(text: string): string[] {
-	return text.match(/[^\n]*\n|[^\n]+$/g) ?? ['']
 }
 
 interface SourceNavigationTarget {
@@ -619,36 +577,6 @@ function renderSourceDocument(target: Window, views: SourceFileView[], activeKey
 	const activeSection = activeView && target.document.getElementById(activeView.id)
 	const mark = activeSection?.querySelector('.trace-active-highlight') ?? activeSection?.querySelector('mark')
 	if (mark) setTimeout(() => mark.scrollIntoView?.({ block: 'center' }))
-}
-
-// Some producers inconsistently include uriBaseId on the result location but omit it from the
-// matching code-flow location. Local source reading resolves both to the same selected-folder path,
-// so use the URI alone when grouping locations into source views.
-function sourceViewKey(artifactLocation: ArtifactLocation): string | undefined {
-	return artifactLocation.uri
-}
-
-async function readSourceFile(
-	artifactLocation: ArtifactLocation,
-	run: Run,
-	reader: SourceFileReader | undefined,
-): Promise<SourceFile | undefined> {
-	const embeddedText = getArtifactContents(artifactLocation, run)
-	if (embeddedText !== undefined) return { name: artifactLocation.uri ?? 'Source file', text: embeddedText }
-	if (!reader) return undefined
-	const key = sourceViewKey(artifactLocation)
-	if (!key) return reader(artifactLocation, run)
-
-	let readerCache = sourceFileCaches.get(reader)
-	if (!readerCache) sourceFileCaches.set(reader, readerCache = new WeakMap())
-	let runCache = readerCache.get(run)
-	if (!runCache) readerCache.set(run, runCache = new Map())
-	let sourceFile = runCache.get(key)
-	if (!sourceFile) {
-		sourceFile = reader(artifactLocation, run)
-		runCache.set(key, sourceFile)
-	}
-	return sourceFile
 }
 
 export function traceColor(index: number, count: number, role?: AcahTraceRole): string {
