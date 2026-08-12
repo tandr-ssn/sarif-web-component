@@ -4,12 +4,13 @@
 	align-items: stretch;
 	background: $neutral-2;
 	display: flex;
+	flex-wrap: wrap;
 	gap: 8px;
 	margin: 8px 32px;
 	min-width: 0;
 
 	.swcKeywordFilter {
-		flex: 1 1 auto;
+		flex: 1 1 440px;
 		margin: 0;
 		min-width: 220px;
 	}
@@ -19,12 +20,25 @@
 	@media screen and (max-width: 600px) {
 		margin-left: 0;
 		margin-right: 0;
+
+		.swcKeywordFilter {
+			flex-basis: 100%;
+			min-width: 0;
+		}
+
+		.swcFilterToolbarActions {
+			justify-content: flex-end;
+			padding-top: 0;
+			width: 100%;
+		}
 	}
 }
 
 .swcFilterToolbarActions {
 	align-items: center;
 	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
 	flex: 0 0 auto;
 	padding: 8px 0;
 }

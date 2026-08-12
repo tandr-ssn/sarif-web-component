@@ -11,7 +11,11 @@ export function getFindingVisibility(filter: MobxFilter): FindingVisibility {
 	return 'visible'
 }
 
-@observer export class FindingVisibilityFilter extends React.Component<{filter: MobxFilter}> {
+@observer export class FindingVisibilityFilter extends React.Component<{
+	filter: MobxFilter
+	visibleCount: number
+	hiddenCount: number
+}> {
 	private setVisibility = (event: React.ChangeEvent<HTMLSelectElement>) => {
 		const visibility = event.target.value as FindingVisibility
 		this.props.filter.setFilterItemState('Triage', {value: visibility === 'all'
@@ -20,12 +24,13 @@ export function getFindingVisibility(filter: MobxFilter): FindingVisibility {
 	}
 
 	render() {
+		const {visibleCount, hiddenCount} = this.props
 		return <label className="swcFindingVisibility">
 			<span>Findings</span>
 			<select aria-label="Finding visibility" value={getFindingVisibility(this.props.filter)} onChange={this.setVisibility}>
-				<option value="visible">Visible</option>
-				<option value="hidden">Hidden</option>
-				<option value="all">All</option>
+				<option value="visible">Visible ({visibleCount})</option>
+				<option value="hidden">Hidden ({hiddenCount})</option>
+				<option value="all">All ({visibleCount + hiddenCount})</option>
 			</select>
 		</label>
 	}

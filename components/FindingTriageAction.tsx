@@ -21,8 +21,8 @@ import {FindingTriage} from './FindingTriage'
 		const {triage, results} = this.props
 		if (!triage || !triage.ready || !results.length) return null
 		const restore = triage.hiddenCount(results) === results.length
-		const verb = restore ? 'Restore' : 'Hide'
-		const label = results.length === 1 ? verb : `${verb} ${results.length} findings`
+		const verb = restore ? 'Unhide' : 'Hide'
+		const label = results.length === 1 ? `${verb} finding` : `${verb} ${results.length} findings`
 		return <button type="button" className="swcFindingTriageAction"
 			disabled={triage.pending} data-swc-tooltip={`${label} in this browser`}
 			onClick={this.update}>{label}</button>

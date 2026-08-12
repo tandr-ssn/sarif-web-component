@@ -27,7 +27,9 @@
 		line-height: 1;
 		min-width: 22px;
 		padding: 2px 4px 4px;
+		opacity: .28;
 	}
+	&:hover > button, > button:focus-visible, > button.active { opacity: 1; }
 	> button:hover, > button.active { background: var(--palette-black-alpha-10); }
 	> button.active { color: var(--communication-foreground); font-weight: bold; }
 }

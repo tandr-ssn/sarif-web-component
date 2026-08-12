@@ -267,6 +267,7 @@ export interface ViewerProps {
 		this.ruleSortPersistence?.()
 		this.columnFilterCleanup?.()
 		this.invalidateRunStores()
+		this.findingTriage?.dispose()
 	}
 
 	private createRunStores(logs: Log[] | undefined): RunStore[] {
@@ -538,7 +539,8 @@ export interface ViewerProps {
 							<div className="swcResultsControls">
 								<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
 									resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
-									findingVisibilityFilter={<FindingVisibilityFilter filter={this.filter} />}
+									findingVisibilityFilter={<FindingVisibilityFilter filter={this.filter}
+										visibleCount={visibleResultCount} hiddenCount={allResultCount - visibleResultCount} />}
 									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={visibleResultCount}
 										filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
 									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresInOrder} fitAllColumns={this.fitAllColumns}
@@ -550,6 +552,11 @@ export interface ViewerProps {
 								onDismiss={() => this.oldVersionWarningDismissed = true}>
 								Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
 							</MessageCard>}
+							{this.findingTriage?.recentlyHidden.length > 0 && <div className="swcFindingUndo" role="status" aria-live="polite">
+								<span>{this.findingTriage.recentlyHidden.length === 1 ? 'Finding hidden' : `${this.findingTriage.recentlyHidden.length} findings hidden`}</span>
+								<button type="button" disabled={this.findingTriage.pending} onClick={() => this.findingTriage?.undoRecentlyHidden()
+									.catch(error => window.alert(`Unable to restore finding state: ${error instanceof Error ? error.message : error}`))}>Undo</button>
+							</div>}
 							{nearElement}
 							</Page>
 						</SurfaceContext.Provider>

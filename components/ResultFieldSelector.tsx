@@ -5,7 +5,7 @@ import './ResultFieldSelector.scss'
 import * as React from 'react'
 import {IObservableValue, observable} from 'mobx'
 import {observer} from 'mobx-react'
-import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, getResultFieldJsonPath, ResultFieldNode} from './ResultFields'
+import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldJsonPath, ResultFieldNode} from './ResultFields'
 import {Callout} from 'azure-devops-ui/Callout'
 import {Location} from 'azure-devops-ui/Utilities/Position'
 
@@ -84,6 +84,25 @@ export class ResultFieldSelector extends React.Component<{
 	@observable private open = false
 	private anchor?: HTMLButtonElement
 
+	private moveSelected = (path: string, direction: -1 | 1) => {
+		const fields = this.props.selected.get().slice()
+		const index = fields.indexOf(path)
+		const target = index + direction
+		if (index < 0 || target < 0 || target >= fields.length) return
+		;[fields[index], fields[target]] = [fields[target], fields[index]]
+		this.props.selected.set(fields)
+	}
+
+	private removeSelected = (path: string) => {
+		const fields = this.props.selected.get().filter(field => field !== path)
+		this.props.selected.set(fields.length ? fields : ['Path'])
+	}
+
+	private restoreDefaults = () => {
+		const available = new Set(this.props.fieldPaths)
+		this.props.selected.set(DEFAULT_RESULT_FIELDS.filter(field => available.has(field)))
+	}
+
 	render() {
 		const builtIns = Array.from(BUILT_IN_RESULT_FIELDS).filter(field => this.props.fieldPaths.includes(field))
 		const dynamic = this.props.fieldPaths.filter(field => !BUILT_IN_RESULT_FIELDS.has(field))
@@ -92,6 +111,8 @@ export class ResultFieldSelector extends React.Component<{
 			...buildResultFieldTree(dynamic),
 		]
 		const search = this.search.trim().toLowerCase()
+		const selected = this.props.selected.get()
+		const displayNames = getResultFieldDisplayNames(selected)
 		return <div className="swcResultFieldSelector">
 			<button type="button" ref={element => this.anchor = element ?? undefined}
 				data-swc-tooltip="Choose which SARIF result fields are shown in findings and exports"
@@ -108,7 +129,16 @@ export class ResultFieldSelector extends React.Component<{
 				<div className="swcResultFieldMenu"
 					onClick={event => event.stopPropagation()}
 					onMouseDown={event => event.stopPropagation()}>
-				<input type="search" aria-label="Search result fields" placeholder="Search fields" value={this.search}
+				<section className="swcSelectedFields" aria-label="Selected columns">
+					<div><strong>Selected columns</strong><button type="button" onClick={this.restoreDefaults}>Restore defaults</button></div>
+					<ol>{selected.map((path, index) => <li key={path} data-swc-tooltip={BUILT_IN_RESULT_FIELDS.has(path) ? path : `SARIF JSON path: ${getResultFieldJsonPath(path)}`}>
+						<span>{displayNames.get(path) ?? path}</span>
+						<button type="button" disabled={index === 0} aria-label={`Move ${path} left`} onClick={() => this.moveSelected(path, -1)}>←</button>
+						<button type="button" disabled={index === selected.length - 1} aria-label={`Move ${path} right`} onClick={() => this.moveSelected(path, 1)}>→</button>
+						<button type="button" aria-label={`Remove ${path}`} onClick={() => this.removeSelected(path)}>×</button>
+					</li>)}</ol>
+				</section>
+				<input type="search" aria-label="Search result fields" placeholder="Search available fields" value={this.search}
 					onChange={event => this.search = event.currentTarget.value} />
 				<ul>{tree.map(node => <FieldTreeNode key={node.name} node={node} selected={this.props.selected} search={search} />)}</ul>
 				</div>

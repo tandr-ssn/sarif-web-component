@@ -44,3 +44,17 @@
 	label { cursor: pointer; display: inline-block; margin-left: 3px; padding: 2px 4px 2px 0; white-space: nowrap; }
 	input[type='checkbox'] { margin-right: 6px; }
 }
+
+.swcSelectedFields {
+	border-bottom: 1px solid $neutral-20;
+	margin-bottom: 10px;
+	padding-bottom: 8px;
+
+	> div { align-items: center; display: flex; justify-content: space-between; }
+	> div button { background: transparent; border: 0; color: $communication-foreground; cursor: pointer; }
+	ol { list-style: none; margin: 6px 0 0; padding: 0; }
+	li { align-items: center; display: flex; gap: 3px; margin: 2px 0; }
+	li span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	li button { background: $neutral-2; border: 1px solid $neutral-20; cursor: pointer; min-width: 24px; padding: 1px 4px; }
+	li button:disabled { cursor: default; opacity: .35; }
+}

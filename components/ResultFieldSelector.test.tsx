@@ -54,3 +54,18 @@ test('clears a parent indeterminate mark when its final selected leaf is cleared
 	expect(result.indeterminate).toBe(false)
 	wrapper.unmount()
 })
+
+test('reorders, removes, and restores selected columns', () => {
+	const selected = observable.box(['Path', 'Details', 'Level'])
+	const wrapper = mount(<ResultFieldSelector fieldPaths={['Path', 'Details', 'Level', 'Kind']} selected={selected} />)
+	wrapper.find('.swcResultFieldSelector > button').simulate('click')
+	wrapper.update()
+
+	wrapper.find('button[aria-label="Move Details left"]').simulate('click')
+	expect(selected.get()).toEqual(['Details', 'Path', 'Level'])
+	wrapper.find('button[aria-label="Remove Level"]').simulate('click')
+	expect(selected.get()).toEqual(['Details', 'Path'])
+	wrapper.find('.swcSelectedFields > div button').simulate('click')
+	expect(selected.get()).toEqual(['Path', 'Details', 'Level', 'Kind'])
+	wrapper.unmount()
+})

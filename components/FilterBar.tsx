@@ -102,12 +102,12 @@ export function clearFilterItem(filter: MobxFilter, key: string) {
 				calloutOrigin={{horizontal: Location.start, vertical: Location.start}}
 				blurDismiss={false} escDismiss={true} lightDismiss={true}
 				onDismiss={() => this.open = false}>
-				<div className="swcClearFiltersMenu" role="menu">
-					{active.map(item => <button type="button" role="menuitem" key={item.key}
+				<div className="swcClearFiltersMenu">
+					{active.map(item => <button type="button" key={item.key}
 						aria-label={`Clear filter: ${item.description}`}
 						onClick={() => { clearFilterItem(filter, item.key); this.open = false }}><span aria-hidden="true">×</span>{item.description}</button>)}
-					<hr role="separator" />
-					<button type="button" role="menuitem" className="swcClearFiltersAll"
+					<hr />
+					<button type="button" className="swcClearFiltersAll"
 						onClick={() => { filter.reset(); this.open = false }}>Clear all filters</button>
 				</div>
 			</Callout>}

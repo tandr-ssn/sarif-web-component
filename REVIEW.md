@@ -14,10 +14,10 @@ This document records the August 2026 read-only review and tracks the resulting 
 
 ## Priority 2: user experience
 
-- [ ] Make the filter toolbar responsive: search on the first row and actions on the second when space is limited.
-- [ ] Clarify finding and group visibility actions, include visible/hidden/all counts, and provide an accessible undo after hiding.
-- [ ] Reduce column-header menu noise while keeping active filters obvious and keyboard-accessible.
-- [ ] Add a selected-columns area with ordering, removal, and restore-defaults controls.
+- [x] Make the filter toolbar responsive: search on the first row and actions on the second when space is limited.
+- [x] Clarify finding and group visibility actions, include visible/hidden/all counts, and provide an accessible undo after hiding.
+- [x] Reduce column-header menu noise while keeping active filters obvious and keyboard-accessible.
+- [x] Add a selected-columns area with ordering, removal, and restore-defaults controls.
 - [ ] Keep fit-all readable with many columns and preserve usable horizontal scrolling when fit-all is disabled.
 - [x] Ensure shortened source paths are also used in tooltips so local home-directory prefixes are not exposed.
 - [ ] Improve narrow-screen, keyboard, zoom, and tooltip accessibility behavior.

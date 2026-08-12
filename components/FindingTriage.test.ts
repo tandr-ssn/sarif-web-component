@@ -108,3 +108,18 @@ test('hidden state persists, restores within a namespace, and can be forgotten g
 	expect(triage.isHidden(finding)).toBe(false)
 	expect(triage.hasStoredEntries).toBe(false)
 })
+
+test('offers an undo for the most recently hidden findings', async () => {
+	jest.useFakeTimers()
+	const triage = new FindingTriage('river', new MemoryFindingTriageStore())
+	const finding = result('undo')
+	await triage.load()
+	await triage.setHidden([finding], true)
+	expect(triage.recentlyHidden).toEqual([finding])
+	expect(triage.isHidden(finding)).toBe(true)
+	await triage.undoRecentlyHidden()
+	expect(triage.recentlyHidden).toEqual([])
+	expect(triage.isHidden(finding)).toBe(false)
+	triage.dispose()
+	jest.useRealTimers()
+})

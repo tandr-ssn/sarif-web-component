@@ -67,7 +67,9 @@ export class FindingTriage {
 	@observable pending = false
 	@observable hasStoredEntries = false
 	@observable private revision = 0
+	@observable.ref recentlyHidden: Result[] = []
 	private hiddenKeys = new Set<string>()
+	private recentlyHiddenTimer?: number
 
 	constructor(readonly namespace: string, readonly store: FindingTriageStore) { }
 
@@ -107,7 +109,15 @@ export class FindingTriage {
 		try {
 			await this.store.setHidden(this.namespace, keys, hidden)
 			const hasAny = hidden ? true : await this.store.hasAny()
-			runInAction(() => this.hasStoredEntries = hasAny)
+			runInAction(() => {
+				this.hasStoredEntries = hasAny
+				if (hidden) this.recentlyHidden = results.slice()
+				else if (results.some(result => this.recentlyHidden.includes(result))) this.recentlyHidden = []
+			})
+			if (hidden) {
+				if (this.recentlyHiddenTimer !== undefined) window.clearTimeout(this.recentlyHiddenTimer)
+				this.recentlyHiddenTimer = window.setTimeout(() => runInAction(() => this.recentlyHidden = []), 8000)
+			}
 		} catch (error) {
 			runInAction(() => {
 				previous.forEach((wasHidden, key) => wasHidden ? this.hiddenKeys.add(key) : this.hiddenKeys.delete(key))
@@ -117,6 +127,16 @@ export class FindingTriage {
 		} finally {
 			runInAction(() => this.pending = false)
 		}
+	}
+
+	async undoRecentlyHidden(): Promise<void> {
+		const results = this.recentlyHidden.slice()
+		if (!results.length) return
+		await this.setHidden(results, false)
+	}
+
+	dispose() {
+		if (this.recentlyHiddenTimer !== undefined) window.clearTimeout(this.recentlyHiddenTimer)
 	}
 
 	async forgetAll(): Promise<void> {
