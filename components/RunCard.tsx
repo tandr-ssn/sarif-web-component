@@ -4,7 +4,7 @@
 import './RunCard.scss'
 import * as React from 'react'
 import {Component} from 'react'
-import {autorun, observable, computed, IObservableValue, IReactionDisposer} from 'mobx'
+import {autorun, observable, computed, IObservableValue, IReactionDisposer, makeObservable} from 'mobx'
 import {observer} from 'mobx-react'
 
 import {Hi} from './Hi'
@@ -28,13 +28,13 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 	fitAllColumns?: IObservableValue<boolean>
 	columnLayout?: ResultColumnLayout
 }> {
-	@observable private show = true
+	private show = true
 	private itemProvider = new TreeItemProvider<ResultOrRuleOrMore>([])
 	private columnCache = new Map<string, ITreeColumn<ResultOrRuleOrMore>>()
 	private columnLayout: ResultColumnLayout
 	private disposers: IReactionDisposer[] = []
 
-	@computed private get columns() {
+	private get columns() {
 		const {runStore} = this.props
 		const columns = runStore.displayColumns.map(col => {
 			const {id, name, width} = col
@@ -68,6 +68,7 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 
 	constructor(props) {
 		super(props)
+		makeObservable<this, 'show' | 'columns'>(this, {show: observable, columns: computed})
 		this.columnLayout = props.columnLayout ?? new ResultColumnLayout(props.fitAllColumns ?? observable.box(true))
 
 		this.disposers.push(autorun(() => {

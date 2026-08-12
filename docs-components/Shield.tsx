@@ -1,10 +1,14 @@
 import './Shield.scss'
-import {observable} from 'mobx'
+import {makeObservable, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import * as React from 'react'
 
 @observer export default class Shield extends React.Component<any> {
-	@observable shielding = false
+	shielding = false
+	constructor(props: any) {
+		super(props)
+		makeObservable(this, {shielding: observable})
+	}
 	componentDidMount() {
 		addEventListener('dragover', e => {
 			e.preventDefault()

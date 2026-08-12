@@ -5,6 +5,7 @@ module.exports = {
 	maxWorkers: 1,
 
 	testEnvironment: 'jsdom',
+	setupFilesAfterEnv: ['<rootDir>/test-setup.ts'],
 	moduleNameMapper: {
 		'\\.(png|s?css)$': 'identity-obj-proxy'
 	},

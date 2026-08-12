@@ -5,7 +5,7 @@ import './Viewer.scss'
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import { Component } from 'react'
-import { observable, autorun, IObservableValue, runInAction, IReactionDisposer } from 'mobx'
+import { observable, autorun, IObservableValue, runInAction, IReactionDisposer, makeObservable, observableRef } from 'mobx'
 import { observer } from 'mobx-react'
 import { Log, Run } from 'sarif'
 
@@ -136,11 +136,11 @@ export interface ViewerProps {
 	private findingTriage?: FindingTriage
 	private runCardKeys = new WeakMap<Run, number>()
 	private nextRunCardKey = 0
-	@observable.ref private sourceDirectory?: FileSystemDirectoryHandleLike
-	@observable.ref private selectedSourceFiles?: File[]
-	@observable private selectedSourceFolderName?: string
-	@observable private rememberedSourceFolderName?: string
-	@observable private sourceDirectoryError?: string
+	private sourceDirectory?: FileSystemDirectoryHandleLike = undefined
+	private selectedSourceFiles?: File[] = undefined
+	private selectedSourceFolderName?: string = undefined
+	private rememberedSourceFolderName?: string = undefined
+	private sourceDirectoryError?: string = undefined
 	private sourceDirectoryInput?: HTMLInputElement
 	private resultsControls?: HTMLDivElement
 	private resultsControlsObserver?: ResizeObserver
@@ -152,10 +152,18 @@ export interface ViewerProps {
 		stores: RunStore[]
 	}
 	private sourceNavigationCache?: {stores: RunStore[], navigation: SourceNavigation}
-	@observable private oldVersionWarningDismissed = false
+	private oldVersionWarningDismissed = false
 
 	constructor(props) {
 		super(props)
+		makeObservable<this, 'sourceDirectory' | 'selectedSourceFiles' | 'selectedSourceFolderName' | 'rememberedSourceFolderName' | 'sourceDirectoryError' | 'oldVersionWarningDismissed'>(this, {
+			sourceDirectory: observableRef,
+			selectedSourceFiles: observableRef,
+			selectedSourceFolderName: observable,
+			rememberedSourceFolderName: observable,
+			sourceDirectoryError: observable,
+			oldVersionWarningDismissed: observable,
+		})
 		const {defaultFilterState, filterState, showAge} = this.props
 		this.filter = new MobxFilter(defaultFilterState, filterState)
 		if (this.props.findingTriageStorageKey !== false) {
@@ -213,8 +221,19 @@ export interface ViewerProps {
 				}
 			} catch (_) { }
 		}
+		this.configureRuleSortPersistence(ruleSortStorageKey)
+		this.columnFilterCleanup = autorun(() => {
+			const selected = this.selectedResultFields.get()
+			Object.keys(this.filter.getState())
+				.filter(key => key.startsWith('Column:') && !selected.includes(key.slice('Column:'.length)))
+				.forEach(key => this.filter.resetFilterItemState(key))
+		})
+	}
+
+	private configureRuleSortPersistence(ruleSortStorageKey?: string) {
+		this.ruleSortPersistence?.()
+		const stores = this.runStoresInOrder
 		this.ruleSortPersistence = autorun(() => {
-			const stores = this.runStoresInOrder
 			if (!stores.length) return
 			const {sortRuleBy, sortRuleOrder} = stores[0]
 			if (!stores.every(store => store.sortRuleBy === sortRuleBy && store.sortRuleOrder === sortRuleOrder)) return
@@ -226,12 +245,6 @@ export interface ViewerProps {
 					order: sortRuleOrder === SortOrder.descending ? 'descending' : 'ascending',
 				}))
 			} catch (_) { }
-		})
-		this.columnFilterCleanup = autorun(() => {
-			const selected = this.selectedResultFields.get()
-			Object.keys(this.filter.getState())
-				.filter(key => key.startsWith('Column:') && !selected.includes(key.slice('Column:'.length)))
-				.forEach(key => this.filter.resetFilterItemState(key))
 		})
 	}
 
@@ -251,8 +264,9 @@ export interface ViewerProps {
 			|| previousProps.showAge !== this.props.showAge
 		if (storesChanged) {
 			this.invalidateRunStores()
-			this.groupByAge.set(this.props.showAge)
+			runInAction(() => this.groupByAge.set(this.props.showAge))
 			this.restoreResultFieldSelection()
+			this.configureRuleSortPersistence(this.getRuleSortStorageKey())
 		}
 		if (previousProps.logs !== this.props.logs) this.oldVersionWarningDismissed = false
 	}
@@ -292,8 +306,7 @@ export interface ViewerProps {
 		const {filter, groupByAge} = this
 		return runs.map(({run, runIndex}) => {
 			const store = new RunStore(run, runIndex, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields, this.findingTriage)
-			store.sortRuleBy = this.rememberedRuleSort.by
-			store.sortRuleOrder = this.rememberedRuleSort.order
+			store.setRuleSort(this.rememberedRuleSort.by, this.rememberedRuleSort.order)
 			return store
 		})
 	}
@@ -357,7 +370,7 @@ export interface ViewerProps {
 		const selection = restored.length ? restored : DEFAULT_RESULT_FIELDS.filter(field => available.has(field))
 		this.pendingResultFields = undefined
 		this.resultFieldSelectionRestored = true
-		this.selectedResultFields.set(selection)
+		runInAction(() => this.selectedResultFields.set(selection))
 	}
 
 	private getRunCardKey(run: Run): number {

@@ -1,20 +1,15 @@
-import {mount} from 'enzyme'
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import {fireEvent, render, screen} from '@testing-library/react'
 import * as React from 'react'
 import {observable} from 'mobx'
 import {ResultFieldSelector} from './ResultFieldSelector'
 
-Enzyme.configure({adapter: new Adapter()})
-
 test('renders a nested field tree and updates the selection', () => {
 	const selected = observable.box(['Path', 'Details', 'Level', 'Kind'])
-	const wrapper = mount(<ResultFieldSelector
+	render(<ResultFieldSelector
 		fieldPaths={['Path', 'Details', 'Level', 'Kind', 'result.properties.acah.sink.selection.status',
 			'result.message.text', 'rule.shortDescription.text', 'rule.helpUri']}
 		selected={selected} />)
-	wrapper.find('.swcResultFieldSelector > button').simulate('click')
-	wrapper.update()
+	fireEvent.click(screen.getByRole('button', {name: /Fields:/}))
 
 	expect(document.body.textContent).toContain('Properties')
 	expect(document.body.textContent).toContain('ACAH')
@@ -24,48 +19,41 @@ test('renders a nested field tree and updates the selection', () => {
 	expect(document.body.textContent).toContain('Short Description')
 	const status = document.querySelector(
 		'label[data-swc-tooltip="SARIF JSON path: $.runs[*].results[*].properties.acah.sink.selection.status"] input') as HTMLInputElement
-	status.click()
+	fireEvent.click(status)
 	expect(selected.get()).toContain('result.properties.acah.sink.selection.status')
 	expect(document.querySelector(
 		'label[data-swc-tooltip="SARIF JSON path: $.runs[*].tool.driver.rules[*].helpUri"] input')).not.toBeNull()
-	wrapper.unmount()
 })
 
 test('clears a parent indeterminate mark when its final selected leaf is cleared', () => {
 	const selected = observable.box(['Path'])
-	const wrapper = mount(<ResultFieldSelector
+	render(<ResultFieldSelector
 		fieldPaths={['Path', 'result.properties.acah.sink.selection.status', 'result.message.text']}
 		selected={selected} />)
-	wrapper.find('.swcResultFieldSelector > button').simulate('click')
-	wrapper.update()
+	fireEvent.click(screen.getByRole('button', {name: /Fields:/}))
 	const status = document.querySelector(
 		'label[data-swc-tooltip="SARIF JSON path: $.runs[*].results[*].properties.acah.sink.selection.status"] input') as HTMLInputElement
 	const resultLabel = Array.from(document.querySelectorAll<HTMLLabelElement>('.swcResultFieldMenu label'))
 		.find(label => label.textContent === 'Result')
 	const result = resultLabel.querySelector('input') as HTMLInputElement
 
-	status.click()
-	wrapper.update()
+	fireEvent.click(status)
 	expect(result.indeterminate).toBe(true)
 
-	status.click()
-	wrapper.update()
+	fireEvent.click(status)
 	expect(result.checked).toBe(false)
 	expect(result.indeterminate).toBe(false)
-	wrapper.unmount()
 })
 
 test('reorders, removes, and restores selected columns', () => {
 	const selected = observable.box(['Path', 'Details', 'Level'])
-	const wrapper = mount(<ResultFieldSelector fieldPaths={['Path', 'Details', 'Level', 'Kind']} selected={selected} />)
-	wrapper.find('.swcResultFieldSelector > button').simulate('click')
-	wrapper.update()
+	render(<ResultFieldSelector fieldPaths={['Path', 'Details', 'Level', 'Kind']} selected={selected} />)
+	fireEvent.click(screen.getByRole('button', {name: /Fields:/}))
 
-	wrapper.find('button[aria-label="Move Details left"]').simulate('click')
+	fireEvent.click(screen.getByRole('button', {name: 'Move Details left'}))
 	expect(selected.get()).toEqual(['Details', 'Path', 'Level'])
-	wrapper.find('button[aria-label="Remove Level"]').simulate('click')
+	fireEvent.click(screen.getByRole('button', {name: 'Remove Level'}))
 	expect(selected.get()).toEqual(['Details', 'Path'])
-	wrapper.find('.swcSelectedFields > div button').simulate('click')
+	fireEvent.click(screen.getByRole('button', {name: 'Restore defaults'}))
 	expect(selected.get()).toEqual(['Path', 'Details', 'Level', 'Kind'])
-	wrapper.unmount()
 })

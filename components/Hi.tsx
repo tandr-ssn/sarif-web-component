@@ -4,8 +4,9 @@
 import * as React from 'react'
 import {FilterKeywordContext} from './Viewer.Contexts'
 
-export class Hi extends React.Component {
+export class Hi extends React.Component<{children?: React.ReactNode}> {
 	static contextType = FilterKeywordContext
+	declare context: React.ContextType<typeof FilterKeywordContext>
 	render() {
 		let children = this.props.children
 		if (!children) return null

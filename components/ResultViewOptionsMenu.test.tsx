@@ -1,19 +1,7 @@
-import * as React from 'react'
-import {mount} from 'enzyme'
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
 import {observable} from 'mobx'
-import {MoreButton} from 'azure-devops-ui/Menu'
 import {SortOrder} from 'azure-devops-ui/Table'
 import {SortRuleBy} from './RunStore'
-import {ResultViewOptionsMenu} from './ResultViewOptionsMenu'
-
-Enzyme.configure({adapter: new Adapter()})
-
-function menuItems(wrapper) {
-	const props = wrapper.find(MoreButton).prop('contextualMenuProps') as Function
-	return props().menuProps.items
-}
+import {resultViewOptionItems} from './ResultViewOptionsMenu'
 
 test('moves shared grouping and rule sorting choices into the result toolbar menu', () => {
 	const groupByAge = observable.box(false)
@@ -22,38 +10,37 @@ test('moves shared grouping and rule sorting choices into the result toolbar men
 		{showAge: true, groupByAge, sortRuleBy: SortRuleBy.Count, sortRuleOrder: SortOrder.descending},
 		{showAge: true, groupByAge, sortRuleBy: SortRuleBy.Count, sortRuleOrder: SortOrder.descending},
 	] as any
-	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} fitAllColumns={fitAllColumns} />)
-	let items = menuItems(wrapper)
+	stores.forEach(store => store.setRuleSort = (by: SortRuleBy, order: SortOrder) => {
+		store.sortRuleBy = by
+		store.sortRuleOrder = order
+	})
+	let items = resultViewOptionItems({runStores: stores, fitAllColumns})
 
 	expect(items.map(item => item.id)).toEqual([
 		'fitAllColumns', 'viewDivider',
 		'groupByAge', 'groupByRule', 'groupDivider', 'sortByRuleCount', 'sortByRuleName',
 	])
 	expect(items.find(item => item.id === 'fitAllColumns').checked).toBe(true)
-	items.find(item => item.id === 'fitAllColumns').onActivate()
+	items.find(item => item.id === 'fitAllColumns').onActivate({} as any)
 	expect(fitAllColumns.get()).toBe(false)
 	expect(items.find(item => item.id === 'groupByRule').checked).toBe(true)
-	items.find(item => item.id === 'groupByAge').onActivate()
+	items.find(item => item.id === 'groupByAge').onActivate({} as any)
 	expect(groupByAge.get()).toBe(true)
 
-	items.find(item => item.id === 'sortByRuleName').onActivate()
-	wrapper.setProps({runStores: stores.slice()})
+	items.find(item => item.id === 'sortByRuleName').onActivate({} as any)
 	expect(stores.map(store => store.sortRuleBy)).toEqual([SortRuleBy.Name, SortRuleBy.Name])
 	expect(stores.map(store => store.sortRuleOrder)).toEqual([SortOrder.ascending, SortOrder.ascending])
-	items = menuItems(wrapper)
+	items = resultViewOptionItems({runStores: stores.slice(), fitAllColumns})
 	expect(items.find(item => item.id === 'sortByRuleName').checked).toBe(true)
-
-	wrapper.unmount()
 })
 
 test('omits grouping choices when age grouping is unavailable', () => {
 	const stores = [{showAge: false, groupByAge: observable.box(false), sortRuleBy: SortRuleBy.Count}] as any
-	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} fitAllColumns={observable.box(true)} />)
+	const items = resultViewOptionItems({runStores: stores, fitAllColumns: observable.box(true)})
 
-	expect(menuItems(wrapper).map(item => item.id)).toEqual([
+	expect(items.map(item => item.id)).toEqual([
 		'fitAllColumns', 'viewDivider', 'sortByRuleCount', 'sortByRuleName',
 	])
-	wrapper.unmount()
 })
 
 test('offers current-file restore and confirmed global forgetting for saved triage state', async () => {
@@ -67,21 +54,18 @@ test('offers current-file restore and confirmed global forgetting for saved tria
 		forgetAll: jest.fn().mockResolvedValue(undefined),
 	} as any
 	const stores = [{showAge: false, groupByAge: observable.box(false), sortRuleBy: SortRuleBy.Count}] as any
-	const wrapper = mount(<ResultViewOptionsMenu runStores={stores} fitAllColumns={observable.box(true)}
-		findingTriage={findingTriage} results={results} />)
-	const items = menuItems(wrapper)
+	const items = resultViewOptionItems({runStores: stores, fitAllColumns: observable.box(true), findingTriage, results})
 
 	expect(items.slice(-3).map(item => item.id)).toEqual([
 		'triageDivider', 'restoreCurrentFindings', 'forgetAllFindingStates',
 	])
-	items.find(item => item.id === 'restoreCurrentFindings').onActivate()
+	items.find(item => item.id === 'restoreCurrentFindings').onActivate({} as any)
 	await Promise.resolve()
 	expect(findingTriage.setHidden).toHaveBeenCalledWith(results, false)
 
 	const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true)
-	items.find(item => item.id === 'forgetAllFindingStates').onActivate()
+	items.find(item => item.id === 'forgetAllFindingStates').onActivate({} as any)
 	await Promise.resolve()
 	expect(findingTriage.forgetAll).toHaveBeenCalled()
 	confirm.mockRestore()
-	wrapper.unmount()
 })

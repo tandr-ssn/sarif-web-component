@@ -1,4 +1,4 @@
-import {observable, runInAction} from 'mobx'
+import {makeObservable, observable, observableRef, runInAction} from 'mobx'
 import {Result, Run} from 'sarif'
 import {getResultClaim} from './Acah'
 import {stableSha256} from './StableHash'
@@ -63,15 +63,23 @@ export function findingIdentityKeys(result: Result): string[] {
 }
 
 export class FindingTriage {
-	@observable ready = false
-	@observable pending = false
-	@observable hasStoredEntries = false
-	@observable private revision = 0
-	@observable.ref recentlyHidden: Result[] = []
+	ready = false
+	pending = false
+	hasStoredEntries = false
+	private revision = 0
+	recentlyHidden: Result[] = []
 	private hiddenKeys = new Set<string>()
 	private recentlyHiddenTimer?: number
 
-	constructor(readonly namespace: string, readonly store: FindingTriageStore) { }
+	constructor(readonly namespace: string, readonly store: FindingTriageStore) {
+		makeObservable<this, 'revision'>(this, {
+			ready: observable,
+			pending: observable,
+			hasStoredEntries: observable,
+			revision: observable,
+			recentlyHidden: observableRef,
+		})
+	}
 
 	async load(): Promise<void> {
 		const stored = await this.store.load(this.namespace)

@@ -3,10 +3,10 @@
 
 // Used solely for live development.
 import autobind from 'autobind-decorator'
-import { observable, runInAction } from 'mobx'
+import { makeObservable, observable, observableRef, runInAction } from 'mobx'
 import { observer } from 'mobx-react'
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
+import {createRoot} from 'react-dom/client'
 import { Log } from 'sarif'
 import { Viewer } from './components/Viewer'
 import Shield from './docs-components/Shield'
@@ -21,8 +21,13 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 })
 
 @observer export class Index extends React.Component {
-	@observable discussionId = undefined
-	@observable.ref logs = undefined as Log[]
+	discussionId = undefined
+	logs = undefined as Log[]
+
+	constructor(props: {}) {
+		super(props)
+		makeObservable(this, {discussionId: observable, logs: observableRef})
+	}
 
 	@autobind async loadFile(file) {
 		if (!file) return
@@ -68,7 +73,5 @@ const readAsText = file => new Promise<string>((resolve, reject) => {
 	}
 }
 
-ReactDOM.render(
-	<Index />,
-	document.getElementById("app")
-)
+const app = document.getElementById('app')
+if (app) createRoot(app).render(<Index />)

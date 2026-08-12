@@ -1,50 +1,37 @@
-import {mount} from 'enzyme'
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import {fireEvent, render, screen} from '@testing-library/react'
 import * as React from 'react'
 import {ResultExportMenu} from './ResultExportMenu'
 
-Enzyme.configure({adapter: new Adapter()})
-
 test('exports filtered findings as plain-text CSV', () => {
 	const onExport = jest.fn()
-	const wrapper = mount(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
-	const button = wrapper.find('.swcResultExport > button')
-	expect(button.text()).toContain('Export: filtered')
-	button.simulate('click')
-	wrapper.update()
+	render(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
+	const button = screen.getByRole('button', {name: /Export: filtered/})
+	fireEvent.click(button)
 	const choices = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))
 	expect(choices.map(choice => choice.textContent)).toEqual([
 		'CSV — plain text', 'CSV — raw values', 'TSV', 'HTML — report', 'HTML — table', 'Plain text', 'Markdown',
 	])
 	const csv = choices[0]
-	csv.click()
+	fireEvent.click(csv)
 	expect(onExport).toHaveBeenCalledWith('filtered', 'csv-plain')
-	wrapper.unmount()
 })
 
 test('offers a logical-column HTML table', () => {
 	const onExport = jest.fn()
-	const wrapper = mount(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
-	wrapper.find('.swcResultExport > button').simulate('click')
-	wrapper.update()
+	render(<ResultExportMenu filteredCount={3} allCount={8} filtered={true} onExport={onExport} />)
+	fireEvent.click(screen.getByRole('button', {name: /Export: filtered/}))
 	const htmlTable = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))
 		.find(candidate => candidate.textContent === 'HTML — table')
-	htmlTable.click()
+	fireEvent.click(htmlTable)
 	expect(onExport).toHaveBeenCalledWith('filtered', 'html-table')
-	wrapper.unmount()
 })
 
 test('offers a Markdown report for all visible findings', () => {
 	const onExport = jest.fn()
-	const wrapper = mount(<ResultExportMenu filteredCount={8} allCount={8} filtered={false} onExport={onExport} />)
-	const button = wrapper.find('.swcResultExport > button')
-	expect(button.text()).toContain('Export: visible')
-	button.simulate('click')
-	wrapper.update()
+	render(<ResultExportMenu filteredCount={8} allCount={8} filtered={false} onExport={onExport} />)
+	fireEvent.click(screen.getByRole('button', {name: /Export: visible/}))
 	const markdown = Array.from(document.querySelectorAll<HTMLButtonElement>('.swcResultExportMenu button'))
 		.find(candidate => candidate.textContent === 'Markdown')
-	markdown.click()
+	fireEvent.click(markdown)
 	expect(onExport).toHaveBeenCalledWith('all', 'markdown')
-	wrapper.unmount()
 })

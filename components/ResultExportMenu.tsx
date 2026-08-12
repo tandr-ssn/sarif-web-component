@@ -1,6 +1,6 @@
 import './ResultExportMenu.scss'
 import * as React from 'react'
-import {observable} from 'mobx'
+import {makeObservable, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {Callout, Icon, IconSize, Location} from './AzureDevOpsUi'
 import {ResultExportFormat, ResultExportScope} from './ResultExport'
@@ -11,8 +11,13 @@ import {ResultExportFormat, ResultExportScope} from './ResultExport'
 	filtered: boolean
 	onExport: (scope: ResultExportScope, format: ResultExportFormat) => void
 }> {
-	@observable private open = false
+	private open = false
 	private anchor?: HTMLButtonElement
+
+	constructor(props: ResultExportMenu['props']) {
+		super(props)
+		makeObservable<this, 'open'>(this, {open: observable})
+	}
 
 	render() {
 		const {filteredCount, allCount, filtered, onExport} = this.props

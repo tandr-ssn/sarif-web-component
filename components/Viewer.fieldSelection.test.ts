@@ -57,8 +57,7 @@ test('restores and persists rule-group sorting', () => {
 
 	expect(viewer.runStoresInOrder[0].sortRuleBy).toBe(SortRuleBy.Name)
 	expect(viewer.runStoresInOrder[0].sortRuleOrder).toBe(SortOrder.descending)
-	viewer.runStoresInOrder[0].sortRuleBy = SortRuleBy.Count
-	viewer.runStoresInOrder[0].sortRuleOrder = SortOrder.ascending
+	viewer.runStoresInOrder[0].setRuleSort(SortRuleBy.Count, SortOrder.ascending)
 	expect(JSON.parse(window.localStorage.getItem(storageKey))).toEqual({by: 'count', order: 'ascending'})
 	viewer.componentWillUnmount()
 

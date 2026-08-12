@@ -1,13 +1,33 @@
-import {mount} from 'enzyme'
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import {fireEvent, render, screen} from '@testing-library/react'
 import * as React from 'react'
 import {Result} from 'sarif'
 import {ExecutionTrace} from './ExecutionTrace'
-import {SourceLocationLink} from './SourceLocationLink'
-import {Snippet} from './Snippet'
 
-Enzyme.configure({ adapter: new Adapter() })
+const sourceLinkProps: any[] = []
+const snippetProps: any[] = []
+
+jest.mock('./SourceLocationLink', () => {
+	const actual = jest.requireActual('./SourceLocationLink')
+	const React = require('react')
+	return {...actual, SourceLocationLink: (props: any) => {
+		sourceLinkProps.push(props)
+		return React.createElement('span', {className: props.className}, actual.getSourceLocationText(props.ploc, props.run))
+	}}
+})
+
+jest.mock('./Snippet', () => {
+	const React = require('react')
+	return {Snippet: (props: any) => {
+		snippetProps.push(props)
+		const text = props.ploc?.contextRegion?.snippet?.text ?? props.ploc?.region?.snippet?.text ?? ''
+		return React.createElement('pre', {className: 'swcSnippet'}, text)
+	}}
+})
+
+beforeEach(() => {
+	sourceLinkProps.length = 0
+	snippetProps.length = 0
+})
 
 test('renders result stacks and code flows', () => {
 	const run: any = {
@@ -59,34 +79,33 @@ test('renders result stacks and code flows', () => {
 		kind: 'method-parameter',
 	}
 
-	const wrapper = mount(<ExecutionTrace result={result} />)
-	expect(wrapper.find('summary').map(summary => summary.text())).toEqual([
+	const {container} = render(<ExecutionTrace result={result} />)
+	expect(Array.from(container.querySelectorAll('summary')).map(summary => summary.textContent)).toEqual([
 		'Call stack (1 frames)',
 		'Code flow (1 step) · Partial',
 	])
-	expect(wrapper.find('.swcTraceStatus').prop('data-swc-tooltip')).toBe([
+	expect(container.querySelector<HTMLElement>('.swcTraceStatus')?.dataset.swcTooltip).toBe([
 		"Partial trace within ACAH's bounded static model · Construction to sink",
 		'This does not prove runtime reachability or exploitability.',
 		'Caller origin is unresolved',
 	].join('\n'))
-	expect(wrapper.find('details').map(details => details.prop('data-copy-trace-value'))).toEqual([
+	expect(Array.from(container.querySelectorAll<HTMLElement>('details')).map(details => details.dataset.copyTraceValue)).toEqual([
 		'1. App.Run — src/app.ts:10\n10  Run(path)',
 		'1. Enter handler — src/handler.ts:5\n5  handle(request)',
 	])
-	expect(wrapper.text()).toContain('App.Run')
-	expect(wrapper.text()).toContain('src/app.ts:10')
-	expect(wrapper.text()).toContain('Enter handler')
-	expect(wrapper.text()).toContain('src/handler.ts:5')
-	expect(wrapper.find('.swcSnippet').map(snippet => snippet.text()).join(' ')).toContain('handle(request)')
-	expect(wrapper.find(Snippet).map(snippet => snippet.prop('highlightColor'))).toEqual(['#bde3f4', '#f7ee9f'])
-	const sourceLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') !== 'swcSnippetLink')
-	expect(sourceLinks.at(0).prop('trace')).toEqual({
+	expect(container.textContent).toContain('App.Run')
+	expect(container.textContent).toContain('src/app.ts:10')
+	expect(container.textContent).toContain('Enter handler')
+	expect(container.textContent).toContain('src/handler.ts:5')
+	expect(Array.from(container.querySelectorAll('.swcSnippet')).map(snippet => snippet.textContent).join(' ')).toContain('handle(request)')
+	expect(snippetProps.map(snippet => snippet.highlightColor)).toEqual(['#bde3f4', '#f7ee9f'])
+	expect(sourceLinkProps[0].trace).toEqual({
 		locations: [result.stacks[0].frames[0].location.physicalLocation],
 		activeIndex: 0,
 		label: 'Call stack',
 		origin,
 	})
-	expect(sourceLinks.at(1).prop('trace')).toEqual({
+	expect(sourceLinkProps[1].trace).toEqual({
 		locations: [run.threadFlowLocations[0].location.physicalLocation],
 		activeIndex: 0,
 		label: 'Code flow',
@@ -95,9 +114,8 @@ test('renders result stacks and code flows', () => {
 		inferIdentifiers: true,
 		origin,
 	})
-	const snippetLinks = wrapper.find(SourceLocationLink).filterWhere(link => link.prop('className') === 'swcSnippetLink')
-	expect(snippetLinks).toHaveLength(2)
-	expect(snippetLinks.at(1).prop('trace')).toEqual(sourceLinks.at(1).prop('trace'))
+	expect(snippetProps).toHaveLength(2)
+	expect(snippetProps[1].trace).toEqual(sourceLinkProps[1].trace)
 })
 
 test('labels a complete ACAH trace without implying runtime proof', () => {
@@ -107,10 +125,10 @@ test('labels a complete ACAH trace without implying runtime proof', () => {
 			trace: {status: 'complete', scope: 'modeled-source-to-sink', reason: 'all modeled endpoints are present'}}},
 		codeFlows: [{threadFlows: [{locations: []}]}],
 	} as unknown as Result
-	const wrapper = mount(<ExecutionTrace result={result} />)
-	expect(wrapper.find('summary').text()).toBe('Code flow (0 steps) · Complete')
-	expect(wrapper.find('.swcTraceStatus').prop('data-swc-tooltip')).toContain("Complete trace within ACAH's bounded static model")
-	expect(wrapper.find('.swcTraceStatus').prop('data-swc-tooltip')).toContain('does not prove runtime reachability')
+	const {container} = render(<ExecutionTrace result={result} />)
+	expect(container.querySelector('summary')?.textContent).toBe('Code flow (0 steps) · Complete')
+	expect(container.querySelector<HTMLElement>('.swcTraceStatus')?.dataset.swcTooltip).toContain("Complete trace within ACAH's bounded static model")
+	expect(container.querySelector<HTMLElement>('.swcTraceStatus')?.dataset.swcTooltip).toContain('does not prove runtime reachability')
 })
 
 test('selects one sink branch while retaining every branch for copy', () => {
@@ -123,13 +141,13 @@ test('selects one sink branch while retaining every branch for copy', () => {
 		{message: {text: 'File write'}, threadFlows: [{locations: [{index: 0}, {index: 1}]}]},
 		{message: {text: 'SQL execution'}, threadFlows: [{locations: [{index: 0}, {index: 2}]}]},
 	]} as unknown as Result
-	const wrapper = mount(<ExecutionTrace result={result} />)
-	expect(wrapper.find('[role="tab"]').map(tab => tab.text())).toEqual(['File write', 'SQL execution'])
-	expect(wrapper.text()).toContain('write(path)')
-	expect(wrapper.text()).not.toContain('query(sql)')
-	expect(wrapper.find('details').prop('data-copy-trace-value')).toContain('File write')
-	expect(wrapper.find('details').prop('data-copy-trace-value')).toContain('SQL execution')
-	wrapper.find('[role="tab"]').at(1).simulate('click')
-	expect(wrapper.text()).toContain('query(sql)')
-	expect(wrapper.text()).not.toContain('write(path)')
+	const {container} = render(<ExecutionTrace result={result} />)
+	expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['File write', 'SQL execution'])
+	expect(container.textContent).toContain('write(path)')
+	expect(container.textContent).not.toContain('query(sql)')
+	expect(container.querySelector<HTMLElement>('details')?.dataset.copyTraceValue).toContain('File write')
+	expect(container.querySelector<HTMLElement>('details')?.dataset.copyTraceValue).toContain('SQL execution')
+	fireEvent.click(screen.getByRole('tab', {name: 'SQL execution'}))
+	expect(container.textContent).toContain('query(sql)')
+	expect(container.textContent).not.toContain('write(path)')
 })

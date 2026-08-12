@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import {Artifact, Result, Run} from 'sarif'
-import {IObservableValue, autorun, computed, observable, IReactionDisposer} from 'mobx'
+import {action, IObservableValue, autorun, computed, observable, observableRef, IReactionDisposer, makeObservable} from 'mobx'
 import {RepositoryDetails, ResultOrRuleOrMore, Rule} from './Viewer.Types'
 import { getRepositoryDetailsFromRemoteUrl, isRepositoryDetailsComplete } from './getRepositoryDetailsFromRemoteUrl'
 
@@ -63,10 +63,10 @@ function cloneRunForView(source: Run): Run {
 export class RunStore {
 	readonly run: Run
 	driverName: string
-	@observable sortRuleBy = SortRuleBy.Count
-	@observable sortRuleOrder = SortOrder.ascending
-	@observable sortColumnIndex = 1
-	@observable sortOrder = SortOrder.ascending
+	sortRuleBy = SortRuleBy.Count
+	sortRuleOrder = SortOrder.ascending
+	sortColumnIndex = 1
+	sortOrder = SortOrder.ascending
 	private truncationDisposer: IReactionDisposer
 	private rulesInUse = new Map<string, Rule>()
 	private agesInUse = new Map([
@@ -75,6 +75,23 @@ export class RunStore {
 	])
 
 	constructor(sourceRun: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge: IObservableValue<boolean> = observable.box(false), readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice()), readonly findingTriage?: FindingTriage) {
+		makeObservable(this, {
+			sortRuleBy: observable,
+			sortRuleOrder: observable,
+			sortColumnIndex: observable,
+			sortOrder: observable,
+			agesFiltered: computed,
+			rulesFiltered: computed,
+			filteredCount: computed,
+			filteredResults: computed,
+			visibleResults: computed,
+			showAllRevision: observable,
+			rulesTruncated: observableRef,
+			columns: computed,
+			displayColumns: computed,
+			setRuleSort: action,
+			setColumnSort: action,
+		})
 		const run = this.run = cloneRunForView(sourceRun)
 		const {driver} = run.tool
 		const sarifDriverName = driver.fullName || driver.name
@@ -277,7 +294,7 @@ export class RunStore {
 		return treeItemsVisible
 	}
 
-	@computed get agesFiltered() {
+	get agesFiltered() {
 		const treeItems = [...this.agesInUse.values()]
 			.map(age => {
 				const treeItem = age.treeItem = age.treeItem || {
@@ -289,7 +306,7 @@ export class RunStore {
 		return this.filterHelper(treeItems)
 	}
 
-	@computed get rulesFiltered() {
+	get rulesFiltered() {
 		const treeItems = [...this.rulesInUse.values()]
 			.map(rule => {
 				const treeItem = rule.treeItem = rule.treeItem || {
@@ -301,15 +318,15 @@ export class RunStore {
 		return this.filterHelper(treeItems)
 	}
 
-	@computed get filteredCount() {
+	get filteredCount() {
 		return this.rulesFiltered.reduce((total, rule) => total + this.resultCount(rule.childItemsAll), 0)
 	}
 
-	@computed get filteredResults(): Result[] {
+	get filteredResults(): Result[] {
 		return this.rulesFiltered.flatMap(rule => rule.childItemsAll.map(item => item.data as Result))
 	}
 
-	@computed get visibleResults(): Result[] {
+	get visibleResults(): Result[] {
 		return (this.run.results ?? []).filter(result => !this.findingTriage?.isHidden(result))
 	}
 
@@ -317,19 +334,23 @@ export class RunStore {
 		return items.length
 	}
 
-	@observable showAllRevision = 0
-	@observable.ref rulesTruncated = [] as ITreeItem<ResultOrRuleOrMore>[] // Technically ITreeItem<Rule>[], ref assuming immutable array.
+	showAllRevision = 0
+	rulesTruncated = [] as ITreeItem<ResultOrRuleOrMore>[] // Technically ITreeItem<Rule>[], ref assuming immutable array.
+
+	setRuleSort(sortRuleBy: SortRuleBy, sortRuleOrder = this.sortRuleOrder) {
+		this.sortRuleBy = sortRuleBy
+		this.sortRuleOrder = sortRuleOrder
+	}
 
 	setColumnSort(columnIndex: number, sortOrder: SortOrder): boolean {
 		this.sortColumnIndex = columnIndex
 		this.sortOrder = sortOrder
 		if (!['Rule', 'ruleId'].includes(this.columns[columnIndex]?.id)) return false
-		this.sortRuleBy = SortRuleBy.Name
-		this.sortRuleOrder = sortOrder
+		this.setRuleSort(SortRuleBy.Name, sortOrder)
 		return true
 	}
 
-	@computed get columns() {
+	get columns() {
 		const artifactPath = (result: Result) => {
 			const physicalLocation = result.locations?.[0]?.physicalLocation
 			const artifactLocation = physicalLocation?.artifactLocation ?? result.analysisTarget
@@ -381,7 +402,7 @@ export class RunStore {
 	}
 
 	/** Columns rendered by the table. A selected Path is embedded in Details when both are present. */
-	@computed get displayColumns() {
+	get displayColumns() {
 		const columns = this.columns
 		const pathColumn = columns.find(column => column.id === 'Path')
 		const embedPath = !!pathColumn

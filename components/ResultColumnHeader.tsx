@@ -3,7 +3,7 @@
 
 import './ResultColumnHeader.scss'
 import * as React from 'react'
-import {observable} from 'mobx'
+import {makeObservable, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {Callout, ITableColumn, TableHeaderCell, Location} from './AzureDevOpsUi'
 import {ResultOrRuleOrMore} from './Viewer.Types'
@@ -26,8 +26,13 @@ export class ResultColumnHeader extends React.Component<{
 	focuszoneId?: string
 	isFirstActionableHeader?: boolean
 }> {
-	@observable private open = false
+	private open = false
 	private anchor?: HTMLButtonElement
+
+	constructor(props: ResultColumnHeader['props']) {
+		super(props)
+		makeObservable<this, 'open'>(this, {open: observable})
+	}
 
 	private setValue(value: string | string[] | undefined) {
 		const filter = this.props.runStores[0]?.filter

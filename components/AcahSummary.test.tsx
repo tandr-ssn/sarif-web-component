@@ -1,11 +1,7 @@
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
-import {mount} from 'enzyme'
+import {render} from '@testing-library/react'
 import * as React from 'react'
 import {Result, Run} from 'sarif'
 import {AcahSummary} from './AcahSummary'
-
-Enzyme.configure({adapter: new Adapter()})
 
 function resultWithAcah(acah: object, ruleAcah?: object): Result {
 	const run = {properties: {acah: {formatVersion: 4}}} as unknown as Run
@@ -30,33 +26,34 @@ test('summarizes an ACAH v4 claim, verdict, and detector provenance', () => {
 			selection: {status: 'confirmed', resolution: 'roslyn-symbol', reason: 'Resolved framework owner'},
 			parameterization: {status: 'unresolved', resolution: 'not-applicable', reason: 'Not a SQL sink'}},
 	}, {confidence: 'MEDIUM', sinkFamily: 'filesystem-operation'})
-	const wrapper = mount(<AcahSummary result={result} />)
-	expect(wrapper.find('.swcAcahBadge').map(badge => badge.text())).toEqual([
+	const {container} = render(<AcahSummary result={result} />)
+	const badges = Array.from(container.querySelectorAll<HTMLElement>('.swcAcahBadge'))
+	expect(badges.map(badge => badge.textContent)).toEqual([
 		'Plausible', `Claim ${claimId.slice(0, 12)}`, 'Detected by 2', 'Medium confidence', 'Filesystem operation', 'Effect unresolved', 'Partial trace',
 	])
-	expect(wrapper.find('.swcAcahBadge').at(1).prop('data-swc-tooltip')).toContain(claimId)
-	expect(wrapper.find('.swcAcahBadge').at(1).prop('data-swc-tooltip')).toContain('Validation conflict')
-	expect(wrapper.find('.swcAcahBadge').at(2).prop('data-swc-tooltip')).toContain('Public registry — public.php.xss')
-	expect(wrapper.find('.swcAcahBadge').at(2).prop('data-swc-tooltip')).toContain('Message: Unescaped output.')
-	expect(wrapper.find('.swcAcahBadge').at(2).prop('data-swc-tooltip')).toContain('Code flows: 2, 3')
-	expect(wrapper.find('.swcAcahBadge').at(4).prop('data-swc-tooltip')).toContain('Sensitive parameter: path')
-	expect(wrapper.find('.swcAcahBadge').at(5).prop('data-swc-tooltip')).toContain('Effect state is independent')
-	expect(wrapper.find('.swcAcahBadge').at(6).prop('data-swc-tooltip')).toContain('does not prove runtime reachability')
+	expect(badges[1].dataset.swcTooltip).toContain(claimId)
+	expect(badges[1].dataset.swcTooltip).toContain('Validation conflict')
+	expect(badges[2].dataset.swcTooltip).toContain('Public registry — public.php.xss')
+	expect(badges[2].dataset.swcTooltip).toContain('Message: Unescaped output.')
+	expect(badges[2].dataset.swcTooltip).toContain('Code flows: 2, 3')
+	expect(badges[4].dataset.swcTooltip).toContain('Sensitive parameter: path')
+	expect(badges[5].dataset.swcTooltip).toContain('Effect state is independent')
+	expect(badges[6].dataset.swcTooltip).toContain('does not prove runtime reachability')
 })
 
 test('shows context without exposing value previews', () => {
 	const result = resultWithAcah({classification: 'known-vulnerable-dependency', status: 'dependency-present', confidence: 'HIGH',
 		resolution: 'osv-match', scope: 'test', testSource: {confidence: 'high', language: 'csharp', reasons: ['test-directory']},
 		reachability: 'unverified', valuePreview: 'private source text'})
-	const wrapper = mount(<AcahSummary result={result} />)
-	expect(wrapper.text()).toContain('Test source')
-	expect(wrapper.text()).toContain('Reachability unverified')
-	expect(wrapper.html()).not.toContain('private source text')
+	const {container} = render(<AcahSummary result={result} />)
+	expect(container.textContent).toContain('Test source')
+	expect(container.textContent).toContain('Reachability unverified')
+	expect(container.innerHTML).not.toContain('private source text')
 })
 
 test('does not render missing or unknown formats', () => {
 	const missing = {run: {properties: {}}, properties: {otherTool: {status: 'review'}}} as unknown as Result
 	const retired = {run: {properties: {acah: {formatVersion: 3}}}, properties: {acah: {status: 'review'}}} as unknown as Result
-	expect(mount(<AcahSummary result={missing} />).isEmptyRender()).toBe(true)
-	expect(mount(<AcahSummary result={retired} />).isEmptyRender()).toBe(true)
+	expect(render(<AcahSummary result={missing} />).container).toBeEmptyDOMElement()
+	expect(render(<AcahSummary result={retired} />).container).toBeEmptyDOMElement()
 })

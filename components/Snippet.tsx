@@ -3,7 +3,7 @@
 
 import './Snippet.scss'
 import * as React from 'react'
-import {observable} from 'mobx'
+import {makeObservable, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {hljs} from './SyntaxHighlight'
 require('!style-loader!css-loader!highlight.js/styles/vs.css')
@@ -89,7 +89,12 @@ export function getSnippetRegionSegments(region: Region, contextRegion: Region):
 
 @observer export class Snippet extends React.Component<{ ploc?: PhysicalLocation, run?: Run, trace?: SourceTrace, style?: React.CSSProperties, highlightColor?: string }> {
 	static contextType = FilterKeywordContext
-	@observable showAll = false
+	showAll = false
+
+	constructor(props: Snippet['props']) {
+		super(props)
+		makeObservable(this, {showAll: observable})
+	}
 
 	render () {
 		const {ploc} = this.props

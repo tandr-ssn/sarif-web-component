@@ -3,7 +3,7 @@
 
 import './ResultFieldSelector.scss'
 import * as React from 'react'
-import {IObservableValue, observable} from 'mobx'
+import {IObservableValue, makeObservable, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldJsonPath, ResultFieldNode} from './ResultFields'
 import {Callout, Icon, IconSize, Location} from './AzureDevOpsUi'
@@ -79,9 +79,14 @@ export class ResultFieldSelector extends React.Component<{
 	fieldPaths: string[]
 	selected: IObservableValue<string[]>
 }> {
-	@observable private search = ''
-	@observable private open = false
+	private search = ''
+	private open = false
 	private anchor?: HTMLButtonElement
+
+	constructor(props: ResultFieldSelector['props']) {
+		super(props)
+		makeObservable<this, 'search' | 'open'>(this, {search: observable, open: observable})
+	}
 
 	private moveSelected = (path: string, direction: -1 | 1) => {
 		const fields = this.props.selected.get().slice()

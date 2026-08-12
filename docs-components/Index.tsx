@@ -1,9 +1,9 @@
 import "./Index.scss"
 import autobind from 'autobind-decorator'
-import {observable} from "mobx"
+import {makeObservable, observable, observableRef} from "mobx"
 import {observer} from "mobx-react"
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
+import {createRoot} from 'react-dom/client'
 import { Log } from 'sarif'
 import {Button} from '../components/AzureDevOpsUi'
 
@@ -64,18 +64,27 @@ export function parseSarif(text: string): Log {
 }
 
 @observer export class Index extends React.Component {
-	@observable.ref sample = (() => {
+	sample = (() => {
 		try { return rememberedSessionSarif ? parseSarif(rememberedSessionSarif.text) : demoLog }
 		catch (_) { return demoLog }
 	})()
-	@observable currentSarifFileName = rememberedSessionSarif?.name
-	@observable loadError?: string
+	currentSarifFileName = rememberedSessionSarif?.name
+	loadError?: string = undefined
 	private sourcePickerContainer?: HTMLSpanElement
+	private inputFile?: HTMLInputElement
 	private sarifFileHandle?: FileSystemFileHandleLike
 	private currentSarifFile?: File
 	private loadRevision = 0
 	private persistence = Promise.resolve()
 	state = {sourcePickerReady: false}
+	constructor(props: {}) {
+		super(props)
+		makeObservable(this, {
+			sample: observableRef,
+			currentSarifFileName: observable,
+			loadError: observable,
+		})
+	}
 	componentDidMount() {
 		this.setState({sourcePickerReady: true})
 		if (!rememberedSessionSarif) void indexedDbRememberedSarifStore.get().then(remembered => {
@@ -139,7 +148,7 @@ export function parseSarif(text: string): Log {
 		try { await indexedDbRememberedSarifStore.remove() }
 		catch (error) { this.loadError = `The report was closed, but its fallback copy could not be removed: ${error instanceof Error ? error.message : String(error)}` }
 	}
-	private openInputFilePicker = () => (this.refs.inputFile as any).click()
+	private openInputFilePicker = () => this.inputFile?.click()
 	private openFile = async () => {
 		if (!window.showOpenFilePicker) {
 			this.openInputFilePicker()
@@ -178,7 +187,7 @@ export function parseSarif(text: string): Log {
 		return <>
 			<div className="demoHeader">
 				<span>SARIF Viewer</span>
-				<input ref="inputFile" type="file" multiple={false} accept=".sarif,.json" style={{ display: 'none' }}
+				<input ref={element => this.inputFile = element ?? undefined} type="file" multiple={false} accept=".sarif,.json" style={{ display: 'none' }}
 					onChange={async e => {
 						e.persist()
 						const input = e.currentTarget
@@ -211,4 +220,4 @@ export function parseSarif(text: string): Log {
 }
 
 const app = document.getElementById('app')
-if (app) ReactDOM.render(<Index />, app)
+if (app) createRoot(app).render(<Index />)

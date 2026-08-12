@@ -13,10 +13,10 @@ npm install @microsoft/sarif-web-component
 
 ```js
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
+import {createRoot} from 'react-dom/client'
 import {Viewer} from '@microsoft/sarif-web-component'
 
-ReactDOM.render(<Viewer logs={arrayOfLogs} />, document.body.firstChild)
+createRoot(document.body.firstChild).render(<Viewer logs={arrayOfLogs} />)
 ```
 In the HTML page hosting this component, `<meta http-equiv="content-type" content="text/html; charset=utf-8">` is required to avoid text rendering issues.
 

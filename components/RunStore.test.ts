@@ -1,9 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import 'react-dom'
-jest.mock('react-dom')
-
 import { Run } from 'sarif'
 import { RunStore } from './RunStore'
 import { Viewer } from './Viewer'
@@ -15,7 +12,6 @@ import {createResultCsv, createResultHtmlTable} from './ResultExport'
 import {RunCard} from './RunCard'
 import {ResultColumnLayout} from './ResultColumnLayout'
 import {FindingTriage, FindingTriageStore} from './FindingTriage'
-jest.mock('./FilterBar')
 
 it('does not explode', () => { // Bare bones perf is 0.2s
 	const run = {

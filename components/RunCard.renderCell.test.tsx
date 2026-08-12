@@ -1,10 +1,6 @@
-import {mount} from 'enzyme'
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
+import {render} from '@testing-library/react'
 import {renderCell} from './RunCard.renderCell'
 import {looksLikeMarkdown} from './ResultFields'
-
-Enzyme.configure({adapter: new Adapter()})
 
 test('attaches the rule description tooltip to the rendered rule title', () => {
 	const rule: any = {
@@ -19,9 +15,9 @@ test('attaches the rule description tooltip to the rendered rule title', () => {
 		depth: 0,
 		underlyingItem: {data: rule, expanded: false, childItems: []},
 	}
-	const wrapper = mount(renderCell(0, 0, {id: 'Details'} as any, treeItem))
+	const {container} = render(renderCell(0, 0, {id: 'Details'} as any, treeItem))
 
-	expect(wrapper.find('.swcRuleTitle').prop('data-swc-tooltip')).toBe('Detects unsafe file access.')
+	expect(container.querySelector<HTMLElement>('.swcRuleTitle')?.dataset.swcTooltip).toBe('Detects unsafe file access.')
 })
 
 test('preserves line endings in selected result and rule field values', () => {
@@ -30,11 +26,11 @@ test('preserves line endings in selected result and rule field values', () => {
 		_rule: {help: {text: '\n\nUpgrade Calgary.Package.\nRestart the River service.\nVerify the resolved version.\n\n'}},
 	}
 	const treeItem: any = {underlyingItem: {data: result}}
-	const wrapper = mount(renderCell(0, 1, {id: 'rule.help.text'} as any, treeItem))
-	const value = wrapper.find('.swcResultFieldValue')
+	const {container} = render(renderCell(0, 1, {id: 'rule.help.text'} as any, treeItem))
+	const value = container.querySelector<HTMLElement>('.swcResultFieldValue')
 
-	expect(value.prop('style')).toEqual({whiteSpace: 'pre-wrap'})
-	expect(value.text()).toBe('Upgrade Calgary.Package.\nRestart the River service.\nVerify the resolved version.')
+	expect(value?.style.whiteSpace).toBe('pre-wrap')
+	expect(value?.textContent).toBe('Upgrade Calgary.Package.\nRestart the River service.\nVerify the resolved version.')
 })
 
 test('detects common Markdown in text fields without treating ordinary prose as Markdown', () => {
@@ -52,32 +48,32 @@ test('renders Markdown-looking text fields with safe external links', () => {
 		_rule: {help: {text: '### Remediation\n\nSee [the advisory](https://example.test/advisory).\n\n| Version | Status |\n| --- | --- |\n| 1.0 | affected |'}},
 	}
 	const treeItem: any = {underlyingItem: {data: result}}
-	const wrapper = mount(renderCell(0, 1, {
+	const {container} = render(renderCell(0, 1, {
 		id: 'rule.help.text', copyString: () => result._rule.help.text,
 	} as any, treeItem))
 
-	expect(wrapper.find('.swcResultFieldValue.swcMarkDown h3').text()).toBe('Remediation')
-	expect(wrapper.find('.swcResultFieldValue a').prop('href')).toBe('https://example.test/advisory')
-	expect(wrapper.find('.swcResultFieldValue a').prop('rel')).toBe('noopener noreferrer')
-	expect(wrapper.find('.swcResultFieldValue table')).toHaveLength(1)
-	expect(wrapper.find('.swcResultFieldValue th').map(cell => cell.text())).toEqual(['Version', 'Status'])
-	expect(wrapper.find('[data-copy-value]').prop('data-copy-value')).toContain('| --- | --- |')
-	expect(wrapper.find('[data-copy-markdown-value]').prop('data-copy-markdown-value')).toContain('| --- | --- |')
+	expect(container.querySelector('.swcResultFieldValue.swcMarkDown h3')?.textContent).toBe('Remediation')
+	expect(container.querySelector('.swcResultFieldValue a')?.getAttribute('href')).toBe('https://example.test/advisory')
+	expect(container.querySelector('.swcResultFieldValue a')?.getAttribute('rel')).toBe('noopener noreferrer')
+	expect(container.querySelectorAll('.swcResultFieldValue table')).toHaveLength(1)
+	expect(Array.from(container.querySelectorAll('.swcResultFieldValue th')).map(cell => cell.textContent)).toEqual(['Version', 'Status'])
+	expect(container.querySelector<HTMLElement>('[data-copy-value]')?.dataset.copyValue).toContain('| --- | --- |')
+	expect(container.querySelector<HTMLElement>('[data-copy-markdown-value]')?.dataset.copyMarkdownValue).toContain('| --- | --- |')
 })
 
 test('marks an embedded Path as a separate logical clipboard value', () => {
 	const result: any = {message: {text: 'Finding'}, _rule: {}, run: {}}
 	const treeItem: any = {underlyingItem: {data: result}}
-	const wrapper = mount(renderCell(0, 1, {
+	const {container} = render(renderCell(0, 1, {
 		id: 'Details',
 		copyString: () => 'Finding',
 		embedPath: true,
 		embeddedPathCopyString: () => 'calgary/src/River.ts',
 	} as any, treeItem))
 
-	const marker = wrapper.find('[data-copy-value]')
-	expect(marker.prop('data-copy-value')).toBe('Finding')
-	expect(marker.prop('data-copy-leading-value')).toBe('calgary/src/River.ts')
+	const marker = container.querySelector<HTMLElement>('[data-copy-value]')
+	expect(marker?.dataset.copyValue).toBe('Finding')
+	expect(marker?.dataset.copyLeadingValue).toBe('calgary/src/River.ts')
 })
 
 test('resolves numeric message links through SARIF related locations', () => {
@@ -94,10 +90,10 @@ test('resolves numeric message links through SARIF related locations', () => {
 		}]},
 	}
 	const treeItem: any = {underlyingItem: {data: result}}
-	const wrapper = mount(renderCell(0, 0, {id: 'Details'} as any, treeItem))
+	const {container} = render(renderCell(0, 0, {id: 'Details'} as any, treeItem))
 
-	expect(wrapper.find('a').prop('href')).toBe(
+	expect(container.querySelector('a')?.getAttribute('href')).toBe(
 		'https://github.com/edmonton/calgary/blob/abc123/src/River.ts#L12',
 	)
-	expect(wrapper.find('a').text()).toBe('the source')
+	expect(container.querySelector('a')?.textContent).toBe('the source')
 })

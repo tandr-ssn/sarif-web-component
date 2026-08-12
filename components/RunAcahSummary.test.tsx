@@ -1,11 +1,8 @@
-import * as Enzyme from 'enzyme'
-import Adapter from 'enzyme-adapter-react-16'
-import {mount} from 'enzyme'
+import {render} from '@testing-library/react'
 import * as React from 'react'
 import {Run} from 'sarif'
 import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 
-Enzyme.configure({adapter: new Adapter()})
 const runWithAcah = (acah: object) => ({properties: {acah: {formatVersion: 4, ...acah}}} as unknown as Run)
 
 test('summarizes v4 coverage, configuration, cache provenance, diagnostics, and filtering', () => {
@@ -29,7 +26,7 @@ test('summarizes v4 coverage, configuration, cache provenance, diagnostics, and 
 		'Filtered evidence: 1 parameterized SQL, 1 process-start overlaps, 1 review duplicates',
 		'Diagnostics: 2 (details retained in SARIF)',
 	], incomplete: true})
-	expect(mount(<RunAcahBadge summary={summary} />).text()).toContain('ACAH analysis incomplete')
+	expect(render(<RunAcahBadge summary={summary} />).container.textContent).toContain('ACAH analysis incomplete')
 })
 
 test('marks partial native coverage as incomplete', () => {
