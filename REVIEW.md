@@ -10,7 +10,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Rebuild run stores when behavior-changing React props change; do not cache computed values derived from non-observable props.
 - [x] Stop mutating caller-owned SARIF documents. Keep indexes, rule links, actions, age data, and other derived state in viewer-owned models or metadata.
 - [x] Fix result action indexes so Visual Studio and VS Code links for a finding use the same result index, and URL-encode all query parameters.
-- [ ] Avoid storing raw paths and messages in finding-triage keys, and prevent stale aliases from leaving ghost hidden states.
+- [x] Avoid storing raw paths and messages in finding-triage keys, and prevent stale aliases from leaving ghost hidden states.
 
 ## Priority 2: user experience
 

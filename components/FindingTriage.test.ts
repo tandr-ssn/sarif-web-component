@@ -46,7 +46,40 @@ test('prefers the producer-independent ACAH claim fingerprint', () => {
 	finding.partialFingerprints = {'acahClaim/v1': claimId, 'acahResult/v1': claimId}
 	const keys = findingIdentityKeys(finding)
 
-	expect(keys[0]).toBe(`v2\0acah-claim\0${JSON.stringify(['https://example.invalid/river', claimId])}`)
+	expect(keys).toHaveLength(1)
+	expect(keys[0]).toMatch(/^v3\0sha256\0[0-9a-f]{64}$/)
+	expect(keys[0]).not.toContain('example.invalid')
+	expect(keys[0]).not.toContain(claimId)
+})
+
+test('stored keys do not expose fallback paths or finding messages', () => {
+	const keys = findingIdentityKeys(result('', 'Private advisory text', '/home/alex/calgary/src/River.cs'))
+	expect(keys).toHaveLength(1)
+	expect(keys[0]).toMatch(/^v3\0sha256\0[0-9a-f]{64}$/)
+	expect(keys[0]).not.toContain('/home/alex')
+	expect(keys[0]).not.toContain('Private advisory text')
+})
+
+test('one canonical key avoids stale fallback aliases when presentation changes', async () => {
+	const store = new MemoryFindingTriageStore()
+	const before = result('stable', 'Before', 'src/Before.cs')
+	const after = result('stable', 'After', 'src/After.cs')
+	const triage = new FindingTriage('river', store)
+	await triage.load()
+	await triage.setHidden([before], true)
+	expect(triage.isHidden(after)).toBe(true)
+	await triage.setHidden([after], false)
+	expect(triage.isHidden(before)).toBe(false)
+	expect(store.values.size).toBe(0)
+})
+
+test('removes legacy raw identity keys while loading', async () => {
+	const store = new MemoryFindingTriageStore()
+	store.values.add('river\0v1\0fallback\0["/home/alex/private.cs"]')
+	const triage = new FindingTriage('river', store)
+	await triage.load()
+	expect(store.values.size).toBe(0)
+	expect(triage.hasStoredEntries).toBe(false)
 })
 
 test('hidden state persists, restores within a namespace, and can be forgotten globally', async () => {

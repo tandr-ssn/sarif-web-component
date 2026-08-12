@@ -1,6 +1,7 @@
 import {observable, runInAction} from 'mobx'
 import {Result, Run} from 'sarif'
 import {getResultClaim} from './Acah'
+import {stableSha256} from './StableHash'
 
 export interface StoredFindingTriage {
 	keys: string[]
@@ -46,20 +47,19 @@ function fallbackIdentity(result: Result): unknown[] {
 /** Stable aliases used to carry local triage state across scans from the same producer. */
 export function findingIdentityKeys(result: Result): string[] {
 	const context = findingContext(result)
-	const keys: string[] = []
 	const claimId = result.partialFingerprints?.['acahClaim/v1'] ?? getResultClaim(result)?.id
 	if (typeof claimId === 'string' && /^[0-9a-f]{64}$/.test(claimId)) {
 		const repository = result.run?.versionControlProvenance?.[0]?.repositoryUri ?? ''
-		keys.push(`v2\0acah-claim\0${JSON.stringify([repository, claimId])}`)
+		return [`v3\0sha256\0${stableSha256(JSON.stringify(['acah-claim', repository, claimId]))}`]
 	}
-	if (result.guid) keys.push(`v1\0guid\0${JSON.stringify([...context, result.guid])}`)
-	for (const [name, value] of sortedEntries(result.fingerprints)) {
-		keys.push(`v1\0fingerprint\0${JSON.stringify([...context, name, value])}`)
-	}
+	let identity: unknown[] | undefined
+	if (result.guid) identity = ['guid', ...context, result.guid]
+	const fingerprints = sortedEntries(result.fingerprints)
+	if (!identity && fingerprints.length) identity = ['fingerprints', ...context, fingerprints]
 	const partialFingerprints = sortedEntries(result.partialFingerprints)
-	if (partialFingerprints.length) keys.push(`v1\0partial\0${JSON.stringify([...context, partialFingerprints])}`)
-	keys.push(`v1\0fallback\0${JSON.stringify(fallbackIdentity(result))}`)
-	return Array.from(new Set(keys))
+	if (!identity && partialFingerprints.length) identity = ['partial', ...context, partialFingerprints]
+	identity ??= ['fallback', ...fallbackIdentity(result)]
+	return [`v3\0sha256\0${stableSha256(JSON.stringify(identity))}`]
 }
 
 export class FindingTriage {
@@ -73,9 +73,13 @@ export class FindingTriage {
 
 	async load(): Promise<void> {
 		const stored = await this.store.load(this.namespace)
+		const keys = stored.keys.filter(key => key.startsWith('v3\0sha256\0'))
+		const legacyKeys = stored.keys.filter(key => !key.startsWith('v3\0sha256\0'))
+		if (legacyKeys.length) await this.store.setHidden(this.namespace, legacyKeys, false)
+		const hasAny = legacyKeys.length ? await this.store.hasAny() : stored.hasAny
 		runInAction(() => {
-			this.hiddenKeys = new Set(stored.keys)
-			this.hasStoredEntries = stored.hasAny
+			this.hiddenKeys = new Set(keys)
+			this.hasStoredEntries = hasAny
 			this.ready = true
 			this.revision++
 		})
