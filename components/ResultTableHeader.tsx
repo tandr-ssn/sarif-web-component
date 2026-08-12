@@ -8,6 +8,7 @@ import {renderCell} from './RunCard.renderCell'
 import {TreeColumnSorting} from './RunCard.TreeColumnSorting'
 import {RunStore} from './RunStore'
 import {ResultOrRuleOrMore} from './Viewer.Types'
+import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 
 export function setResultColumnSort(runStores: RunStore[], columnId: string, sortOrder: SortOrder) {
 	runStores.forEach(store => {
@@ -67,6 +68,13 @@ export function setResultColumnSort(runStores: RunStore[], columnId: string, sor
 			column.sortProps.sortOrder = sharedSort && sortedColumn.id === id ? first.sortOrder : undefined
 			return column
 		})
+		if (first.findingTriage) this.currentColumns.push({
+			id: FINDING_TRIAGE_COLUMN_ID,
+			name: '',
+			width: layout.width(FINDING_TRIAGE_COLUMN_ID, 38),
+			renderCell,
+			className: 'swcFindingStickyCell',
+		} as ITreeColumn<ResultOrRuleOrMore>)
 		return this.currentColumns
 	}
 

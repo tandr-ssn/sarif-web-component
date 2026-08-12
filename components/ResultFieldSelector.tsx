@@ -6,7 +6,7 @@ import * as React from 'react'
 import {IObservableValue, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldJsonPath, ResultFieldNode} from './ResultFields'
-import {Callout, Location} from './AzureDevOpsUi'
+import {Callout, Icon, IconSize, Location} from './AzureDevOpsUi'
 
 function leafPaths(node: ResultFieldNode): string[] {
 	return [...(node.path ? [node.path] : []), ...node.children.flatMap(leafPaths)]
@@ -113,10 +113,14 @@ export class ResultFieldSelector extends React.Component<{
 		const selected = this.props.selected.get()
 		const displayNames = getResultFieldDisplayNames(selected)
 		return <div className="swcResultFieldSelector">
-			<button type="button" ref={element => this.anchor = element ?? undefined}
+			<button type="button" className="swcToolbarDropdownButton" ref={element => this.anchor = element ?? undefined}
 				data-swc-tooltip="Choose which SARIF result fields are shown in findings and exports"
 				aria-expanded={this.open}
-				onClick={() => this.open = !this.open}>Fields ({this.props.selected.get().length}) <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
+				onClick={() => this.open = !this.open}>
+				<span className="swcToolbarDropdownLabel">Fields: </span>
+				<span className="swcToolbarDropdownValue">{this.props.selected.get().length}</span>
+				<Icon ariaHidden={true} className="swcToolbarDropdownChevron" iconName="ChevronDownMed" size={IconSize.small} />
+			</button>
 			{this.open && this.anchor && <Callout
 				anchorElement={this.anchor}
 				anchorOrigin={{horizontal: Location.start, vertical: Location.end}}

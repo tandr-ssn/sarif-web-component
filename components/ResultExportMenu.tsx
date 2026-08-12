@@ -2,7 +2,7 @@ import './ResultExportMenu.scss'
 import * as React from 'react'
 import {observable} from 'mobx'
 import {observer} from 'mobx-react'
-import {Callout, Location} from './AzureDevOpsUi'
+import {Callout, Icon, IconSize, Location} from './AzureDevOpsUi'
 import {ResultExportFormat, ResultExportScope} from './ResultExport'
 
 @observer export class ResultExportMenu extends React.Component<{
@@ -20,11 +20,15 @@ import {ResultExportFormat, ResultExportScope} from './ResultExport'
 		const count = filtered ? filteredCount : allCount
 		const scopeLabel = filtered ? 'filtered' : 'visible'
 		return <div className="swcResultExport">
-			<button type="button" ref={element => this.anchor = element ?? undefined}
+			<button type="button" className="swcToolbarDropdownButton" ref={element => this.anchor = element ?? undefined}
 				data-swc-tooltip={`Export ${count} findings using the selected Fields`}
 				aria-expanded={this.open} aria-haspopup="menu"
 				disabled={!count}
-				onClick={() => this.open = !this.open}>Export {scopeLabel} <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
+				onClick={() => this.open = !this.open}>
+				<span className="swcToolbarDropdownLabel">Export: </span>
+				<span className="swcToolbarDropdownValue">{scopeLabel}</span>
+				<Icon ariaHidden={true} className="swcToolbarDropdownChevron" iconName="ChevronDownMed" size={IconSize.small} />
+			</button>
 			{this.open && this.anchor && <Callout anchorElement={this.anchor}
 				anchorOrigin={{horizontal: Location.end, vertical: Location.end}}
 				calloutOrigin={{horizontal: Location.end, vertical: Location.start}}

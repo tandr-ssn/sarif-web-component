@@ -43,61 +43,26 @@
 	padding: 8px 0;
 }
 
-.swcFindingVisibility {
+.swcFindingVisibility { min-width: 120px; }
+
+.swcToolbarDropdownButton {
 	align-items: center;
-	border: 1px solid $neutral-20;
-	border-radius: 2px;
-	display: flex;
-	font-weight: 600;
-	margin-right: 4px;
-	padding-left: 8px;
-
-	select {
-		background: transparent;
-		border: 0;
-		color: inherit;
-		cursor: pointer;
-		font: inherit;
-		font-weight: 400;
-		padding: 5px 7px 5px 5px;
-	}
-}
-
-.swcClearAllFilters {
 	background: transparent;
-	border: 1px solid $neutral-20;
-	border-radius: 2px;
-	color: $communication-foreground;
-	cursor: pointer;
-	font-weight: 600;
-	margin-right: 4px;
-	padding: 5px 10px;
+	border: 0;
+	color: $secondary-text;
+	display: inline-flex;
+	font: inherit;
+	height: 32px;
+	padding: 0 8px;
 
 	&:hover, &:focus-visible { background: $neutral-8; }
+	&:disabled { cursor: default; opacity: .6; }
 }
 
-.swcClearFiltersMenu {
-	background: $neutral-4;
-	border: 1px solid $neutral-30;
-	border-radius: 3px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, .24);
-	display: flex;
-	flex-direction: column;
-	min-width: 220px;
-	padding: 4px;
-
-	button {
-		align-items: center;
-		background: transparent;
-		border: 0;
-		cursor: pointer;
-		display: flex;
-		gap: 8px;
-		padding: 7px 10px;
-		text-align: left;
-	}
-
-	button:hover, button:focus { background: $neutral-10; }
-	hr { border: 0; border-top: 1px solid $neutral-20; margin: 4px 0; width: 100%; }
-	.swcClearFiltersAll { font-weight: 600; }
+.swcToolbarDropdownValue {
+	color: $primary-text;
+	font-weight: $fontWeightSemiBold;
 }
+
+.swcToolbarDropdownLabel { margin-right: 3px; }
+.swcToolbarDropdownChevron { margin-left: 8px; }

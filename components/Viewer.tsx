@@ -563,8 +563,7 @@ export interface ViewerProps {
 							<div className="swcResultsControls" ref={this.setResultsControls}>
 								<FilterBar filter={this.filter} groupByAge={this.groupByAge.get()} hideBaseline={hideBaseline} hideLevel={hideLevel} showSuppression={showSuppression} showAge={showAge}
 									resultFieldSelector={<ResultFieldSelector fieldPaths={this.resultFieldPaths} selected={this.selectedResultFields} />}
-									findingVisibilityFilter={<FindingVisibilityFilter filter={this.filter}
-										visibleCount={visibleResultCount} hiddenCount={allResultCount - visibleResultCount} />}
+									findingVisibilityFilter={<FindingVisibilityFilter filter={this.filter} />}
 									resultExportMenu={<ResultExportMenu filteredCount={filteredResultCount} allCount={visibleResultCount}
 										filtered={this.filter.hasChangesToReset()} onExport={this.exportResults} />}
 									resultViewOptionsMenu={<ResultViewOptionsMenu runStores={this.runStoresInOrder} fitAllColumns={this.fitAllColumns}

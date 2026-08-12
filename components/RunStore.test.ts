@@ -248,6 +248,8 @@ it('filters hidden findings persistently and excludes them from visible exports'
 	expect(runStore.filteredResults).toEqual(viewResults)
 	visibility.set(['hidden'])
 	expect(runStore.filteredResults).toEqual([viewResults[0]])
+	visibility.set([])
+	expect(runStore.filteredResults).toEqual([])
 })
 
 it('does not coalesce results from different rules', () => {

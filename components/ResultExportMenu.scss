@@ -5,11 +5,7 @@
 	margin-left: 4px;
 
 	> button {
-		background: $neutral-2;
-		border: 1px solid $neutral-20;
-		border-radius: 2px;
 		cursor: pointer;
-		padding: 5px 10px;
 	}
 
 	> button:disabled { cursor: default; opacity: .6; }

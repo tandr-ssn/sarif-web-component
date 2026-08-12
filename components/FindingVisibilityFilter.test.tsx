@@ -4,19 +4,26 @@ import * as Enzyme from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import {FindingVisibilityFilter, getFindingVisibility} from './FindingVisibilityFilter'
 import {MobxFilter} from './FilterBar'
+import {DropdownFilterBarItem} from './AzureDevOpsUi'
 
 Enzyme.configure({adapter: new Adapter()})
 
 test('selects visible, hidden, or all findings through the shared filter', () => {
 	const filter = new MobxFilter()
-	const wrapper = mount(<FindingVisibilityFilter filter={filter} visibleCount={7} hiddenCount={2} />)
+	const wrapper = mount(<FindingVisibilityFilter filter={filter} />)
 	expect(getFindingVisibility(filter)).toBe('visible')
-	expect(wrapper.find('option').map(option => option.text())).toEqual(['Visible (7)', 'Hidden (2)', 'All (9)'])
+	const dropdown = wrapper.find(DropdownFilterBarItem)
+	expect(dropdown.prop('placeholder')).toBe('Visibility')
+	expect((dropdown.prop('items') as any[]).map(item => item.text)).toEqual(['Visible', 'Hidden'])
 
-	wrapper.find('select').simulate('change', {target: {value: 'hidden'}})
+	filter.setFilterItemState('Triage', {value: ['hidden']})
 	expect(getFindingVisibility(filter)).toBe('hidden')
-	wrapper.find('select').simulate('change', {target: {value: 'all'}})
+	filter.setFilterItemState('Triage', {value: ['visible', 'hidden']})
 	expect(getFindingVisibility(filter)).toBe('all')
+	filter.setFilterItemState('Triage', {value: []})
+	expect(getFindingVisibility(filter)).toBe('none')
+	wrapper.update()
+	expect(wrapper.find(DropdownFilterBarItem).prop('placeholder')).toBe('Visibility: none')
 
 	wrapper.unmount()
 })

@@ -20,6 +20,7 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 import {getTreeRowClass} from './RunCard.rowPresentation'
 import {RunTitle} from './RunTitle'
 import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
+import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 
 @observer export class RunCard extends Component<{
 	runStore: RunStore
@@ -35,7 +36,7 @@ import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
 
 	@computed private get columns() {
 		const {runStore} = this.props
-		return runStore.displayColumns.map(col => {
+		const columns = runStore.displayColumns.map(col => {
 			const {id, name, width} = col
 			if (!this.columnCache.has(id)) {
 				this.columnCache.set(id, {
@@ -54,6 +55,15 @@ import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
 			;(column as ITreeColumn<ResultOrRuleOrMore> & {findingTriage?: typeof runStore.findingTriage}).findingTriage = runStore.findingTriage
 			return column
 		})
+		if (runStore.findingTriage) columns.push({
+			id: FINDING_TRIAGE_COLUMN_ID,
+			name: '',
+			width: this.columnLayout.width(FINDING_TRIAGE_COLUMN_ID, 38),
+			renderCell,
+			className: 'swcFindingStickyCell',
+			findingTriage: runStore.findingTriage,
+		} as ITreeColumn<ResultOrRuleOrMore>)
+		return columns
 	}
 
 	constructor(props) {

@@ -202,7 +202,7 @@ export class RunStore {
 				.filter(result => {
 					const triageValues = filter.Triage?.value as string[] | undefined ?? ['visible']
 					const triageValue = this.findingTriage?.isHidden(result) ? 'hidden' : 'visible'
-					if (triageValues.length && !triageValues.includes(triageValue)) return false
+					if (!triageValues.includes(triageValue)) return false
 					for (const column of columns) {
 						const value = filter[resultColumnFilterKey(column.id)]?.value as string | string[] | undefined
 						const field = column.filterString(result)

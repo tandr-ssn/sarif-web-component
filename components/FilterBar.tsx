@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 import './FilterBar.scss'
-import { createAtom, observable } from 'mobx'
+import { createAtom } from 'mobx'
 import { observer } from 'mobx-react'
 import * as React from 'react'
 
-import {Callout, FilterBar as AzFilterBar, KeywordFilterBarItem, Filter, FILTER_CHANGE_EVENT, IFilterState, Location} from './AzureDevOpsUi'
+import {FilterBar as AzFilterBar, KeywordFilterBarItem, Filter, FILTER_CHANGE_EVENT, IFilterState} from './AzureDevOpsUi'
 
 export const recommendedDefaultState = {
 	Baseline: { value: ['new', 'unchanged', 'updated'] },
@@ -42,75 +42,6 @@ export class MobxFilter extends Filter {
 	}
 }
 
-export interface ActiveFilterDescription {
-	key: string
-	description: string
-}
-
-function filterValueText(value: unknown): string {
-	if (Array.isArray(value)) return value.join(', ')
-	if (value && typeof value === 'object') return JSON.stringify(value)
-	return String(value ?? '')
-}
-
-export function getActiveFilterDescriptions(filter: MobxFilter): ActiveFilterDescription[] {
-	const state = filter.getState()
-	const defaults = filter.getDefaultState()
-	return Array.from(new Set([...Object.keys(defaults), ...Object.keys(state)]))
-		.filter(key => !filter.filterItemStatesAreEqual(key, state[key] ?? null, defaults[key] ?? null))
-		.map(key => {
-			const value = state[key]?.value
-			if (key === 'Keywords') return {key, description: `Keyword: “${filterValueText(value)}”`}
-			if (key.startsWith('Column:')) {
-				const field = key.slice('Column:'.length)
-				return {key, description: typeof value === 'string'
-					? `${field}: contains “${value}”`
-					: `${field}: ${filterValueText(value)}`}
-			}
-			return {key, description: `${key}: ${filterValueText(value)}`}
-		})
-}
-
-export function clearFilterItem(filter: MobxFilter, key: string) {
-	// Keep an object for Keywords because RunStore iterates non-column filter states.
-	if (key === 'Keywords') filter.setFilterItemState(key, {value: ''})
-	else filter.resetFilterItemState(key)
-}
-
-@observer export class ClearAllFiltersButton extends React.Component<{filter: MobxFilter}> {
-	@observable private open = false
-	private anchor?: HTMLButtonElement
-
-	render() {
-		const {filter} = this.props
-		const active = getActiveFilterDescriptions(filter)
-		if (!active.some(item => item.key !== 'Keywords')) return null
-		const tooltip = `Clear all filters\n${active.map(item => item.description).join('\n')}`
-		return <div className="swcClearFilters">
-			<button type="button" className="swcClearAllFilters"
-				ref={element => this.anchor = element ?? undefined}
-				aria-label={`Clear filters; ${active.length} active`}
-				aria-expanded={this.open} aria-haspopup="menu"
-				data-swc-tooltip={tooltip}
-				onClick={() => this.open = !this.open}>Clear filters ({active.length}) <span aria-hidden="true">{this.open ? '▴' : '▾'}</span></button>
-			{this.open && this.anchor && <Callout anchorElement={this.anchor}
-				anchorOrigin={{horizontal: Location.start, vertical: Location.end}}
-				calloutOrigin={{horizontal: Location.start, vertical: Location.start}}
-				blurDismiss={false} escDismiss={true} lightDismiss={true}
-				onDismiss={() => this.open = false}>
-				<div className="swcClearFiltersMenu">
-					{active.map(item => <button type="button" key={item.key}
-						aria-label={`Clear filter: ${item.description}`}
-						onClick={() => { clearFilterItem(filter, item.key); this.open = false }}><span aria-hidden="true">×</span>{item.description}</button>)}
-					<hr />
-					<button type="button" className="swcClearFiltersAll"
-						onClick={() => { filter.reset(); this.open = false }}>Clear all filters</button>
-				</div>
-			</Callout>}
-		</div>
-	}
-}
-
 @observer export class FilterBar extends React.Component<{
 	filter: MobxFilter
 	readonly groupByAge: boolean
@@ -126,12 +57,11 @@ export function clearFilterItem(filter: MobxFilter, key: string) {
 	render() {
 		const {filter, resultFieldSelector, findingVisibilityFilter, resultExportMenu, resultViewOptionsMenu} = this.props
 		return <div className="swcFilterToolbar">
-			<AzFilterBar className="swcKeywordFilter" filter={filter} hideClearAction={true}>
+			<AzFilterBar className="swcKeywordFilter" filter={filter} hideClearAction={false}>
 				<KeywordFilterBarItem filterItemKey="Keywords" placeholder="Filter by keyword" clearable />
 			</AzFilterBar>
 			<div className="swcFilterToolbarActions">
 				{findingVisibilityFilter}
-				<ClearAllFiltersButton filter={filter} />
 				{resultFieldSelector}
 				{resultExportMenu}
 				{resultViewOptionsMenu}

@@ -16,6 +16,7 @@ class InlineViewerHtmlPlugin {
 				const licenseAssetName = `${bundleName}.LICENSE.txt`
 				const thirdPartyLicenses = compilation.getAsset(licenseAssetName)?.source.source().toString() ?? ''
 				const projectLicense = fs.readFileSync(path.join(__dirname, 'LICENSE'), 'utf8').trim()
+				const iconFont = fs.readFileSync(path.join(__dirname, 'node_modules/azure-devops-ui/Components/Icon/fonts/AzDevMDL2.woff')).toString('base64')
 				const template = fs.readFileSync(path.join(__dirname, 'docs-components/index.template.html'), 'utf8')
 				const placeholder = '<script src="index.js"></script>'
 				if (!template.includes(placeholder)) throw new Error(`Missing viewer bundle placeholder: ${placeholder}`)
@@ -28,7 +29,8 @@ class InlineViewerHtmlPlugin {
 				const bundle = bundleAsset.source.source().toString()
 					.replace(/^\/\*! For license information please see [^*]+\*\/\s*/, '')
 					.replace(/<\/script/gi, '<\\\\/script')
-				const html = template.replace(placeholder, () => `${licenseComment}\n\t\t<script>${bundle}</script>`)
+				const iconFontStyle = `<style>@font-face{font-family:"SWCAzureIcons";src:url("data:font/woff;base64,${iconFont}") format("woff");font-display:block}.fabric-icon{font-family:"SWCAzureIcons"!important}</style>`
+				const html = template.replace(placeholder, () => `${licenseComment}\n\t\t<script>${bundle}</script>\n\t\t${iconFontStyle}`)
 
 				compilation.emitAsset('index.html', new sources.RawSource(html))
 				compilation.deleteAsset(bundleName)

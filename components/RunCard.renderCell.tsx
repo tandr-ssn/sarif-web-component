@@ -24,7 +24,7 @@ import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
 import {getRuleTooltip} from './RunCard.rowPresentation'
 import {FindingTriage} from './FindingTriage'
-import {FindingTriageAction} from './FindingTriageAction'
+import {FINDING_TRIAGE_COLUMN_ID, FindingTriageAction} from './FindingTriageAction'
 import {safeLinkHref} from './SafeLink'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
@@ -70,6 +70,15 @@ export function renderCell<T extends ISimpleTableCell>(
 		columnIndex,
 		treeItem,
 		treeColumn,
+	}
+	if (treeColumn.id === FINDING_TRIAGE_COLUMN_ID) {
+		return (data as any)?.message ? TableCell({
+			children: <div className="swcFindingStickyAction">
+				<FindingTriageAction triage={findingTriage} results={[data as unknown as Result]} compact />
+			</div>,
+			className: 'swcFindingStickyCell',
+			columnIndex,
+		}) : null
 	}
 
 	// ROW AGE
@@ -190,7 +199,6 @@ export function renderCell<T extends ISimpleTableCell>(
 		})()
 		const resultChildren = <div className="swcFindingWithTriage">
 			<div className="swcFindingTriageContent">{copyMarker}{children}</div>
-			{columnIndex === 0 && <FindingTriageAction triage={findingTriage} results={[result]} />}
 		</div>
 		return columnIndex === 0
 			? ExpandableTreeCell({children: resultChildren, ...commonProps})

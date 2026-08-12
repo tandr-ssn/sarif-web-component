@@ -61,18 +61,39 @@
 }
 
 .swcFindingTriageAction {
-	background: transparent;
-	border: 1px solid var(--palette-neutral-30, #c8c8c8);
-	border-radius: 2px;
-	color: var(--palette-primary, #0078d4);
-	cursor: pointer;
 	flex: 0 0 auto;
-	font: inherit;
-	font-size: 11px;
-	padding: 2px 6px;
+}
 
-	&:hover, &:focus-visible { background: var(--palette-neutral-8, #eaeaea); }
-	&:disabled { cursor: default; opacity: .55; }
+.swcFindingStickyCell {
+	background: inherit;
+	box-shadow: -1px 0 var(--palette-neutral-20, #e8e8e8);
+	box-sizing: border-box;
+	min-width: 38px;
+	position: sticky;
+	right: 0;
+	vertical-align: top;
+	width: 38px;
+	z-index: 1;
+}
+
+.swcFindingStickyAction {
+	align-items: flex-start;
+	display: flex;
+	justify-content: center;
+	padding: 5px;
+	position: sticky;
+	top: calc(var(--swc-results-controls-height, 104px) + 8px);
+}
+
+.swcFindingTriageActionCompact {
+	align-items: center;
+	display: inline-flex;
+	height: 28px;
+	justify-content: center;
+	padding: 0;
+	width: 28px;
+
+	svg { fill: none; height: 18px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; width: 18px; }
 }
 
 .swcRuleTitle {
