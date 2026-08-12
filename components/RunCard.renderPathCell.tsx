@@ -9,6 +9,7 @@ import { getSourceLocationText, SourceLocationLink } from './SourceLocationLink'
 import { getResultSourceTrace } from './ResultSourceTrace'
 import { tryOr } from './try'
 import {SourcePathFormatterContext} from './SourceFile'
+import {getArtifactLocation} from './SourceFileResolver'
 
 function SourcePathText(props: {uri?: string, position: string, rootRelative?: boolean, run: Result['run'], artifactLocation?: Result['analysisTarget']}) {
 	const formatPath = React.useContext(SourcePathFormatterContext)
@@ -36,20 +37,20 @@ function PathTooltip(props: {
 	return <Element className={props.className} data-swc-tooltip={text}>{props.children}</Element>
 }
 
-// TODO:
-// Unify runArt vs resultArt.
-// Distinguish uri and text.
 export function renderPathCell(result: Result, embedded = false) {
 	const ploc = result.locations?.[0]?.physicalLocation
-	const resArtLoc
+	const resultArtifactLocation
 	    =  ploc?.artifactLocation
 		?? result.analysisTarget
-	const runArt = result.run.artifacts?.[resArtLoc?.index ?? -1]
-	const runArtLoc = runArt?.location
-	const description = resArtLoc?.description?.text
-		?? runArtLoc?.description?.text // vs runArt?.description?.text?
-	const artifactUri = resArtLoc?.uri
-		?? runArtLoc?.uri // Commonly a relative URI.
+	const runArtifact = result.run.artifacts?.[resultArtifactLocation?.index ?? -1]
+	const artifactLocation = getArtifactLocation(
+		resultArtifactLocation ? {artifactLocation: resultArtifactLocation} : undefined,
+		result.run,
+	)
+	const description = resultArtifactLocation?.description?.text
+		?? runArtifact?.location?.description?.text
+		?? runArtifact?.description?.text
+	const artifactUri = artifactLocation?.uri // Commonly a relative URI.
 	const uri = description ?? artifactUri
 
 	const region = ploc?.region
@@ -57,12 +58,12 @@ export function renderPathCell(result: Result, embedded = false) {
 		? `:${region.startLine}${region.startColumn ? `:${region.startColumn}` : ''}`
 		: ''
 	const uriWithEllipsis = <SourcePathText uri={uri} position={position} rootRelative={!description}
-		run={result.run} artifactLocation={resArtLoc ?? runArtLoc} />
+		run={result.run} artifactLocation={artifactLocation} />
 	
 	// Example of href scenario:
 	// uri  = src\Prototypes\README.md
 	// href = https://org.visualstudio.com/project/_git/repo?path=%2Fsrc%2FPrototypes%2FREADME.md&_a=preview
-	const href = resArtLoc?.properties?.['href']
+	const href = artifactLocation?.properties?.['href']
 	const sourcePhysicalLocation = ploc ?? (result.analysisTarget
 		? { artifactLocation: result.analysisTarget } as PhysicalLocation
 		: undefined)

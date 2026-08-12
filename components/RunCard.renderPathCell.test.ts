@@ -7,6 +7,7 @@ import { demoResults } from './PathCellDemo'
 import {Result} from 'sarif'
 import {Hi} from './Hi'
 import {SourcePathFormatterContext} from './SourceFile'
+import {FilterKeywordContext} from './Viewer.Contexts'
 
 Enzyme.configure({ adapter: new Adapter() })
 
@@ -14,6 +15,21 @@ test('renders supported path shapes without failing', () => {
 	for (const result of demoResults()) {
 		expect(() => shallow(renderPathCell(result))).not.toThrow()
 	}
+})
+
+test('highlights a matching keyword in a rendered path', () => {
+	const result = {
+		message: {text: 'Finding'},
+		locations: [{physicalLocation: {artifactLocation: {uri: 'src/River/Handler.ts'}}}],
+		run: {},
+	} as unknown as Result
+	const wrapper = mount(React.createElement(
+		FilterKeywordContext.Provider,
+		{value: 'river'},
+		renderPathCell(result),
+	))
+
+	expect(wrapper.find('mark').text()).toBe('River')
 })
 
 test('renders an embedded, middle-ellipsized path with its source position', () => {
@@ -72,4 +88,22 @@ test('does not treat an artifact description as a root-relative path', () => {
 		.map(part => React.Children.toArray(part.prop('children')).join('')).join('')
 
 	expect(displayedPath).toBe('Calgary service handler:42')
+})
+
+test('resolves an index-only result location while keeping display text separate from its URI', () => {
+	const result = {
+		message: {text: 'Finding'},
+		locations: [{physicalLocation: {artifactLocation: {index: 0}, region: {startLine: 9}}}],
+		run: {artifacts: [{
+			description: {text: 'River request handler'},
+			location: {uri: 'src/River.ts', properties: {href: 'https://example.test/src/River.ts'}},
+		}]},
+	} as unknown as Result
+	const wrapper = mount(renderPathCell(result, true))
+	const displayedPath = wrapper.find(Hi)
+		.map(part => React.Children.toArray(part.prop('children')).join('')).join('')
+
+	expect(displayedPath).toBe('River request handler:9')
+	expect(wrapper.find('div.swcFindingPath').prop('data-swc-tooltip')).toBe('src/River.ts:9')
+	expect(wrapper.find('a').prop('href')).toBe('https://example.test/src/River.ts')
 })

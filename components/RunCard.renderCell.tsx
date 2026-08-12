@@ -235,9 +235,7 @@ function renderMessageWithEmbeddedLinks(result: Result, message: string) {
 				const href = (() => {
 					if (isNaN(id as any)) return id // `id` is a URI string
 
-					// Else `id` is a number
-					// TODO: search other location collections
-					// RelatedLocations is typically [{ id: 1, ...}, { id: 2, ...}]
+					// Numeric message-link ids refer to result.relatedLocations in SARIF 2.1.
 					const physicalLocation = result.relatedLocations?.find(location => location.id === +id)?.physicalLocation
 					return getRepoUri(physicalLocation?.artifactLocation?.uri, result.run, physicalLocation?.region)
 				})()

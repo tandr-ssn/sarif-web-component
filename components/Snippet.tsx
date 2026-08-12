@@ -10,7 +10,7 @@ require('!style-loader!css-loader!highlight.js/styles/vs.css')
 
 import {FilterKeywordContext} from './Viewer.Contexts'
 import {Hi} from './Hi'
-import {PhysicalLocation, Run} from 'sarif'
+import {PhysicalLocation, Region, Run} from 'sarif'
 import {tryOr} from './try'
 import {SourceLocationLink} from './SourceLocationLink'
 import {SourceTrace} from './SourceFile'
@@ -25,6 +25,66 @@ export function trimSnippetIndent(text: string): {text: string, removed: number}
 		text: lines.map(line => line.trim().length ? line.slice(Math.min(removed, line.length)) : '').join('\n'),
 		removed,
 	}
+}
+
+export interface SnippetRegionSegments {
+	pre: string
+	highlighted: string
+	post: string
+}
+
+function offsetAfterSnippetTrim(text: string, rawOffset: number, removed: number): number | undefined {
+	if (rawOffset < 0 || rawOffset > text.length) return undefined
+	let rawPosition = 0
+	let renderedPosition = 0
+	for (const match of text.matchAll(/([^\r\n]*)(\r\n|\r|\n|$)/g)) {
+		const content = match[1]
+		const newline = match[2]
+		const blank = content.trim().length === 0
+		const leadingWhitespace = content.match(/^[ \t]*/)?.[0].length ?? 0
+		const omitted = blank ? content.length : Math.min(removed, leadingWhitespace)
+		if (rawOffset <= rawPosition + content.length) {
+			return renderedPosition + (blank ? 0 : Math.max(0, rawOffset - rawPosition - omitted))
+		}
+		rawPosition += content.length
+		renderedPosition += content.length - omitted
+		if (!newline) break
+		if (rawOffset < rawPosition + newline.length) return renderedPosition
+		rawPosition += newline.length
+		renderedPosition++
+		if (rawOffset === rawPosition) return renderedPosition
+	}
+	return rawOffset === rawPosition ? renderedPosition : undefined
+}
+
+export function getSnippetRegionSegments(region: Region, contextRegion: Region): SnippetRegionSegments | undefined {
+	const contextText = contextRegion.snippet?.text
+	if (contextText === undefined) return undefined
+	const trimmed = trimSnippetIndent(contextText)
+	if (region.startLine === undefined) {
+		if (region.charOffset === undefined || region.charLength === undefined || contextRegion.charOffset === undefined) return undefined
+		const rawStart = region.charOffset - contextRegion.charOffset
+		const rawEnd = rawStart + region.charLength
+		const start = offsetAfterSnippetTrim(contextText, rawStart, trimmed.removed)
+		const end = offsetAfterSnippetTrim(contextText, rawEnd, trimmed.removed)
+		if (start === undefined || end === undefined || end < start) return undefined
+		return {pre: trimmed.text.slice(0, start), highlighted: trimmed.text.slice(start, end), post: trimmed.text.slice(end)}
+	}
+
+	const lines = trimmed.text.split('\n')
+	const minLeadingWhitespace = trimmed.removed
+	let {startLine, startColumn = 1, endLine = startLine, endColumn = Number.MAX_SAFE_INTEGER} = region
+	let {startLine: contextStartLine = 1, startColumn: contextStartColumn = 1} = contextRegion
+	startLine = startLine - contextStartLine
+	endLine = endLine - contextStartLine
+	startColumn = Math.max(0, startColumn - contextStartColumn - minLeadingWhitespace)
+	endColumn = Math.max(0, endColumn - contextStartColumn - minLeadingWhitespace)
+	if (!lines[startLine] || !lines[endLine]) return undefined
+	const beforeStart = lines.slice(0, startLine).join('\n')
+	const start = beforeStart.length + (startLine ? 1 : 0) + Math.min(startColumn, lines[startLine].length)
+	const beforeEnd = lines.slice(0, endLine).join('\n')
+	const end = beforeEnd.length + (endLine ? 1 : 0) + Math.min(endColumn, lines[endLine].length)
+	return {pre: trimmed.text.slice(0, start), highlighted: trimmed.text.slice(start, end), post: trimmed.text.slice(end)}
 }
 
 @observer export class Snippet extends React.Component<{ ploc?: PhysicalLocation, run?: Run, trace?: SourceTrace, style?: React.CSSProperties, highlightColor?: string }> {
@@ -49,44 +109,9 @@ export function trimSnippetIndent(text: string): {text: string, removed: number}
 				// Search/Filter highlighting is active so bypass snippet highlighting and return plain text.
 				if (term) return crst
 
-				// Carriage returns cause syntax-colorization offsets, so trimSnippetIndent removes them too.
-				const lines = crst.split('\n')
-				const minLeadingWhitespace = trimmed.removed
-
-				// Per 3.30.2 SARIF line and columns are 1-based.
-				let {startLine, startColumn = 1, endLine = startLine, endColumn = Number.MAX_SAFE_INTEGER} = region
-
-				// "3.30.5 startLine property - When a region object represents a text region specified by line/column properties, it SHALL contain .. startLine..."
-				// If startLine is undefined, then it not line/column-specified and likely offset/length-specified. The later is not currently supported.
-				if (startLine === undefined) return undefined // tryOr fallthrough.
-
-				// Convert region to 0-based for ease of calculations.
-				startLine -= 1
-				startColumn -= 1
-				endLine -= 1
-				endColumn -= 1
-
-				// Same comments from above apply to the contextRegion.
-				let {startLine: crStartLine = 1, startColumn: crStartColumn = 1 } = contextRegion
-				crStartLine -= 1
-				crStartColumn -= 1
-
-				// Map region from document coordinates to contextRegion coordinates.
-				startLine -= crStartLine
-				startColumn = Math.max(0, startColumn - crStartColumn - minLeadingWhitespace)
-				endLine -= crStartLine
-				endColumn = Math.max(0, endColumn - crStartColumn - minLeadingWhitespace)
-
-				// Insert start stop markers.
-				const marker = '\u200B'
-				// Endline marker must be inserted first. Otherwise if startLine=endLine, the marker char will make the slice off by one.
-				lines[endLine]
-					= lines[endLine].slice(0, endColumn) + marker + lines[endLine].slice(endColumn)
-				lines[startLine]
-					= lines[startLine].slice(0, startColumn) + marker + lines[startLine].slice(startColumn)
-
-				const [pre, hi, post] = lines.join('\n').split(marker)
-				return <>{pre}<span className="swcRegion">{hi}</span>{post}</>
+				const segments = getSnippetRegionSegments(region, contextRegion)
+				if (!segments) return undefined
+				return <>{segments.pre}<span className="swcRegion">{segments.highlighted}</span>{segments.post}</>
 			},
 			() => trimSnippetIndent(ploc.region.snippet.text).text,
 		)

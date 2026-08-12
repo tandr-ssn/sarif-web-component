@@ -128,7 +128,6 @@ export function* demoResults() {
 	yield clone(resultWithRepo)
 }
 
-// TODO: Test highlighting.
 export function PathCellDemo() {
 	const style = {
 		border: '1px dotted black',

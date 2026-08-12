@@ -79,3 +79,25 @@ test('marks an embedded Path as a separate logical clipboard value', () => {
 	expect(marker.prop('data-copy-value')).toBe('Finding')
 	expect(marker.prop('data-copy-leading-value')).toBe('calgary/src/River.ts')
 })
+
+test('resolves numeric message links through SARIF related locations', () => {
+	const result: any = {
+		message: {text: 'Review [the source](7).'},
+		_rule: {},
+		relatedLocations: [{
+			id: 7,
+			physicalLocation: {artifactLocation: {uri: 'src/River.ts'}, region: {startLine: 12}},
+		}],
+		run: {versionControlProvenance: [{
+			repositoryUri: 'https://github.com/edmonton/calgary',
+			revisionId: 'abc123',
+		}]},
+	}
+	const treeItem: any = {underlyingItem: {data: result}}
+	const wrapper = mount(renderCell(0, 0, {id: 'Details'} as any, treeItem))
+
+	expect(wrapper.find('a').prop('href')).toBe(
+		'https://github.com/edmonton/calgary/blob/abc123/src/River.ts#L12',
+	)
+	expect(wrapper.find('a').text()).toBe('the source')
+})
