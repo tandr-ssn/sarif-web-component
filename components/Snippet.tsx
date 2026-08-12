@@ -6,7 +6,7 @@ import * as React from 'react'
 import {makeObservable, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {hljs} from './SyntaxHighlight'
-require('!style-loader!css-loader!highlight.js/styles/vs.css')
+import 'highlight.js/styles/vs.css'
 
 import {FilterKeywordContext} from './Viewer.Contexts'
 import {Hi} from './Hi'

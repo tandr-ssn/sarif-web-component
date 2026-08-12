@@ -7,9 +7,11 @@ import {highlightSourceSegment} from './SyntaxHighlight'
 import {AcahTraceRole, getTraceStepAcah, getTraceStepRole} from './Acah'
 import {installTooltips} from './Tooltip'
 import {escapeSourceHtml as escapeHtml, sourceDocumentTitle, sourceLines} from './SourceHtml'
-import {getArtifactContents, getArtifactLocation, readSourceFile, SourceFile, SourceFileReader, sourceViewKey} from './SourceFileResolver'
+import {getArtifactContents, getArtifactLocation, readSourceFile, sourceViewKey} from './SourceFileResolver'
+import type {SourceFile, SourceFileReader} from './SourceFileResolver'
 import {stableSha256} from './StableHash'
-export {getArtifactContents, getArtifactLocation, SourceFile, SourceFileReader} from './SourceFileResolver'
+export {getArtifactContents, getArtifactLocation, sourceViewKey} from './SourceFileResolver'
+export type {SourceFile, SourceFileReader} from './SourceFileResolver'
 
 export interface SourceTrace {
 	locations: Array<PhysicalLocation | undefined>
