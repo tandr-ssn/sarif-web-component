@@ -11,6 +11,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Stop mutating caller-owned SARIF documents. Keep indexes, rule links, actions, age data, and other derived state in viewer-owned models or metadata.
 - [x] Fix result action indexes so Visual Studio and VS Code links for a finding use the same result index, and URL-encode all query parameters.
 - [x] Avoid storing raw paths and messages in finding-triage keys, and prevent stale aliases from leaving ghost hidden states.
+- [x] Require every keyword term to match somewhere in a finding's driver, rule, or selected columns, and never mutate caller filter arrays.
 
 ## Priority 2: user experience
 

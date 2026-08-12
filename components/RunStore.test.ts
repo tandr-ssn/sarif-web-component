@@ -295,6 +295,20 @@ it('does not add viewer metadata to the caller-owned SARIF run', () => {
 	expect(runStore.run.results[0].locations[0].physicalLocation.artifactLocation.uri).toBe('src/River.ts')
 })
 
+it('requires every keyword to match somewhere in the finding context', () => {
+	const filter = {getState: () => ({Keywords: {value: 'river vulnerable'}})} as unknown as MobxFilter
+	const run = {
+		tool: {driver: {name: 'River Scanner'}},
+		results: [
+			{ruleId: 'CAL001', message: {text: 'Package is vulnerable'}},
+			{ruleId: 'CAL002', message: {text: 'Package inventory completed'}},
+		],
+	} as unknown as Run
+	const runStore = new RunStore(run, 0, filter)
+
+	expect(runStore.filteredResults.map(result => result.ruleId)).toEqual(['CAL001'])
+})
+
 it('handles multiple logs', () => {
 	const viewer = new Viewer({})
 	

@@ -198,9 +198,6 @@ export class RunStore {
 			// if (!treeItem.hasOwnProperty('isShowAll')) extendObservable(treeItem, { isShowAll: false })
 			treeItem.isShowAll = false
 
-			// Filtering logic: Show if 1) dropdowns match AND 2) any field matches text.
-			const isDriverMatch = isMatch(this.driverName.toLowerCase(), filterKeywords)
-
 			const resultContainer = treeItem.data as { results: Result[] }
 			const filteredResults = resultContainer.results
 				.filter(result => {
@@ -216,8 +213,6 @@ export class RunStore {
 					const {_rule} = result
 					const ruleId = _rule.id.toLowerCase()
 					const ruleName = _rule.name?.toLowerCase() ?? ''
-					const isRuleMatch = isMatch(ruleId, filterKeywords) || isMatch(ruleName, filterKeywords)
-
 					for (const columnName in filter) {
 						if (columnName.startsWith('Column:')) continue
 						if (columnName === 'Triage') continue
@@ -235,12 +230,13 @@ export class RunStore {
 						if (!selectedValues.includes(translatedCellValue)) return false
 					}
 
-					const isKeywordMatch = columns.some(column => {
-						const field = column.filterString(result).toLowerCase()
-						return isMatch(field, filterKeywords)
-					})
-
-					return isDriverMatch || isRuleMatch || isKeywordMatch
+					const searchableValues = [
+						this.driverName.toLowerCase(),
+						ruleId,
+						ruleName,
+						...columns.map(column => column.filterString(result).toLowerCase()),
+					]
+					return filterKeywords.every(keyword => searchableValues.some(value => value.includes(keyword)))
 				})
 
 			filteredResults.sort((resultLeft, resultRight) => {

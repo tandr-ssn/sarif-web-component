@@ -472,12 +472,12 @@ export interface ViewerProps {
 			if (filteredResultsCount === 0 && !showFilteredEmptyTables) {
 
 				const startingFilterState = this.props.filterState || recommendedDefaultState
-				const startingFilterStateLevel: string[] = startingFilterState['Level']?.value ?? []
+				const startingFilterStateLevel: string[] = [...(startingFilterState['Level']?.value ?? [])]
 				if (!startingFilterStateLevel.length) {
 					startingFilterStateLevel.push('error', 'warning', 'note', 'none') // Normalize.
 				}
 
-				const currentfilterStateLevel: string[] = currentfilterState['Level']?.value ?? []
+				const currentfilterStateLevel: string[] = [...(currentfilterState['Level']?.value ?? [])]
 				if (!currentfilterStateLevel.length) {
 					currentfilterStateLevel.push('error', 'warning', 'note', 'none') // Normalize.
 				}
