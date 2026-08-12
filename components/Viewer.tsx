@@ -5,9 +5,8 @@ import './Viewer.scss'
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import { Component } from 'react'
-import { computed, observable, autorun, IObservableValue, runInAction } from 'mobx'
+import { observable, autorun, IObservableValue, runInAction, IReactionDisposer } from 'mobx'
 import { observer } from 'mobx-react'
-import { computedFn } from 'mobx-utils'
 import { Log, Run } from 'sarif'
 
 import './extension'
@@ -140,6 +139,7 @@ export interface ViewerProps {
 	private resultFieldPersistence?: () => void
 	private fitAllColumnsPersistence?: () => void
 	private ruleSortPersistence?: () => void
+	private columnFilterCleanup?: IReactionDisposer
 	private rememberedRuleSort = {by: SortRuleBy.Count, order: SortOrder.ascending}
 	private findingTriage?: FindingTriage
 	private runCardKeys = new WeakMap<Run, number>()
@@ -150,6 +150,14 @@ export interface ViewerProps {
 	@observable private rememberedSourceFolderName?: string
 	@observable private sourceDirectoryError?: string
 	private sourceDirectoryInput?: HTMLInputElement
+	private runStoreCache?: {
+		logs?: Log[]
+		hideBaseline?: boolean
+		showAge?: boolean
+		showActions?: boolean
+		stores: RunStore[]
+	}
+	@observable private oldVersionWarningDismissed = false
 
 	constructor(props) {
 		super(props)
@@ -224,7 +232,7 @@ export interface ViewerProps {
 				}))
 			} catch (_) { }
 		})
-		autorun(() => {
+		this.columnFilterCleanup = autorun(() => {
 			const selected = this.selectedResultFields.get()
 			Object.keys(this.filter.getState())
 				.filter(key => key.startsWith('Column:') && !selected.includes(key.slice('Column:'.length)))
@@ -241,25 +249,27 @@ export interface ViewerProps {
 	}
 
 	componentDidUpdate(previousProps: ViewerProps) {
-		if (previousProps.logs !== this.props.logs
+		const storesChanged = previousProps.logs !== this.props.logs
 			|| previousProps.showActions !== this.props.showActions
 			|| previousProps.hideBaseline !== this.props.hideBaseline
-			|| previousProps.showAge !== this.props.showAge) this.restoreResultFieldSelection()
+			|| previousProps.showAge !== this.props.showAge
+		if (storesChanged) {
+			this.invalidateRunStores()
+			this.groupByAge.set(this.props.showAge)
+			this.restoreResultFieldSelection()
+		}
+		if (previousProps.logs !== this.props.logs) this.oldVersionWarningDismissed = false
 	}
 
 	componentWillUnmount() {
 		this.resultFieldPersistence?.()
 		this.fitAllColumnsPersistence?.()
 		this.ruleSortPersistence?.()
+		this.columnFilterCleanup?.()
+		this.invalidateRunStores()
 	}
 
-	@observable warnOldVersion = false
-	_warnOldVersion = autorun(() => {
-		const {logs} = this.props
-		this.warnOldVersion = logs?.some(log => log.version !== '2.1.0')
-	})
-
-	private runStores = computedFn(logs => {
+	private createRunStores(logs: Log[] | undefined): RunStore[] {
 		const {hideBaseline, showAge, showActions} = this.props
 		if (!logs) return [] // Undef interpreted as loading.
 		const runs = [].concat(...logs.filter(log => log.version === '2.1.0').map(log => { log.runs.forEach((run, index) => { run._index = index }); return log.runs })) as Run[]
@@ -270,14 +280,25 @@ export interface ViewerProps {
 			store.sortRuleOrder = this.rememberedRuleSort.order
 			return store
 		})
-	}, { keepAlive: true })
-
-	@computed get runStoresInOrder() {
-		const {logs} = this.props
-		return this.runStores(logs)
 	}
 
-	@computed private get resultFieldPaths(): string[] {
+	get runStoresInOrder() {
+		const {logs, hideBaseline, showAge, showActions} = this.props
+		const cache = this.runStoreCache
+		if (cache && cache.logs === logs && cache.hideBaseline === hideBaseline
+			&& cache.showAge === showAge && cache.showActions === showActions) return cache.stores
+		this.invalidateRunStores()
+		const stores = this.createRunStores(logs)
+		this.runStoreCache = {logs, hideBaseline, showAge, showActions, stores}
+		return stores
+	}
+
+	private invalidateRunStores() {
+		this.runStoreCache?.stores.forEach(store => store.dispose())
+		this.runStoreCache = undefined
+	}
+
+	private get resultFieldPaths(): string[] {
 		const fields = DEFAULT_RESULT_FIELDS.slice()
 		if (this.props.showActions) fields.push('Actions')
 		if (!this.props.hideBaseline) fields.push('Baseline')
@@ -523,9 +544,9 @@ export interface ViewerProps {
 										columnLayout={this.resultColumnLayout} findingTriage={this.findingTriage} results={currentResults} />} />
 								{!!this.runStoresInOrder.length && <ResultTableHeader runStores={this.runStoresInOrder} layout={this.resultColumnLayout} />}
 							</div>
-							{this.warnOldVersion && <MessageCard
+							{!this.oldVersionWarningDismissed && this.props.logs?.some(log => log.version !== '2.1.0') && <MessageCard
 								severity={MessageCardSeverity.Warning}
-								onDismiss={() => this.warnOldVersion = false}>
+								onDismiss={() => this.oldVersionWarningDismissed = true}>
 								Pre-SARIF-2.1 logs have been omitted. Use the Artifacts explorer to access all files.
 							</MessageCard>}
 							{nearElement}

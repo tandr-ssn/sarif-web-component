@@ -92,3 +92,17 @@ test('preserves SARIF run order regardless of result counts or tool names', () =
 	expect(viewer.runStoresInOrder.map(store => store.driverName)).toEqual(['Zinc', 'Athabasca', 'Bow'])
 	viewer.componentWillUnmount()
 })
+
+test('replaces and disposes run stores when behavior-changing props change', () => {
+	const viewer = new Viewer({logs, showActions: false, fieldSelectionStorageKey: false, fitAllColumnsStorageKey: false}) as any
+	const previousProps = viewer.props
+	const firstStore = viewer.runStoresInOrder[0]
+	const dispose = jest.spyOn(firstStore, 'dispose')
+
+	viewer.props = {...previousProps, showActions: true}
+	viewer.componentDidUpdate(previousProps)
+
+	expect(dispose).toHaveBeenCalledTimes(1)
+	expect(viewer.runStoresInOrder[0]).not.toBe(firstStore)
+	viewer.componentWillUnmount()
+})

@@ -6,8 +6,8 @@ This document records the August 2026 read-only review and tracks the resulting 
 
 - [x] Stop interpolating SARIF-controlled names into source-viewer HTML identifiers; generate opaque IDs and escape every HTML attribute.
 - [x] Centralize external URL validation, permit only intended schemes, and consistently use `noopener noreferrer` for new-window links.
-- [ ] Remove forever-cached run stores and dispose every MobX reaction created by viewer components and stores.
-- [ ] Rebuild run stores when behavior-changing React props change; do not cache computed values derived from non-observable props.
+- [x] Remove forever-cached run stores and dispose every MobX reaction created by viewer components and stores.
+- [x] Rebuild run stores when behavior-changing React props change; do not cache computed values derived from non-observable props.
 - [ ] Stop mutating caller-owned SARIF documents. Keep indexes, rule links, actions, age data, and other derived state in viewer-owned models or metadata.
 - [x] Fix result action indexes so Visual Studio and VS Code links for a finding use the same result index, and URL-encode all query parameters.
 - [ ] Avoid storing raw paths and messages in finding-triage keys, and prevent stale aliases from leaving ghost hidden states.

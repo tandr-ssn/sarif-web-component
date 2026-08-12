@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import {Artifact, Result, Run} from 'sarif'
-import {IObservableValue, autorun, computed, observable} from 'mobx'
+import {IObservableValue, autorun, computed, observable, IReactionDisposer} from 'mobx'
 import {RepositoryDetails, ResultOrRuleOrMore, Rule} from './Viewer.Types'
 import { getRepositoryDetailsFromRemoteUrl, isRepositoryDetailsComplete } from './getRepositoryDetailsFromRemoteUrl'
 
@@ -42,6 +42,7 @@ export class RunStore {
 	@observable sortRuleOrder = SortOrder.ascending
 	@observable sortColumnIndex = 1
 	@observable sortOrder = SortOrder.ascending
+	private truncationDisposer: IReactionDisposer
 
 	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice()), readonly findingTriage?: FindingTriage) {
 		const {driver} = run.tool
@@ -142,7 +143,7 @@ export class RunStore {
 			run._augmented = true
 		}
 
-		autorun(() => {
+		this.truncationDisposer = autorun(() => {
 			this.showAllRevision // Read.
 			const rules = this.groupByAge.get() // Slice to satisfy ref rulesTruncated.
 				? this.agesFiltered.slice()
@@ -163,6 +164,10 @@ export class RunStore {
 
 			this.rulesTruncated = rules
 		}, { name: 'Truncation' })
+	}
+
+	dispose() {
+		this.truncationDisposer?.()
 	}
 
 	private filterHelper(treeItems: ITreeItem<ResultOrRuleOrMore>[]) {

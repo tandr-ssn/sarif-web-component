@@ -16,6 +16,10 @@ import { List, ListItem, ListSelection } from 'azure-devops-ui/List'
 	private itemsDisposer = autorun(() => {
 		this.items.value = this.props.items
 	})
+
+	componentWillUnmount() {
+		this.itemsDisposer()
+	}
 	
 	public render() {
 		return <List<T>

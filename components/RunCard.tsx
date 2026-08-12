@@ -4,7 +4,7 @@
 import './RunCard.scss'
 import * as React from 'react'
 import {Component} from 'react'
-import {autorun, observable, computed, IObservableValue} from 'mobx'
+import {autorun, observable, computed, IObservableValue, IReactionDisposer} from 'mobx'
 import {observer} from 'mobx-react'
 
 import {Hi} from './Hi'
@@ -35,6 +35,7 @@ import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
 	private itemProvider = new TreeItemProvider<ResultOrRuleOrMore>([])
 	private columnCache = new Map<string, ITreeColumn<ResultOrRuleOrMore>>()
 	private columnLayout: ResultColumnLayout
+	private disposers: IReactionDisposer[] = []
 
 	@computed private get columns() {
 		const {runStore} = this.props
@@ -63,12 +64,17 @@ import {ResultColumnLayout, ResultColumnScroll} from './ResultColumnLayout'
 		super(props)
 		this.columnLayout = props.columnLayout ?? new ResultColumnLayout(props.fitAllColumns ?? observable.box(true))
 
-		autorun(() => {
+		this.disposers.push(autorun(() => {
 			this.itemProvider.clear()
 			this.itemProvider.splice(undefined, undefined, [{ items: this.props.runStore.rulesTruncated }])
-		})
+		}))
 
-		autorun(() => this.show = this.props.index === 0)
+		this.disposers.push(autorun(() => this.show = this.props.index === 0))
+	}
+
+	componentWillUnmount() {
+		this.disposers.forEach(dispose => dispose())
+		this.disposers = []
 	}
 
 	private renderRow = (rowIndex: number, item: ITreeItemEx<ResultOrRuleOrMore>, details: ITreeRowDetails<ResultOrRuleOrMore>) => {
