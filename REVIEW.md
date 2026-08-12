@@ -36,7 +36,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 
 ## Later opportunities
 
-- [ ] Add a modern ESM package entry while retaining the compatible UMD build.
+- [x] Add a modern ESM package entry while retaining the compatible UMD build.
 - [x] Re-evaluate disabled npm-bundle minification and remove unused production weight.
 - [ ] Isolate Azure DevOps UI behind local primitives before considering replacement.
 - [ ] Consider a finding-list and detail-pane layout for reports with many verbose columns.

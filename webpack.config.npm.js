@@ -1,6 +1,7 @@
 const common = require('./webpack.config.common')
+const path = require('path')
 
-module.exports = {
+const umd = {
 	...common,
 	mode: 'production',
 	entry: {
@@ -30,3 +31,24 @@ module.exports = {
 		}  
 	} 
 }
+
+const esm = {
+	...common,
+	mode: 'production',
+	entry: './components/Viewer.tsx',
+	optimization: {minimize: true},
+	experiments: {outputModule: true},
+	externalsType: 'module',
+	externals: {
+		react: 'react',
+		'react-dom': 'react-dom',
+	},
+	output: {
+		path: path.resolve(__dirname, 'dist'),
+		filename: 'index.mjs',
+		library: {type: 'module'},
+		module: true,
+	},
+}
+
+module.exports = [umd, esm]
