@@ -31,7 +31,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [x] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
-- [x] Complete runtime dependency modernization in separately validated batches. The build/tooling layer is modernized for Node 22+, TypeScript 6, Jest 30, and Webpack 5:
+- [x] Complete runtime dependency modernization in separately validated batches. The build/tooling layer is modernized for Node 24+, TypeScript 6, Jest 30, and Webpack 5:
   - [x] React 18 and Testing Library replace React 16 and the React-16-only Enzyme adapter/tests.
   - [x] MobX 7 and mobx-react 10 use explicit observability compatible with current MobX semantics.
   - [x] Azure DevOps UI 2.277 is isolated behind the local primitive boundary and visually verified in the offline viewer. Its stale React 16 peer metadata requires the documented local npm compatibility setting.
@@ -41,6 +41,8 @@ This document records the August 2026 read-only review and tracks the resulting 
 
 ## Later opportunities
 
+- [ ] Move to Babel 8 after `ts-jest` supports Babel core 8, or replace the Jest TypeScript transformer first; forcing both versions currently produces an invalid peer-dependency tree.
+- [ ] Evaluate React 19 after Azure DevOps UI removes its React 16 peer constraint and legacy ReactDOM calls, or after those UI primitives are replaced locally.
 - [x] Add a modern ESM package entry while retaining the compatible UMD build.
 - [x] Re-evaluate disabled npm-bundle minification and remove unused production weight.
 - [x] Isolate Azure DevOps UI behind local primitives before considering replacement.

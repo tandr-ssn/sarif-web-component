@@ -44,7 +44,7 @@ Copying complete finding-table cells supplies spreadsheet-friendly TSV as `text/
 
 ACAH SARIF format v4 receives additional offline presentation when `run.properties.acah.formatVersion` is `4`. The viewer shows each canonical verdict, stable claim ID, effect state, and every contributing detector from `properties.acah.detectedBy`. ACAH determines claim identity, merging, queue membership, and top-level section order; the viewer does not regroup those results. Trace roles and exact symbols drive source, propagation, boundary, and sink presentation. Potentially sensitive `valuePreview` data is never placed in automatic summaries or tooltips. The complete extension contract is published with the package as [`schema/acah-sarif-properties.schema.json`](schema/acah-sarif-properties.schema.json).
 
-To build and open the standalone viewer locally, install Node.js 22.15 or newer and npm, then run this from a fresh checkout:
+To build and open the standalone viewer locally, install Node.js 24 LTS or newer and npm, then run this from a fresh checkout:
 
 ```
 npm ci --ignore-scripts
@@ -58,7 +58,7 @@ Then open `docs/index.html` directly in the browser. Opening the repository's ro
 The offline demo keeps the opened SARIF and selected source-folder name in browser storage across page reloads. If session storage quota is insufficient, the report uses an IndexedDB fallback and can survive a browser restart. Source contents and directory handles are not persisted. Use **Close and forget** to remove the remembered report; after a reload, use **Reconnect source folder...** to grant local read access again.
 
 ## Publishing
-Update the package version. Run workflow `Publish`. The workflow performs a clean Node 22 install, typecheck, unit tests, package build, and package dry-run before publishing. Make sure repository secret `NODE_AUTH_TOKEN` exists and is authorized for the configured npm package name.
+Update the package version. When publishing automation is restored, it should perform a clean Node 24 install, typecheck, unit tests, package build, and package dry-run before publishing. Configure an npm publishing token only in that release environment.
 
 ## Publishing (Manual)
 In your local clone of this repo, do the following. Double-check `package.json` `name` in case it was modified for development purposes.
