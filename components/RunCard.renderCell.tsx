@@ -41,7 +41,7 @@ type ResultTreeColumn<T> = ITreeColumn<T> & {
 }
 
 const markdownRenderers = {
-	link: ({href, children}) => {
+	a: ({href, children}) => {
 		const safeHref = safeLinkHref(href)
 		return safeHref ? <a href={safeHref} target="_blank" rel="noopener noreferrer">{children}</a> : <>{children}</>
 	},
@@ -51,7 +51,7 @@ function renderResultFieldValue(fieldId: string, value: string): JSX.Element {
 	const trimmed = value.trim()
 	return looksLikeMarkdown(fieldId, trimmed)
 		? <div className="swcResultFieldValue swcMarkDown">
-			<ReactMarkdown source={trimmed} escapeHtml={true} plugins={[remarkGfm]} renderers={markdownRenderers} />
+			<ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={markdownRenderers}>{trimmed}</ReactMarkdown>
 		</div>
 		: <span className="swcResultFieldValue" style={{whiteSpace: 'pre-wrap'}}><Hi>{trimmed}</Hi></span>
 }
@@ -163,8 +163,9 @@ export function renderCell<T extends ISimpleTableCell>(
 								<div className="swcFindingBody">
 									{formattedMarkdown
 										? <div className="swcMarkDown">
-											<ReactMarkdown source={formattedMarkdown}
-												escapeHtml={true} plugins={[remarkGfm]} renderers={markdownRenderers} />
+											<ReactMarkdown skipHtml remarkPlugins={[remarkGfm]} components={markdownRenderers}>
+												{formattedMarkdown}
+											</ReactMarkdown>
 										</div> // Div to cancel out containers display flex row.
 										: <span style={{ whiteSpace: 'pre-line' }}><Hi>{renderMessageWithEmbeddedLinks(result, formattedMessage)}</Hi></span>}
 									<AcahSummary result={result} />

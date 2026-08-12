@@ -31,12 +31,12 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [x] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
-- [ ] Complete runtime dependency modernization in separately validated batches. The build/tooling layer is already modernized for Node 22+, TypeScript 6, Jest 30, and Webpack 5; do not combine these remaining migrations:
-  - [ ] React 16 and Enzyme: move to a supported React release and replace the React-16-only Enzyme adapter/tests.
-  - [ ] MobX 5 and mobx-react 5: migrate decorators/observability independently from React.
-  - [ ] Azure DevOps UI 2.167: update the isolated local primitive boundary and visually verify the offline viewer.
-  - [ ] Markdown/unified stack: migrate react-markdown 5, unified 9, remark-parse 9, and remark-gfm 1 together because newer releases are ESM-first and have different renderer APIs.
-  - [ ] Highlight.js 10: update syntax registration and source-viewer highlighting separately.
+- [x] Complete runtime dependency modernization in separately validated batches. The build/tooling layer is modernized for Node 22+, TypeScript 6, Jest 30, and Webpack 5:
+  - [x] React 18 and Testing Library replace React 16 and the React-16-only Enzyme adapter/tests.
+  - [x] MobX 7 and mobx-react 10 use explicit observability compatible with current MobX semantics.
+  - [x] Azure DevOps UI 2.277 is isolated behind the local primitive boundary and visually verified in the offline viewer. Its stale React 16 peer metadata requires the documented local npm compatibility setting.
+  - [x] The Markdown/unified stack uses react-markdown 10, unified 11, remark-parse 11, and remark-gfm 4 with the current renderer API.
+  - [x] Highlight.js 11 uses current syntax registration and source-viewer highlighting APIs.
 - [x] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.
 
 ## Later opportunities
