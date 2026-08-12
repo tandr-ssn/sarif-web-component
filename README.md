@@ -3,7 +3,7 @@
 
 # SARIF Web Component
 
-A React-based component for viewing [SARIF](https://www.sarif.info) files. [Try it out](https://microsoft.github.io/sarif-web-component/).
+A React-based component for viewing [SARIF](https://www.sarif.info) files. This maintained fork extends Microsoft's original component with an offline standalone viewer, configurable fields and exports, local source navigation, and persistent finding visibility. [Try it out](https://tandr-ssn.github.io/sarif-web-component/).
 
 ## Usage
 
@@ -55,17 +55,20 @@ npm run docs
 
 Then open `docs/index.html` directly in the browser. Opening the repository's root `index.html` from the filesystem redirects there as a convenience; when served over HTTP, the root page remains the webpack development shell. The build bundles React and the other runtime dependencies so the resulting page works offline. Generated `docs/index.js` is intentionally ignored and must not be committed.
 
-The offline demo keeps the opened SARIF and selected source-folder name in browser session storage across page reloads. Source contents and directory handles are not persisted; after a reload, use **Reconnect source folder...** to grant local read access again.
+The offline demo keeps the opened SARIF and selected source-folder name in browser storage across page reloads. If session storage quota is insufficient, the report uses an IndexedDB fallback and can survive a browser restart. Source contents and directory handles are not persisted. Use **Close and forget** to remove the remembered report; after a reload, use **Reconnect source folder...** to grant local read access again.
 
 ## Publishing
-Update the package version. Run workflow `Publish`. Make sure Repository secret `NODE_AUTH_TOKEN` exists.
+Update the package version. Run workflow `Publish`. The workflow performs a clean Node 22 install, typecheck, unit tests, package build, and package dry-run before publishing. Make sure repository secret `NODE_AUTH_TOKEN` exists and is authorized for the configured npm package name.
 
 ## Publishing (Manual)
 In your local clone of this repo, do the following. Double-check `package.json` `name` in case it was modified for development purposes.
 ```
 git pull
-npm install
-npx webpack --config ./webpack.config.npm.js
+npm ci --ignore-scripts
+npm run typecheck
+npm test -- --runInBand
+npm run npm
+npm pack --dry-run
 npm login
 npm publish
 ```
@@ -74,9 +77,9 @@ For a scoped non-paid accounts (such as for personal testing), publish would req
 For a dry-run publish: `npm publish --dry-run`. Careful: the typo `--dryrun` results in a real publish.
 
 ## Publishing (Local/Private)
-As needed, run `git pull` and `npm install`. Then...
+As needed, run `git pull` and `npm ci --ignore-scripts`. Then...
 ```
-npx webpack --config ./webpack.config.npm.js
+npm run npm
 npm pack
 ```
 Our convention is to move/keep the tarballs in the `packages` directory.

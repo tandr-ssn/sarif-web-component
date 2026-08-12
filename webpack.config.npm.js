@@ -7,8 +7,7 @@ module.exports = {
 		'dist': './components/Viewer.tsx',
 	},
 	optimization: {
-		// Blocking Snowpack import thus disabling `minimize`.
-		minimize: false,
+		minimize: true,
 	},
 	output: {
 		path: __dirname,

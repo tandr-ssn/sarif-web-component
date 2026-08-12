@@ -31,13 +31,13 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [ ] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
-- [ ] Stage dependency modernization; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
-- [ ] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.
+- [x] Stage dependency modernization; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
+- [x] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.
 
 ## Later opportunities
 
 - [ ] Add a modern ESM package entry while retaining the compatible UMD build.
-- [ ] Re-evaluate disabled npm-bundle minification and remove unused production weight.
+- [x] Re-evaluate disabled npm-bundle minification and remove unused production weight.
 - [ ] Isolate Azure DevOps UI behind local primitives before considering replacement.
 - [ ] Consider a finding-list and detail-pane layout for reports with many verbose columns.
 
