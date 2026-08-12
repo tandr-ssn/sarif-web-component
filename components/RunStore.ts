@@ -21,6 +21,15 @@ export enum SortRuleBy { Count, Name }
 export const isMatch = (field: string, keywords: string[]) => !keywords.length || keywords.some(keyword => field.includes(keyword))
 export const resultColumnFilterKey = (fieldId: string) => `Column:${fieldId}`
 
+const standardResultValue: {[name: string]: (result: Result) => string} = {
+	Baseline: result => result.baselineState ?? 'new',
+	Level: result => result.level ?? 'warning',
+	Suppression: result => result.suppressions?.some(suppression => suppression.status === undefined || suppression.status === 'accepted')
+		? 'suppressed'
+		: 'unsuppressed',
+	Age: result => result.sla ?? '',
+}
+
 function cloneRunForView(source: Run): Run {
 	const driver = source.tool.driver
 	return {
@@ -219,13 +228,8 @@ export class RunStore {
 						const selectedValues = filter[columnName].value
 						if (!Array.isArray(selectedValues)) continue
 						if (!selectedValues.length) continue
-						const map = {
-							Baseline: (result: Result) => result.baselineState as string || 'new', // TODO: Merge with column def.
-							Level: (result: Result) => result.level || 'warning',
-							Suppression: (result: Result) => result.suppressions?.some(s => s.status === undefined || s.status === 'accepted') ? 'suppressed' : 'unsuppressed',
-							Age: (result: Result) => result.sla.toLowerCase(),
-						}
-						const translatedCellValue = map[columnName] ? map[columnName](result) : result
+						const standardValue = standardResultValue[columnName]?.(result)
+						const translatedCellValue = columnName === 'Age' ? standardValue?.toLowerCase() : standardValue ?? result
 						if (!selectedValues.includes(translatedCellValue)) return false
 					}
 
@@ -353,13 +357,14 @@ export class RunStore {
 		const definitions = {
 			Path: {filterString: pathValue, sortString: pathValue, width: -3},
 			Details: {filterString: detailsValue, copyString: resultDetailsCopyText, sortString: (result: Result) => result.message?.text ?? '', width: -5},
-			Level: {filterString: (result: Result) => result.level ?? 'warning', sortString: (result: Result) => result.level ?? 'warning', width: -1},
+			Level: {filterString: standardResultValue.Level, sortString: standardResultValue.Level, width: -1},
 			Kind: {filterString: (result: Result) => result.kind ?? 'fail', sortString: (result: Result) => result.kind ?? 'fail', width: -1},
 			Rule: {filterString: ruleValue, sortString: ruleValue, width: -2},
 			Actions: {filterString: () => '', sortString: () => '', width: -2},
-			Baseline: {filterString: (result: Result) => result.baselineState ?? 'new', sortString: (result: Result) => result.baselineState ?? 'new', width: -1},
+			Baseline: {filterString: standardResultValue.Baseline, sortString: standardResultValue.Baseline, width: -1},
+			Suppression: {filterString: standardResultValue.Suppression, sortString: standardResultValue.Suppression, width: -1},
 			Bug: {filterString: () => '', sortString: () => '', width: -1},
-			Age: {filterString: (result: Result) => result.sla ?? '', sortString: (result: Result) => result.sla ?? '', width: -1},
+			Age: {filterString: standardResultValue.Age, sortString: standardResultValue.Age, width: -1},
 			'First Observed': {filterString: (result: Result) => result.firstDetection?.toLocaleDateString() ?? '', sortString: (result: Result) => result.firstDetection?.getTime().toString() ?? '', width: -1},
 		}
 		const selectedFields = this.selectedFields.get()
