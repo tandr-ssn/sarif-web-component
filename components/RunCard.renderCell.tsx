@@ -24,7 +24,7 @@ import {getResultSourceTrace} from './ResultSourceTrace'
 import {AcahSummary} from './AcahSummary'
 import {getRuleTooltip} from './RunCard.rowPresentation'
 import {FindingTriage} from './FindingTriage'
-import {FINDING_TRIAGE_COLUMN_ID, FindingTriageAction} from './FindingTriageAction'
+import {FINDING_TRIAGE_COLUMN_ID, FindingTriageAction, StickyFindingTriageAction} from './FindingTriageAction'
 import {safeLinkHref} from './SafeLink'
 
 const colspan = 99 // No easy way to parameterize this, however extra does not hurt, so using an arbitrarily large value.
@@ -73,9 +73,7 @@ export function renderCell<T extends ISimpleTableCell>(
 	}
 	if (treeColumn.id === FINDING_TRIAGE_COLUMN_ID) {
 		return (data as any)?.message ? TableCell({
-			children: <div className="swcFindingStickyAction">
-				<FindingTriageAction triage={findingTriage} results={[data as unknown as Result]} compact />
-			</div>,
+			children: <StickyFindingTriageAction triage={findingTriage} results={[data as unknown as Result]} />,
 			className: 'swcFindingStickyCell',
 			columnIndex,
 		}) : null

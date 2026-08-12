@@ -58,7 +58,7 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 		if (runStore.findingTriage) columns.push({
 			id: FINDING_TRIAGE_COLUMN_ID,
 			name: '',
-			width: this.columnLayout.width(FINDING_TRIAGE_COLUMN_ID, 38),
+			width: this.columnLayout.width(FINDING_TRIAGE_COLUMN_ID, 42),
 			renderCell,
 			className: 'swcFindingStickyCell',
 			findingTriage: runStore.findingTriage,

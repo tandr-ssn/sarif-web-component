@@ -106,8 +106,16 @@ test('fits columns, exposes horizontal scrolling, and clears filters deliberatel
 	await headerScroll.evaluate(element => element.scrollLeft = element.scrollWidth)
 	const stickyVisibility = page.locator('.swcFindingStickyCell').getByRole('button', {name: 'Hide finding', exact: true})
 	await expect(stickyVisibility).toBeVisible()
-	const stickyRight = await stickyVisibility.evaluate(element => element.getBoundingClientRect().right)
-	expect(stickyRight).toBeLessThanOrEqual((await page.viewportSize()).width)
+	const stickyGeometry = await stickyVisibility.evaluate(element => {
+		const button = element.getBoundingClientRect()
+		const cell = element.closest('.swcFindingStickyCell')?.getBoundingClientRect()
+		const icon = element.querySelector('svg')?.getBoundingClientRect()
+		return {button, cell, icon}
+	})
+	expect(stickyGeometry.button.right).toBeLessThanOrEqual((await page.viewportSize()).width)
+	expect(stickyGeometry.icon.width).toBeGreaterThanOrEqual(20)
+	expect(Math.abs(stickyGeometry.button.left + stickyGeometry.button.width / 2
+		- (stickyGeometry.cell.left + stickyGeometry.cell.width / 2))).toBeLessThanOrEqual(1)
 	const lastSizer = page.locator('.swcGlobalResultHeader .bolt-table-header-sizer').last()
 	const lastHeader = lastSizer.locator('xpath=..')
 	const initialLastWidth = await lastHeader.evaluate(element => element.getBoundingClientRect().width)

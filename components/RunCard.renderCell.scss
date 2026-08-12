@@ -68,12 +68,20 @@
 	background: inherit;
 	box-shadow: -1px 0 var(--palette-neutral-20, #e8e8e8);
 	box-sizing: border-box;
-	min-width: 38px;
+	min-width: 42px;
+	padding: 0 !important;
 	position: sticky;
 	right: 0;
 	vertical-align: top;
-	width: 38px;
+	width: 42px;
 	z-index: 1;
+
+	.bolt-table-cell-content {
+		padding: 0;
+		width: 100%;
+	}
+
+	.bolt-list-cell-child { width: 100%; }
 }
 
 .swcFindingStickyAction {
@@ -81,19 +89,20 @@
 	display: flex;
 	justify-content: center;
 	padding: 5px;
-	position: sticky;
-	top: calc(var(--swc-results-controls-height, 104px) + 8px);
+	position: relative;
+	width: 100%;
+	z-index: 4;
 }
 
 .swcFindingTriageActionCompact {
 	align-items: center;
 	display: inline-flex;
-	height: 28px;
+	height: 32px;
 	justify-content: center;
 	padding: 0;
-	width: 28px;
+	width: 32px;
 
-	svg { fill: none; height: 18px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; width: 18px; }
+	svg { fill: none; flex: 0 0 auto; height: 20px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; width: 20px; }
 }
 
 .swcRuleTitle {

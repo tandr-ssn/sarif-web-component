@@ -71,7 +71,7 @@ export function setResultColumnSort(runStores: RunStore[], columnId: string, sor
 		if (first.findingTriage) this.currentColumns.push({
 			id: FINDING_TRIAGE_COLUMN_ID,
 			name: '',
-			width: layout.width(FINDING_TRIAGE_COLUMN_ID, 38),
+			width: layout.width(FINDING_TRIAGE_COLUMN_ID, 42),
 			renderCell,
 			className: 'swcFindingStickyCell',
 		} as ITreeColumn<ResultOrRuleOrMore>)
