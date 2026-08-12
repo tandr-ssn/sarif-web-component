@@ -21,6 +21,10 @@ function statusLine(label: string, analysis: AcahProperties, details: Array<stri
 	return status ? `${label}: ${[readable(status), ...details.filter(Boolean)].join(' · ')}` : undefined
 }
 
+function strings(value: unknown): string[] {
+	return Array.isArray(value) ? value.filter(item => typeof item === 'string' && item) : []
+}
+
 const incompleteStatuses = new Set(['failed', 'error', 'unavailable', 'disabled', 'incomplete', 'partial'])
 
 export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
@@ -40,16 +44,42 @@ export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
 	const dependency = acah.dependencyAnalysis
 	if (dependency && typeof dependency === 'object') {
 		const line = statusLine('Dependencies', dependency, [text(dependency.coverage),
-			text(dependency.reachability) ? `reachability ${dependency.reachability}` : undefined])
+			text(dependency.reachability) ? `reachability ${dependency.reachability}` : undefined,
+			typeof dependency.duplicateResultsRemoved === 'number' && dependency.duplicateResultsRemoved > 0
+				? `${dependency.duplicateResultsRemoved} duplicates removed` : undefined])
 		if (line) lines.push(line)
 		if (text(dependency.status)) statuses.push(dependency.status)
 	}
 	const publicRules = acah.publicRuleAnalysis
 	if (publicRules && typeof publicRules === 'object') {
 		const line = statusLine('Public rules', publicRules, [
-			text(publicRules.verification) ? `verification ${publicRules.verification}` : undefined])
+			text(publicRules.verification) ? `verification ${publicRules.verification}` : undefined,
+			strings(publicRules.registryConfigs).length ? `${strings(publicRules.registryConfigs).length} registry packs` : undefined,
+			strings(publicRules.excludedRuleIds).length ? `${strings(publicRules.excludedRuleIds).length} rules excluded` : undefined])
 		if (line) lines.push(line)
 		if (text(publicRules.status)) statuses.push(publicRules.status)
+	}
+	const semgrepCache = acah.semgrepCache
+	if (semgrepCache && typeof semgrepCache === 'object' && text(semgrepCache.status)) {
+		lines.push(`Semgrep evidence cache: ${readable(semgrepCache.status)} · ${semgrepCache.reused ? 'reused' : 'not reused'}`)
+	}
+	const registryCache = acah.registryRuleCache
+	if (registryCache && typeof registryCache === 'object' && text(registryCache.status)) {
+		const packs = Array.isArray(registryCache.packs) ? registryCache.packs : []
+		const fallbacks = packs.filter(pack => pack && typeof pack === 'object' && pack.status === 'live-fallback').length
+		lines.push(`Registry rule cache: ${readable(registryCache.status)}${text(registryCache.mode) ? ` · ${readable(registryCache.mode)} mode` : ''}${fallbacks ? ` · ${fallbacks} live fallback${fallbacks === 1 ? '' : 's'}` : ''}`)
+		statuses.push(registryCache.status)
+	}
+	const scan = acah.scanConfiguration
+	if (scan && typeof scan === 'object') {
+		const excludedPaths = strings(scan.excludedPaths)
+		if (excludedPaths.length) lines.push(`Excluded paths: ${excludedPaths.join(', ')}`)
+		const excludedRules = strings(scan.excludedRuleIds)
+		if (excludedRules.length) lines.push(`Excluded public rules: ${excludedRules.join(', ')}`)
+		const sanitizers = scan.sanitizers && typeof scan.sanitizers === 'object' ? strings(scan.sanitizers.ids) : []
+		if (sanitizers.length) lines.push(`Configured sanitizers: ${sanitizers.join(', ')}`)
+		const summaries = scan.summaries && typeof scan.summaries === 'object' ? strings(scan.summaries.ids) : []
+		if (summaries.length) lines.push(`Configured summaries: ${summaries.join(', ')}`)
 	}
 	const partition = acah.testSourcePartition
 	if (partition && typeof partition === 'object') {
@@ -62,7 +92,8 @@ export function getRunAcahSummary(run: Run): RunAcahSummaryData | undefined {
 	const filteredLabels = [
 		['filteredStaleConstruction', 'stale construction'], ['filteredParameterizedSqlFindings', 'parameterized SQL'],
 		['filteredTypedSinkMismatches', 'typed sink mismatches'], ['filteredReclassifiedInventoryDuplicates', 'inventory duplicates'],
-		['filteredRedundantWrapperCandidates', 'wrapper duplicates'],
+		['filteredProcessStartInfoOverlaps', 'process-start overlaps'], ['filteredRedundantWrapperCandidates', 'wrapper duplicates'],
+		['filteredRedundantReviewCandidates', 'review duplicates'],
 	] as Array<[string, string]>
 	const filtered = filteredLabels.map(([property, label]) => [label, Array.isArray(acah[property]) ? acah[property].length : 0] as [string, number])
 		.filter(([, count]) => count > 0)

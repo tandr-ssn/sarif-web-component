@@ -8,18 +8,28 @@ import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 Enzyme.configure({adapter: new Adapter()})
 const runWithAcah = (acah: object) => ({properties: {acah: {formatVersion: 4, ...acah}}} as unknown as Run)
 
-test('summarizes native status, diagnostics, and filtering without cache provenance', () => {
+test('summarizes v4 coverage, configuration, cache provenance, diagnostics, and filtering', () => {
 	const summary = getRunAcahSummary(runWithAcah({
 		nativeAnalysis: {csharp: {inputDetected: true, status: 'succeeded', version: '5.0'}, java: {inputDetected: false, status: 'no-input'}},
-		workspaceDiagnostics: ['SDK selected', 'Workspace warning', 'Workspace warning'], semgrepCache: {status: 'hit', reused: true},
+		workspaceDiagnostics: ['SDK selected', 'Workspace warning', 'Workspace warning'],
+		semgrepCache: {status: 'hit', reused: true},
+		registryRuleCache: {status: 'partial', mode: 'mixed', packs: [{status: 'live-fallback'}]},
+		scanConfiguration: {excludedPaths: ['vendor/**'], excludedRuleIds: ['public.noisy'],
+			sanitizers: {ids: ['safe_path']}, summaries: {ids: ['db_query']}},
 		filteredParameterizedSqlFindings: [{ruleId: 'sql'}],
+		filteredProcessStartInfoOverlaps: [{ruleId: 'process'}],
+		filteredRedundantReviewCandidates: [{ruleId: 'review'}],
 	}))
-	expect(summary).toEqual({label: 'ACAH analysis succeeded · 2 diagnostics', lines: [
+	expect(summary).toEqual({label: 'ACAH analysis incomplete · 2 diagnostics', lines: [
 		'Format: ACAH SARIF v4', 'Native Csharp: Succeeded · version 5.0',
-		'Filtered evidence: 1 parameterized SQL',
+		'Semgrep evidence cache: Hit · reused',
+		'Registry rule cache: Partial · Mixed mode · 1 live fallback',
+		'Excluded paths: vendor/**', 'Excluded public rules: public.noisy',
+		'Configured sanitizers: safe_path', 'Configured summaries: db_query',
+		'Filtered evidence: 1 parameterized SQL, 1 process-start overlaps, 1 review duplicates',
 		'Diagnostics: 2 (details retained in SARIF)',
-	], incomplete: false})
-	expect(mount(<RunAcahBadge summary={summary} />).text()).toContain('ACAH analysis succeeded')
+	], incomplete: true})
+	expect(mount(<RunAcahBadge summary={summary} />).text()).toContain('ACAH analysis incomplete')
 })
 
 test('marks partial native coverage as incomplete', () => {

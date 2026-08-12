@@ -4,7 +4,7 @@
 import './AcahSummary.scss'
 import * as React from 'react'
 import {Result} from 'sarif'
-import {AcahDetector, AcahProperties, getResultAcah, getResultClaim, getResultDetectors} from './Acah'
+import {AcahDetector, AcahProperties, getResultAcah, getResultClaim, getResultDetectors, getResultEffect} from './Acah'
 
 interface AcahBadge { label: string; title: string }
 
@@ -60,11 +60,28 @@ function detectorsBadge(result: Result): AcahBadge | undefined {
 		label: `Detected by ${detectors.length}`,
 		title: title([
 			`This canonical claim combines ${detectors.length} detector${detectors.length === 1 ? '' : 's'}:`,
-			...detectors.map(detector => {
-				const rule = text(detector.ruleId)
-				const classification = text(detector.classification)
-				return `• ${detectorLabel(detector)}${rule ? ` — ${rule}` : ''}${classification ? ` (${readable(classification)})` : ''}`
-			}),
+			...detectors.map(detector => title([
+				`• ${detectorLabel(detector)} — ${detector.ruleId} (${readable(detector.classification)})`,
+				`  Message: ${detector.message}`,
+				`  Observation: ${detector.id}`,
+				`  Original fingerprint: ${detector.originalFingerprint}`,
+				detector.confidence ? `  Confidence: ${readable(detector.confidence)}` : undefined,
+				`  Code flows: ${detector.codeFlowIndices.length ? detector.codeFlowIndices.map(index => index + 1).join(', ') : 'none'}`,
+			])),
+		]),
+	}
+}
+
+function effectBadge(result: Result): AcahBadge | undefined {
+	const effect = getResultEffect(result)
+	if (!effect) return undefined
+	return {
+		label: `Effect ${readable(effect.status).toLowerCase()}`,
+		title: title([
+			`Effect: ${readable(effect.kind)}`,
+			`Status: ${readable(effect.status)}`,
+			`Reason: ${effect.reason}`,
+			'Effect state is independent of the claim verdict.',
 		]),
 	}
 }
@@ -121,7 +138,7 @@ function contextBadge(label: string, propertyLabel: string, value: unknown): Aca
 export function AcahSummary(props: {result: Result}) {
 	const acah = getResultAcah(props.result)
 	if (!acah) return null
-	const badges = [statusBadge(acah), claimBadge(props.result), detectorsBadge(props.result), confidenceBadge(acah), sinkBadge(acah), traceBadge(acah), testSourceBadge(acah),
+	const badges = [statusBadge(acah), claimBadge(props.result), detectorsBadge(props.result), confidenceBadge(acah), sinkBadge(acah), effectBadge(props.result), traceBadge(acah), testSourceBadge(acah),
 		contextBadge('Reachability', 'Dependency reachability', acah.reachability),
 		contextBadge('Verification', 'Verification', acah.verification)].filter(Boolean) as AcahBadge[]
 	if (!badges.length) return null

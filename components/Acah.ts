@@ -5,22 +5,31 @@ import {ReportingDescriptor, Result, Run, ThreadFlowLocation} from 'sarif'
 
 export type AcahProperties = {[key: string]: any}
 export type AcahTraceRole = 'source' | 'propagation' | 'sink' | 'boundary'
+export type AcahVerdict = 'proven' | 'plausible' | 'unknown' | 'disproven'
 export const ACAH_FORMAT_VERSION = 4
 
 export interface AcahClaim {
 	id: string
-	vulnerabilityClass?: string
-	reason?: string
+	vulnerabilityClass: string
+	reason: string
 	validationConflict?: boolean
 }
 
 export interface AcahDetector {
-	id?: string
-	ruleId?: string
-	message?: string
-	classification?: string
+	id: string
+	ruleId: string
+	message: string
+	classification: string
+	originalFingerprint: string
+	codeFlowIndices: number[]
 	confidence?: string
-	producer?: {id?: string; title?: string}
+	producer: {id: string; title: string}
+}
+
+export interface AcahEffect {
+	status: 'unresolved' | 'modeled' | 'confirmed'
+	kind: string
+	reason: string
 }
 
 function object(value: unknown): AcahProperties | undefined {
@@ -52,6 +61,8 @@ export function getResultAcah(
 export function getResultClaim(result: Result): AcahClaim | undefined {
 	const claim = object(getResultAcah(result)?.claim)
 	return typeof claim?.id === 'string' && /^[0-9a-f]{64}$/.test(claim.id)
+		&& typeof claim.vulnerabilityClass === 'string' && !!claim.vulnerabilityClass
+		&& typeof claim.reason === 'string' && !!claim.reason
 		? claim as AcahClaim
 		: undefined
 }
@@ -59,8 +70,29 @@ export function getResultClaim(result: Result): AcahClaim | undefined {
 export function getResultDetectors(result: Result): AcahDetector[] {
 	const detectors = getResultAcah(result)?.detectedBy
 	return Array.isArray(detectors)
-		? detectors.filter(detector => object(detector)) as AcahDetector[]
+		? detectors.filter(detector => {
+			const item = object(detector)
+			const producer = object(item?.producer)
+			return !!item
+				&& typeof item.id === 'string' && !!item.id
+				&& typeof item.ruleId === 'string' && !!item.ruleId
+				&& typeof item.message === 'string' && !!item.message
+				&& typeof item.classification === 'string' && !!item.classification
+				&& typeof item.originalFingerprint === 'string' && !!item.originalFingerprint
+				&& Array.isArray(item.codeFlowIndices) && item.codeFlowIndices.every(index => Number.isInteger(index) && index >= 0)
+				&& typeof producer?.id === 'string' && !!producer.id
+				&& typeof producer.title === 'string' && !!producer.title
+		}) as AcahDetector[]
 		: []
+}
+
+export function getResultEffect(result: Result): AcahEffect | undefined {
+	const effect = object(getResultAcah(result)?.effect)
+	return ['unresolved', 'modeled', 'confirmed'].includes(effect?.status)
+		&& typeof effect?.kind === 'string' && !!effect.kind
+		&& typeof effect.reason === 'string' && !!effect.reason
+		? effect as AcahEffect
+		: undefined
 }
 
 export function getTraceStepAcah(step: ThreadFlowLocation | undefined, run: Run | undefined): AcahProperties | undefined {

@@ -1,5 +1,5 @@
 import {ReportingDescriptor, Result, Run, ThreadFlowLocation} from 'sarif'
-import {getResultAcah, getResultClaim, getResultDetectors, getRunAcah, getTraceStepAcah, getTraceStepSymbol} from './Acah'
+import {getResultAcah, getResultClaim, getResultDetectors, getResultEffect, getRunAcah, getTraceStepAcah, getTraceStepSymbol} from './Acah'
 
 const v4Run = {properties: {acah: {formatVersion: 4}}} as unknown as Run
 
@@ -26,10 +26,26 @@ test('reads canonical claim and detector metadata', () => {
 	const id = 'a'.repeat(64)
 	const result = {run: v4Run, properties: {acah: {
 		claim: {id, vulnerabilityClass: 'cross-site-scripting', reason: 'Exact request flow remains raw.'},
-		detectedBy: [{ruleId: 'public.php.xss', producer: {id: 'public-registry', title: 'Public registry'}}],
+		detectedBy: [{id: 'observation-1', ruleId: 'public.php.xss', message: 'Request reaches output.',
+			classification: 'public-rule-review', originalFingerprint: 'original-1', codeFlowIndices: [0],
+			producer: {id: 'public-registry', title: 'Public registry'}}],
+		effect: {status: 'modeled', kind: 'raw-html-output', reason: 'A static output model matched.'},
 	}}} as unknown as Result
 	expect(getResultClaim(result)).toEqual({id, vulnerabilityClass: 'cross-site-scripting', reason: 'Exact request flow remains raw.'})
 	expect(getResultDetectors(result)).toHaveLength(1)
+	expect(getResultEffect(result)).toEqual({status: 'modeled', kind: 'raw-html-output', reason: 'A static output model matched.'})
+})
+
+test('ignores malformed canonical metadata instead of presenting partial provenance', () => {
+	const id = 'b'.repeat(64)
+	const result = {run: v4Run, properties: {acah: {
+		claim: {id, vulnerabilityClass: 'sql-injection'},
+		detectedBy: [{id: 'missing-required-fields'}],
+		effect: {status: 'confirmed', kind: 'sql-execution'},
+	}}} as unknown as Result
+	expect(getResultClaim(result)).toBeUndefined()
+	expect(getResultDetectors(result)).toEqual([])
+	expect(getResultEffect(result)).toBeUndefined()
 })
 
 test('reads only v4 ACAH trace-step metadata', () => {
