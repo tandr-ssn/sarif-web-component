@@ -26,7 +26,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 ## Priority 3: loading, release, and maintenance
 
 - [x] Show useful file-read, JSON-parse, and invalid-SARIF errors; document local retention and provide a close-and-forget action.
-- [x] Add CI using the supported Node version, clean installation, type checking, unit tests, and package dry-run before publishing.
+- [ ] Add CI using the supported Node version, clean installation, type checking, unit tests, and package dry-run before publishing when repository automation is wanted.
 - [x] Add focused tests for report replacement, prop changes, hostile paths and URLs, lifecycle cleanup, narrow viewports, keyboard operation, and large synthetic reports.
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [x] Split the source viewer into safer rendering, source resolution, and popup-controller units.
