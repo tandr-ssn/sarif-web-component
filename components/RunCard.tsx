@@ -13,12 +13,8 @@ import {More, ResultOrRuleOrMore} from './Viewer.Types'
 import {RunStore} from './RunStore'
 import {tryOr} from './try'
 
-import {Card} from 'azure-devops-ui/Card'
-import {Observer} from 'azure-devops-ui/Observer'
-import {ObservableLike} from 'azure-devops-ui/Core/Observable'
-import {Pill, PillSize} from "azure-devops-ui/Pill"
-import {Tree, ITreeColumn, ITreeRowDetails, renderTreeRow} from 'azure-devops-ui/TreeEx'
-import {TreeItemProvider, ITreeItemEx} from 'azure-devops-ui/Utilities/TreeItemProvider'
+import {Card, Observer, ObservableLike, Pill, PillSize, Tree, ITreeColumn, ITreeRowDetails,
+	renderTreeRow, TreeItemProvider, ITreeItemEx} from './AzureDevOpsUi'
 import {copySelectedTableCells} from './TableClipboard'
 import {getRunAcahSummary, RunAcahBadge} from './RunAcahSummary'
 import {getTreeRowClass} from './RunCard.rowPresentation'

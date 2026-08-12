@@ -38,7 +38,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 
 - [x] Add a modern ESM package entry while retaining the compatible UMD build.
 - [x] Re-evaluate disabled npm-bundle minification and remove unused production weight.
-- [ ] Isolate Azure DevOps UI behind local primitives before considering replacement.
+- [x] Isolate Azure DevOps UI behind local primitives before considering replacement.
 - [ ] Consider a finding-list and detail-pane layout for reports with many verbose columns.
 
 The current self-contained offline HTML is approximately 1.2 MB and is not itself a priority. `npm audit` reported no known vulnerabilities at the time of this review.

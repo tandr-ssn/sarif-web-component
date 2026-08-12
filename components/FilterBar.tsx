@@ -6,11 +6,7 @@ import { createAtom, observable } from 'mobx'
 import { observer } from 'mobx-react'
 import * as React from 'react'
 
-import { Callout } from 'azure-devops-ui/Callout'
-import { FilterBar as AzFilterBar } from 'azure-devops-ui/FilterBar'
-import { KeywordFilterBarItem } from 'azure-devops-ui/TextFilterBarItem'
-import { Filter, FILTER_CHANGE_EVENT, IFilterState } from 'azure-devops-ui/Utilities/Filter'
-import { Location } from 'azure-devops-ui/Utilities/Position'
+import {Callout, FilterBar as AzFilterBar, KeywordFilterBarItem, Filter, FILTER_CHANGE_EVENT, IFilterState, Location} from './AzureDevOpsUi'
 
 export const recommendedDefaultState = {
 	Baseline: { value: ['new', 'unchanged', 'updated'] },

@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import * as React from 'react'
-import {Link} from 'azure-devops-ui/Link'
+import {Link} from './AzureDevOpsUi'
 import {safeLinkHref} from './SafeLink'
 
 export const tryLink = (fHref: () => string, inner: string | JSX.Element, className?: string, onClick?: (event: React.MouseEvent<HTMLAnchorElement>) => void) => {

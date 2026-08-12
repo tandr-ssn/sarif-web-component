@@ -1,6 +1,6 @@
 import * as React from 'react'
 import {IObservableValue} from 'mobx'
-import {ObservableValue} from 'azure-devops-ui/Core/Observable'
+import {ObservableValue} from './AzureDevOpsUi'
 
 export function preferredResultColumnWidth(width: number): number {
 	return width < 0 ? Math.max(140, Math.abs(width) * 100) : width

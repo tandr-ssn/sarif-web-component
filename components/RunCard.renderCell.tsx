@@ -13,15 +13,8 @@ import {tryOr, tryLink} from './try'
 import {Rule, More, ResultOrRuleOrMore} from './Viewer.Types'
 import {Snippet} from './Snippet'
 
-import {css} from 'azure-devops-ui/Util'
-import {Link} from 'azure-devops-ui/Link'
-import {ObservableLike} from 'azure-devops-ui/Core/Observable'
-import {Status, Statuses, StatusSize} from "azure-devops-ui/Status"
-import {PillSize, Pill} from 'azure-devops-ui/Pill'
-import {ISimpleTableCell, TableCell} from 'azure-devops-ui/Table'
-import {ExpandableTreeCell, ITreeColumn} from 'azure-devops-ui/TreeEx'
-import {ITreeItemEx, ITreeItem} from 'azure-devops-ui/Utilities/TreeItemProvider'
-import {Icon, IconSize} from 'azure-devops-ui/Icon'
+import {css, Link, ObservableLike, Status, Statuses, StatusSize, PillSize, Pill,
+	ISimpleTableCell, TableCell, ExpandableTreeCell, ITreeColumn, ITreeItemEx, ITreeItem, Icon, IconSize} from './AzureDevOpsUi'
 import { renderPathCell } from './RunCard.renderPathCell'
 import { renderActionsCell } from './RunCard.renderActionsCell'
 import { getRepoUri } from './getRepoUri'

@@ -3,7 +3,7 @@
 
 import * as React from 'react'
 import {Location, PhysicalLocation, Run} from 'sarif'
-import {Dialog} from 'azure-devops-ui/Dialog'
+import {Dialog} from './AzureDevOpsUi'
 import {getRepoUri} from './getRepoUri'
 import {getArtifactContents, getArtifactLocation, openSourceFile, SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatter, SourcePathFormatterContext, SourceTrace} from './SourceFile'
 import {safeLinkHref} from './SafeLink'

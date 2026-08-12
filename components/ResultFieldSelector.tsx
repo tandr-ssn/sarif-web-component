@@ -6,8 +6,7 @@ import * as React from 'react'
 import {IObservableValue, observable} from 'mobx'
 import {observer} from 'mobx-react'
 import {buildResultFieldTree, BUILT_IN_RESULT_FIELDS, DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldJsonPath, ResultFieldNode} from './ResultFields'
-import {Callout} from 'azure-devops-ui/Callout'
-import {Location} from 'azure-devops-ui/Utilities/Position'
+import {Callout, Location} from './AzureDevOpsUi'
 
 function leafPaths(node: ResultFieldNode): string[] {
 	return [...(node.path ? [node.path] : []), ...node.children.flatMap(leafPaths)]

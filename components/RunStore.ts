@@ -6,9 +6,8 @@ import {IObservableValue, autorun, computed, observable, IReactionDisposer} from
 import {RepositoryDetails, ResultOrRuleOrMore, Rule} from './Viewer.Types'
 import { getRepositoryDetailsFromRemoteUrl, isRepositoryDetailsComplete } from './getRepositoryDetailsFromRemoteUrl'
 
-import {ITreeItem} from 'azure-devops-ui/Utilities/TreeItemProvider'
+import {ITreeItem, SortOrder} from './AzureDevOpsUi'
 import {MobxFilter} from './FilterBar'
-import {SortOrder} from 'azure-devops-ui/Table'
 import { getRepoUri } from './getRepoUri'
 import {tryOr} from './try'
 import {DEFAULT_RESULT_FIELDS, getResultFieldDisplayNames, getResultFieldValue} from './ResultFields'

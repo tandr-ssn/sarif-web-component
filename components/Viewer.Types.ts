@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import {Run, ReportingDescriptor, Result} from 'sarif'
-import {ITreeItem} from 'azure-devops-ui/Utilities/TreeItemProvider'
+import {ITreeItem} from './AzureDevOpsUi'
 
 declare module 'sarif' {
 	interface Result {

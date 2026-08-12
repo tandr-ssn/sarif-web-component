@@ -2,8 +2,7 @@ import './ResultExportMenu.scss'
 import * as React from 'react'
 import {observable} from 'mobx'
 import {observer} from 'mobx-react'
-import {Callout} from 'azure-devops-ui/Callout'
-import {Location} from 'azure-devops-ui/Utilities/Position'
+import {Callout, Location} from './AzureDevOpsUi'
 import {ResultExportFormat, ResultExportScope} from './ResultExport'
 
 @observer export class ResultExportMenu extends React.Component<{

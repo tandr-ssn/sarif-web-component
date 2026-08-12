@@ -5,7 +5,7 @@ import {observer} from "mobx-react"
 import * as React from 'react'
 import * as ReactDOM from 'react-dom'
 import { Log } from 'sarif'
-import {Button} from 'azure-devops-ui/Button'
+import {Button} from '../components/AzureDevOpsUi'
 
 import { Viewer } from '../components/Viewer'
 import {FileSystemFileHandleLike} from '../components/LocalSourceFile'

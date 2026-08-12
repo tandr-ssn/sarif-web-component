@@ -18,15 +18,8 @@ import { RunStore, SortRuleBy } from './RunStore'
 const successPng = require('./Viewer.Success.png')
 const noResultsPng = require('./Viewer.ZeroData.png')
 
-import { Card } from 'azure-devops-ui/Card'
-import { MessageCard, MessageCardSeverity } from "azure-devops-ui/MessageCard"
-import { Page } from 'azure-devops-ui/Page'
-import { SurfaceBackground, SurfaceContext } from 'azure-devops-ui/Surface'
-import { IFilterState } from 'azure-devops-ui/Utilities/Filter'
-import { ZeroData } from 'azure-devops-ui/ZeroData'
-import { ObservableValue } from 'azure-devops-ui/Core/Observable'
-import { Button } from 'azure-devops-ui/Button'
-import {SortOrder} from 'azure-devops-ui/Table'
+import {Card, MessageCard, MessageCardSeverity, Page, SurfaceBackground, SurfaceContext,
+	IFilterState, ZeroData, ObservableValue, Button, SortOrder} from './AzureDevOpsUi'
 import { createLocalSourceFileReader, createSelectedFilesSourceFileReader, FileSystemDirectoryHandleLike, getCommonAbsoluteSourceRoot, getSourcePathFromRoot, getSourcePathFromSarifRoot } from './LocalSourceFile'
 import { SourceFileReader, SourceFileReaderContext, SourceFileSelectionContext, SourcePathFormatterContext } from './SourceFile'
 import {DEFAULT_RESULT_FIELDS, discoverResultFieldPaths} from './ResultFields'

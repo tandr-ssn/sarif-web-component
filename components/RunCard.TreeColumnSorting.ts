@@ -1,12 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-import {cellFromEvent} from 'azure-devops-ui/List'
-import {IBehavior} from 'azure-devops-ui/Utilities/Behavior'
-import {IEventDispatch} from 'azure-devops-ui/Utilities/Dispatch'
-import {ITreeProps, ITree, Tree} from 'azure-devops-ui/TreeEx'
-import {KeyCode} from 'azure-devops-ui/Util'
-import {sortDelegate, SortOrder} from 'azure-devops-ui/Table'
+import {cellFromEvent, IBehavior, IEventDispatch, ITreeProps, ITree, Tree, KeyCode, sortDelegate, SortOrder} from './AzureDevOpsUi'
 
 // Derived from azure-devops-ui ColumnSorting.ts
 export class TreeColumnSorting<T> implements IBehavior<ITreeProps<T>, ITree<T>> {

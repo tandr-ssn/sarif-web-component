@@ -6,7 +6,7 @@ import './RunCard.renderCell.scss'
 import * as React from 'react'
 
 import { ActionProps } from './Viewer.Types';
-import { Link } from 'azure-devops-ui/Link';
+import {Link} from './AzureDevOpsUi'
 import { Result } from 'sarif'
 import {safeLinkHref} from './SafeLink'
 

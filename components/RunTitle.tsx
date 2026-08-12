@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import * as React from 'react'
-import {TreeExpand} from 'azure-devops-ui/TreeEx'
+import {TreeExpand} from './AzureDevOpsUi'
 
 export function RunTitle(props: {
 	expanded: boolean
