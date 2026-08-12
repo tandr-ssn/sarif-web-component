@@ -1,5 +1,6 @@
 const path = require('path')
 const react = require('@vitejs/plugin-react')
+const fs = require('fs')
 const {defineConfig} = require('vite')
 
 function replaceAzureDevOpsFluentIconCSS() {
@@ -15,8 +16,28 @@ function replaceAzureDevOpsFluentIconCSS() {
 	}
 }
 
+function flattenDocsIndexHtml() {
+	return {
+		name: 'flatten-docs-index-html',
+		writeBundle() {
+			const source = path.resolve(__dirname, 'dist', 'docs-components', 'index.html')
+			const destination = path.resolve(__dirname, 'dist', 'index.html')
+			if (fs.existsSync(source)) {
+				try {
+					fs.rmSync(destination, {force: true})
+					fs.renameSync(source, destination)
+				} catch (error) {
+					// fallback to copy/remove if rename fails across filesystem boundaries
+					fs.copyFileSync(source, destination)
+					fs.rmSync(source, {force: true})
+				}
+			}
+		},
+	}
+}
+
 module.exports = defineConfig(({command}) => ({
-	plugins: [replaceAzureDevOpsFluentIconCSS(), react()],
+	plugins: [replaceAzureDevOpsFluentIconCSS(), flattenDocsIndexHtml(), react()],
 	base: command === 'build' ? './' : '/',
 	css: {
 		transformer: 'postcss',
