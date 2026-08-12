@@ -28,13 +28,18 @@ module.exports = defineConfig(({command}) => ({
 		outDir: 'dist',
 		emptyOutDir: true,
 		target: 'es2022',
-		assetsInlineLimit: 10_000_000,
 		rollupOptions: {
 			input: path.resolve(__dirname, 'docs-components/index.html'),
 			output: {
-				entryFileNames: 'index.js',
-				chunkFileNames: '[name].js',
-				assetFileNames: '[name][extname]',
+				manualChunks(id) {
+					if (id.includes('/node_modules/')) {
+						return 'vendor'
+					}
+					return null
+				},
+				entryFileNames: 'scripts/[name]-[hash].js',
+				chunkFileNames: 'scripts/[name]-[hash].js',
+				assetFileNames: 'assets/[name]-[hash][extname]',
 			},
 		},
 	},
