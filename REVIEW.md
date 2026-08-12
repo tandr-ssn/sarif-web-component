@@ -31,7 +31,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [x] Split the source viewer into safer rendering, source resolution, and popup-controller units.
 - [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
-- [x] Stage dependency modernization; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
+- [ ] Stage dependency modernization when repository automation is wanted; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
 - [x] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.
 
 ## Later opportunities
