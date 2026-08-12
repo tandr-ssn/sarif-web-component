@@ -9,8 +9,8 @@ import { observable, autorun, IObservableValue, runInAction, IReactionDisposer }
 import { observer } from 'mobx-react'
 import { Log, Run } from 'sarif'
 
-// Contexts must come before renderCell or anything the uses this.
-export const FilterKeywordContext = React.createContext('')
+import {FilterKeywordContext} from './Viewer.Contexts'
+export {FilterKeywordContext} from './Viewer.Contexts'
 
 import { FilterBar, MobxFilter, recommendedDefaultState } from './FilterBar'
 import { RunCard } from './RunCard'

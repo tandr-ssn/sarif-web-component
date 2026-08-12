@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 import * as React from 'react'
-import {FilterKeywordContext} from './Viewer'
+import {FilterKeywordContext} from './Viewer.Contexts'
 
 export class Hi extends React.Component {
 	static contextType = FilterKeywordContext

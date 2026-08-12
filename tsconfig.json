@@ -7,6 +7,7 @@
 		"strict": false,
 		"noImplicitAny": false,
 		"noUncheckedSideEffectImports": false,
+		"forceConsistentCasingInFileNames": true,
 		"target": "ES6",
 		"module": "Node20", // Preserve CommonJS initialization order for the circular viewer modules in the Webpack bundle.
 		"moduleResolution": "Node16",

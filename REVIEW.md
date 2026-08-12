@@ -21,7 +21,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [x] Add a selected-columns area with ordering, removal, and restore-defaults controls.
 - [ ] Keep fit-all readable with many columns and preserve usable horizontal scrolling when fit-all is disabled.
 - [x] Ensure shortened source paths are also used in tooltips so local home-directory prefixes are not exposed.
-- [ ] Improve narrow-screen, keyboard, zoom, and tooltip accessibility behavior.
+- [x] Improve narrow-screen, keyboard, zoom, and tooltip accessibility behavior.
 
 ## Priority 3: loading, release, and maintenance
 
@@ -30,7 +30,7 @@ This document records the August 2026 read-only review and tracks the resulting 
 - [ ] Add focused tests for report replacement, prop changes, hostile paths and URLs, lifecycle cleanup, narrow viewports, keyboard operation, and large synthetic reports.
 - [x] Remove confirmed dead code and dependencies, including the unused global `Array.prototype.sorted` extension.
 - [ ] Split the source viewer into safer rendering, source resolution, and popup-controller units.
-- [ ] Break Viewer import cycles and incrementally strengthen TypeScript settings.
+- [x] Break Viewer import cycles and incrementally strengthen TypeScript settings.
 - [ ] Stage dependency modernization; avoid combining React, MobX, Markdown, and Azure DevOps UI migrations.
 - [ ] Clarify fork ownership and publishing metadata in README, package metadata, and security guidance.
 

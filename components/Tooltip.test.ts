@@ -22,6 +22,7 @@ test('delays hover tooltips but shows keyboard-focus tooltips immediately', () =
 	jest.advanceTimersByTime(1)
 	expect(tooltips[0].hidden).toBe(false)
 	expect(tooltips[0].textContent).toBe('Readable details')
+	expect(anchor.getAttribute('aria-describedby')).toBe(tooltips[0].id)
 	expect(Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n'))
 		.toContain('font: 16px/1.45 Arial, sans-serif')
 	expect(Array.from(document.querySelectorAll('style')).map(style => style.textContent).join('\n'))
@@ -29,6 +30,7 @@ test('delays hover tooltips but shows keyboard-focus tooltips immediately', () =
 
 	anchor.dispatchEvent(new MouseEvent('mouseout', {bubbles: true}))
 	expect(tooltips[0].hidden).toBe(true)
+	expect(anchor.hasAttribute('aria-describedby')).toBe(false)
 
 	anchor.dispatchEvent(new FocusEvent('focusin', {bubbles: true}))
 	expect(tooltips[0].hidden).toBe(false)

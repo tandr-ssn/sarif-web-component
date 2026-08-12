@@ -8,7 +8,7 @@ import {observer} from 'mobx-react'
 import {hljs} from './SyntaxHighlight'
 require('!style-loader!css-loader!highlight.js/styles/vs.css')
 
-import {FilterKeywordContext} from './Viewer'
+import {FilterKeywordContext} from './Viewer.Contexts'
 import {Hi} from './Hi'
 import {PhysicalLocation, Run} from 'sarif'
 import {tryOr} from './try'
@@ -104,10 +104,7 @@ import {SourceTrace} from './SourceFile'
 					if (!code) return
 					try {
 						hljs.highlightBlock(code)
-					} catch(e) {
-						// Commonly throws if the language is not loaded. Will add telemetry here to track.
-						console.log(code, e)
-					}
+					} catch (_) { /* Keep escaped, unhighlighted source when language detection fails. */ }
 				}}>
 				{body}
 			</code>
@@ -120,7 +117,7 @@ import {SourceTrace} from './SourceFile'
 					maxHeight: this.showAll ? undefined : 108,
 					...(this.props.highlightColor ? {'--swc-trace-highlight': this.props.highlightColor} : {}),
 				} as any} // 108px is a 6-line snippet which is very common.
-				key={Date.now()} onClick={this.props.run ? undefined : () => this.showAll = !this.showAll}
+					onClick={this.props.run ? undefined : () => this.showAll = !this.showAll}
 				ref={pre => {
 					if (!pre) return
 					const isClipped = pre.scrollHeight > pre.clientHeight

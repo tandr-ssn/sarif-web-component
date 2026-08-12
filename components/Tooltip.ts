@@ -1,6 +1,7 @@
 const attribute = 'data-swc-tooltip'
 const installed = new WeakSet<Document>()
 const hoverDelay = 600
+let tooltipId = 0
 
 const styleText = `
 .swcTooltip {
@@ -30,12 +31,14 @@ export function installTooltips(target: Window): void {
 
 	const tooltip = document.createElement('div')
 	tooltip.className = 'swcTooltip'
+	tooltip.id = `swc-tooltip-${tooltipId++}`
 	tooltip.setAttribute('role', 'tooltip')
 	tooltip.hidden = true
 	document.body.appendChild(tooltip)
 	let anchor: Element | undefined
 	let pendingAnchor: Element | undefined
 	let hoverTimer: number | undefined
+	let previousDescribedBy: string | null = null
 
 	const owner = (eventTarget: EventTarget | null): Element | undefined =>
 		(eventTarget as Element | null)?.closest?.(`[${attribute}]`) ?? undefined
@@ -49,13 +52,20 @@ export function installTooltips(target: Window): void {
 		cancelPending(candidate)
 		if (candidate && anchor !== candidate) return
 		tooltip.hidden = true
+		if (anchor) {
+			if (previousDescribedBy === null) anchor.removeAttribute('aria-describedby')
+			else anchor.setAttribute('aria-describedby', previousDescribedBy)
+		}
 		anchor = undefined
+		previousDescribedBy = null
 	}
 	const show = (candidate: Element | undefined) => {
 		cancelPending()
 		const value = candidate?.getAttribute(attribute)
 		if (!candidate || !value) return hide()
 		anchor = candidate
+		previousDescribedBy = candidate.getAttribute('aria-describedby')
+		candidate.setAttribute('aria-describedby', [previousDescribedBy, tooltip.id].filter(Boolean).join(' '))
 		tooltip.textContent = value
 		tooltip.hidden = false
 		const anchorBounds = candidate.getBoundingClientRect()
