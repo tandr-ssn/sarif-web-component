@@ -43,11 +43,16 @@
 	padding: 8px 0;
 }
 
-.swcFindingVisibility { min-width: 120px; }
+.swcFindingVisibility {
+	min-width: 120px;
+
+	.bolt-button { background: $neutral-8; }
+	.bolt-button:hover, .bolt-button:focus-visible { background: $neutral-10; }
+}
 
 .swcToolbarDropdownButton {
 	align-items: center;
-	background: transparent;
+	background: $neutral-8;
 	border: 0;
 	color: $secondary-text;
 	display: inline-flex;
@@ -55,7 +60,7 @@
 	height: 32px;
 	padding: 0 8px;
 
-	&:hover, &:focus-visible { background: $neutral-8; }
+	&:hover, &:focus-visible { background: $neutral-10; }
 	&:disabled { cursor: default; opacity: .6; }
 }
 

@@ -89,6 +89,12 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 	}
 
 	private toggleShow = () => this.show = !this.show
+	private toggleFromHeader = (event: React.MouseEvent<HTMLElement>) => {
+		const target = event.target as Element
+		if (!target.closest('.bolt-card-header')) return
+		if (target.closest('.swcRunTitleToggle, button, a, input, select, textarea')) return
+		this.toggleShow()
+	}
 
 	render() {
 		const {show, itemProvider} = this
@@ -107,9 +113,10 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 					),
 					...(acahSummary ? ['ACAH analysis', ...acahSummary.lines] : []),
 				].filter(Boolean).join('\n')
-				return <Card
+				return <div className="swcRunCard" onClick={this.toggleFromHeader}><Card
 					titleProps={{
 						ariaLevel: 2,
+						className: 'swcRunHeaderTitle',
 						text: <RunTitle expanded={show} title={runTitle} onToggle={this.toggleShow}>
 							<span className="swcRunTitle">
 								<Hi>{runStore.driverName}</Hi>{qualityDomain && ` (${qualityDomain})`}
@@ -150,7 +157,7 @@ import {FINDING_TRIAGE_COLUMN_ID} from './FindingTriageAction'
 						</div>}
 						</div>
 					}
-				</Card>
+				</Card></div>
 			}}
 		</Observer>
 	}

@@ -3,6 +3,8 @@
 
 @use "azure-devops-ui/Core/_platformCommon.scss" as *;
 
+.swcRunCard { min-width: 0; }
+
 .swcRunTitle {
 	display: flex;
 	align-items: center;
@@ -16,12 +18,15 @@
 	cursor: pointer;
 	display: flex;
 	min-width: 0;
+	width: 100%;
 
 	&:focus-visible {
 		outline: 2px solid var(--communication-foreground, #0078d4);
 		outline-offset: 2px;
 	}
 }
+
+.swcRunHeaderTitle { width: 100%; }
 
 .swcRunAcahBadge {
 	background-color: var(--palette-black-alpha-6);
