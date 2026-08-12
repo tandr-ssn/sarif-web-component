@@ -17,34 +17,57 @@ import {getSourcePathFromSarifRoot} from './LocalSourceFile'
 import {getRunAcah} from './Acah'
 import {FindingTriage} from './FindingTriage'
 
-declare module 'sarif' {
-    interface Run {
-		_index: number,
-		_augmented: boolean
-		_rulesInUse: Map<string, Rule>
-		_agesInUse: Map<string, {
-			results: any[];
-			treeItem: any;
-			name: string;
-			isAge: boolean;
-		}>
-	}
-}
-
 export enum SortRuleBy { Count, Name }
 
 export const isMatch = (field: string, keywords: string[]) => !keywords.length || keywords.some(keyword => field.includes(keyword))
 export const resultColumnFilterKey = (fieldId: string) => `Column:${fieldId}`
 
+function cloneRunForView(source: Run): Run {
+	const driver = source.tool.driver
+	return {
+		...source,
+		tool: {
+			...source.tool,
+			driver: {
+				...driver,
+				rules: driver.rules?.map(rule => ({...rule})),
+			},
+		},
+		artifacts: source.artifacts?.map(artifact => ({
+			...artifact,
+			location: artifact.location && {...artifact.location},
+		})),
+		results: source.results?.map(result => ({
+			...result,
+			analysisTarget: result.analysisTarget && {...result.analysisTarget},
+			locations: result.locations?.map(location => ({
+				...location,
+				physicalLocation: location.physicalLocation && {
+					...location.physicalLocation,
+					artifactLocation: location.physicalLocation.artifactLocation
+						&& {...location.physicalLocation.artifactLocation},
+				},
+			})),
+		})),
+	}
+}
+
 export class RunStore {
+	readonly run: Run
 	driverName: string
 	@observable sortRuleBy = SortRuleBy.Count
 	@observable sortRuleOrder = SortOrder.ascending
 	@observable sortColumnIndex = 1
 	@observable sortOrder = SortOrder.ascending
 	private truncationDisposer: IReactionDisposer
+	private rulesInUse = new Map<string, Rule>()
+	private agesInUse = new Map([
+		['Past SLA'  , { results: [] as Result[], treeItem: null, name: 'Past SLA (31+ days)'     , isAge: true }],
+		['Within SLA', { results: [] as Result[], treeItem: null, name: 'Within SLA (0 - 30 days)', isAge: true }],
+	])
 
-	constructor(readonly run: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge?: IObservableValue<boolean>, readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice()), readonly findingTriage?: FindingTriage) {
+	constructor(sourceRun: Run, readonly logIndex, readonly filter: MobxFilter, readonly groupByAge: IObservableValue<boolean> = observable.box(false), readonly hideBaseline?: boolean, readonly showAge?: boolean, readonly showActions?: boolean, readonly selectedFields: IObservableValue<string[]> = observable.box(DEFAULT_RESULT_FIELDS.slice()), readonly findingTriage?: FindingTriage) {
+		const run = this.run = cloneRunForView(sourceRun)
 		const {driver} = run.tool
 		const sarifDriverName = driver.fullName || driver.name
 		const acahRunTitle = getRunAcah(run)?.runTitle
@@ -55,13 +78,7 @@ export class RunStore {
 		const artifactName = run.properties ? run.properties['artifactName'] : ''
 		const filePath = run.properties ? run.properties['filePath'] : ''
 
-		if (!run._augmented) {
-			run._rulesInUse = new Map<string, Rule>()
-			run._agesInUse = new Map([
-				['Past SLA'  , { results: [], treeItem: null, name: 'Past SLA (31+ days)'     , isAge: true }],
-				['Within SLA', { results: [], treeItem: null, name: 'Within SLA (0 - 30 days)', isAge: true }],
-			])
-
+		{
 			const rules = driver.rules || []
 			const rulesListed = new Map<string, Rule>(rules.map(rule => [rule.id, rule] as any)) // Unable to express [[string, RuleEx]].
 			
@@ -77,15 +94,15 @@ export class RunStore {
 				// Collate by Rule
 				const {ruleIndex} = result
 				const ruleId = result.ruleId ?? '(No Rule)' // Ignores 3.5.4 Hierarchical strings.
-				if (!run._rulesInUse.has(ruleId)) {
+				if (!this.rulesInUse.has(ruleId)) {
 					// Need to generate rules for some like Microsoft.CodeAnalysis.Sarif.PatternMatcher.
 					const rule = ruleIndex !== undefined && rules[ruleIndex] as Rule || rulesListed.get(ruleId) || { id: ruleId } as Rule
 					rule.isRule = true
 					rule.run = run // For taxa.
-					run._rulesInUse.set(ruleId, rule)
+					this.rulesInUse.set(ruleId, rule)
 				}
 
-				const rule = run._rulesInUse.get(ruleId)
+				const rule = this.rulesInUse.get(ruleId)
 
 				// Try to build a 'Fix in VS Code' action
 				if (isRepositoryDetailsComplete(repoDetails) && buildId && artifactName && filePath) {
@@ -96,7 +113,7 @@ export class RunStore {
 						organization: repoDetails.organizationName,
 						project: repoDetails.projectName,
 						repoName: repoDetails.repositoryName,
-						runIndex: String(run._index),
+						runIndex: String(logIndex),
 						resultIndex: String(resultIndex),
 						source: '1esscans',
 					})
@@ -128,7 +145,7 @@ export class RunStore {
 				result.firstDetection = firstDetection ? new Date(firstDetection) : new Date()
 				const age = (new Date().getTime() - result.firstDetection.getTime()) / (24 * 60 * 60 * 1000) // 1 day in milliseconds
 				result.sla = age > 31 ? 'Past SLA' : 'Within SLA'
-				run._agesInUse.get(result.sla).results.push(result)
+				this.agesInUse.get(result.sla).results.push(result)
 
 				// Fill-in url from run.artifacts as needed.
 				const artLoc = tryOr(() => result.locations[0].physicalLocation.artifactLocation)
@@ -140,7 +157,6 @@ export class RunStore {
 				result.run = run // For result renderer to get to run.artifacts.
 				result._rule = rule
 			})
-			run._augmented = true
 		}
 
 		this.truncationDisposer = autorun(() => {
@@ -263,7 +279,7 @@ export class RunStore {
 	}
 
 	@computed get agesFiltered() {
-		const treeItems = [...this.run._agesInUse.values()]
+		const treeItems = [...this.agesInUse.values()]
 			.map(age => {
 				const treeItem = age.treeItem = age.treeItem || {
 					data: age,
@@ -275,7 +291,7 @@ export class RunStore {
 	}
 
 	@computed get rulesFiltered() {
-		const treeItems = [...this.run._rulesInUse.values()]
+		const treeItems = [...this.rulesInUse.values()]
 			.map(rule => {
 				const treeItem = rule.treeItem = rule.treeItem || {
 					data: rule,

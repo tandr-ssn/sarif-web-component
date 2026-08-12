@@ -272,10 +272,11 @@ export interface ViewerProps {
 	private createRunStores(logs: Log[] | undefined): RunStore[] {
 		const {hideBaseline, showAge, showActions} = this.props
 		if (!logs) return [] // Undef interpreted as loading.
-		const runs = [].concat(...logs.filter(log => log.version === '2.1.0').map(log => { log.runs.forEach((run, index) => { run._index = index }); return log.runs })) as Run[]
+		const runs = logs.filter(log => log.version === '2.1.0')
+			.flatMap(log => log.runs.map((run, runIndex) => ({run, runIndex})))
 		const {filter, groupByAge} = this
-		return runs.map((run, i) => {
-			const store = new RunStore(run, i, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields, this.findingTriage)
+		return runs.map(({run, runIndex}) => {
+			const store = new RunStore(run, runIndex, filter, groupByAge, hideBaseline, showAge, showActions, this.selectedResultFields, this.findingTriage)
 			store.sortRuleBy = this.rememberedRuleSort.by
 			store.sortRuleOrder = this.rememberedRuleSort.order
 			return store

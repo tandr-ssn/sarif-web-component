@@ -147,7 +147,7 @@ it('uses selected nested result fields as columns', () => {
 	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
 
 	expect(runStore.columns.map(column => column.id)).toEqual(['Path', 'result.properties.acah.sink.selection.status'])
-	expect(runStore.columns[1].filterString(run.results[0])).toBe('confirmed')
+	expect(runStore.columns[1].filterString(runStore.run.results[0])).toBe('confirmed')
 })
 
 it('uses associated rule fields as columns and exports their report values', () => {
@@ -163,8 +163,8 @@ it('uses associated rule fields as columns and exports their report values', () 
 	const runStore = new RunStore(run, 0, new MobxFilter(), undefined, undefined, undefined, undefined, selected)
 
 	expect(runStore.columns.map(column => column.id)).toEqual(selected.get())
-	expect(runStore.columns[1].filterString(run.results[0])).toBe('Affected dependency')
-	expect(runStore.columns[2].filterString(run.results[0])).toBe('https://example.test/CVE-2099-3000')
+	expect(runStore.columns[1].filterString(runStore.run.results[0])).toBe('Affected dependency')
+	expect(runStore.columns[2].filterString(runStore.run.results[0])).toBe('https://example.test/CVE-2099-3000')
 	expect(createResultCsv([runStore], 'all')).toBe(
 		'\ufeff"Message Text","Short Description Text","Help Uri"\r\n' +
 		'"Calgary.Package 1.0.0","Affected dependency","https://example.test/CVE-2099-3000"')
@@ -214,7 +214,7 @@ it('does not merge duplicate-looking v4 claims in the viewer', () => {
 
 	expect(runStore.rulesFiltered[0].childItemsAll).toHaveLength(2)
 	expect(runStore.filteredCount).toBe(2)
-	expect(runStore.filteredResults).toEqual(results)
+	expect(runStore.filteredResults.map(result => result.message.text)).toEqual(results.map(result => result.message.text))
 })
 
 it('filters hidden findings persistently and excludes them from visible exports', async () => {
@@ -238,15 +238,16 @@ it('filters hidden findings persistently and excludes them from visible exports'
 	} as unknown as Run
 	const runStore = new RunStore(run, 0, filter, observable.box(false), false, false, false, undefined, triage)
 
-	await triage.setHidden([run.results[0]], true)
-	expect(runStore.visibleResults).toEqual([run.results[1]])
-	expect(runStore.filteredResults).toEqual([run.results[1]])
+	const viewResults = runStore.run.results
+	await triage.setHidden([viewResults[0]], true)
+	expect(runStore.visibleResults).toEqual([viewResults[1]])
+	expect(runStore.filteredResults).toEqual([viewResults[1]])
 	expect(createResultCsv([runStore], 'all')).not.toContain('First finding')
 
 	visibility.set(['visible', 'hidden'])
-	expect(runStore.filteredResults).toEqual(run.results)
+	expect(runStore.filteredResults).toEqual(viewResults)
 	visibility.set(['hidden'])
-	expect(runStore.filteredResults).toEqual([run.results[0]])
+	expect(runStore.filteredResults).toEqual([viewResults[0]])
 })
 
 it('does not coalesce results from different rules', () => {
@@ -270,7 +271,28 @@ it('does not coalesce results from different rules', () => {
 	expect(runStore.rulesFiltered).toHaveLength(2)
 	expect(runStore.rulesFiltered.every(group => group.childItemsAll.length === 1)).toBe(true)
 	expect(runStore.filteredCount).toBe(2)
-	expect(runStore.filteredResults).toEqual(results)
+	expect(runStore.filteredResults.map(result => result.message.text)).toEqual(results.map(result => result.message.text))
+})
+
+it('does not add viewer metadata to the caller-owned SARIF run', () => {
+	const run = {
+		tool: {driver: {name: 'Calgary', rules: [{id: 'CAL001'}]}},
+		artifacts: [{location: {uri: 'src/River.ts'}}],
+		results: [{ruleId: 'CAL001', message: {text: 'Finding'}, locations: [{physicalLocation: {
+			artifactLocation: {index: 0},
+		}}]}],
+	} as unknown as Run
+	const before = JSON.stringify(run)
+
+	const runStore = new RunStore(run, 0, new MobxFilter())
+
+	expect(JSON.stringify(run)).toBe(before)
+	expect(runStore.run).not.toBe(run)
+	expect(runStore.run.results[0]).not.toBe(run.results[0])
+	expect((run.results[0] as any).run).toBeUndefined()
+	expect((run.results[0] as any)._rule).toBeUndefined()
+	expect(run.results[0].locations[0].physicalLocation.artifactLocation.uri).toBeUndefined()
+	expect(runStore.run.results[0].locations[0].physicalLocation.artifactLocation.uri).toBe('src/River.ts')
 })
 
 it('handles multiple logs', () => {
