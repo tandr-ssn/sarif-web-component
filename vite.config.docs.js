@@ -20,12 +20,14 @@ module.exports = defineConfig(({command}) => ({
 	base: command === 'build' ? './' : '/',
 	css: {
 		transformer: 'postcss',
+		lightningcss: {
+			errorRecovery: true,
+		},
 	},
 	build: {
 		outDir: 'dist',
 		emptyOutDir: true,
 		target: 'es2022',
-		cssMinify: false,
 		assetsInlineLimit: 10_000_000,
 		rollupOptions: {
 			input: path.resolve(__dirname, 'docs-components/index.html'),
