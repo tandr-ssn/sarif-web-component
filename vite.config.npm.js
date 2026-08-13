@@ -1,9 +1,10 @@
 const path = require('path')
 const react = require('@vitejs/plugin-react')
 const {defineConfig} = require('vite')
+const {replaceAzureDevOpsFluentIconCSS, stripLegacyAzureDevOpsMediaQueries} = require('./vite.azure-devops')
 
 module.exports = defineConfig({
-	plugins: [react()],
+	plugins: [replaceAzureDevOpsFluentIconCSS(), stripLegacyAzureDevOpsMediaQueries(), react()],
 	build: {
 		outDir: 'dist',
 		emptyOutDir: false,
@@ -12,6 +13,7 @@ module.exports = defineConfig({
 			name: 'SARIFViewer',
 			formats: ['umd', 'es'],
 			fileName: format => format === 'es' ? 'index.mjs' : 'index.js',
+			cssFileName: 'sarif-web-component',
 		},
 		rollupOptions: {
 			external: ['react', 'react-dom'],

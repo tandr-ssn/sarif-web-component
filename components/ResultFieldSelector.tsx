@@ -107,6 +107,14 @@ export class ResultFieldSelector extends React.Component<{
 		this.props.selected.set(DEFAULT_RESULT_FIELDS.filter(field => available.has(field)))
 	}
 
+	private closeOnEscape = (event: React.KeyboardEvent) => {
+		if (event.key !== 'Escape' || !this.open) return
+		this.open = false
+		this.anchor?.focus()
+		event.preventDefault()
+		event.stopPropagation()
+	}
+
 	render() {
 		const builtIns = Array.from(BUILT_IN_RESULT_FIELDS).filter(field => this.props.fieldPaths.includes(field))
 		const dynamic = this.props.fieldPaths.filter(field => !BUILT_IN_RESULT_FIELDS.has(field))
@@ -117,7 +125,7 @@ export class ResultFieldSelector extends React.Component<{
 		const search = this.search.trim().toLowerCase()
 		const selected = this.props.selected.get()
 		const displayNames = getResultFieldDisplayNames(selected)
-		return <div className="swcResultFieldSelector">
+		return <div className="swcResultFieldSelector" onKeyDown={this.closeOnEscape}>
 			<button type="button" className="swcToolbarDropdownButton" ref={element => this.anchor = element ?? undefined}
 				data-swc-tooltip="Choose which SARIF result fields are shown in findings and exports"
 				aria-expanded={this.open}

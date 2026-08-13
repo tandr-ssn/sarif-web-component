@@ -1,9 +1,10 @@
 import {expect, test} from '@playwright/test'
+import {readFile} from 'node:fs/promises'
 import * as path from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {docsSessionKey} from '../docs-components/SarifSession'
 
-const docsUrl = pathToFileURL(path.resolve(__dirname, '../dist/index.html')).href
+const docsUrl = pathToFileURL(path.resolve(__dirname, '../dist/acah-viewer.html')).href
 const sessionKey = docsSessionKey
 const fitAllColumnsKey = `${sessionKey}:fit-all-columns`
 
@@ -258,6 +259,32 @@ test('persists hidden findings and restores the current SARIF state', async ({pa
 	await page.getByRole('button', {name: 'Result view options'}).click()
 	await page.getByRole('menuitem', {name: 'Restore all findings in this SARIF'}).click()
 	await expect(finding).toBeVisible()
+})
+
+test('operates field, export, and close buttons', async ({page}) => {
+	const fields = page.getByRole('button', {name: /Fields:/})
+	await expect(fields).toHaveAttribute('aria-expanded', 'false')
+	await fields.click()
+	await expect(fields).toHaveAttribute('aria-expanded', 'true')
+	await expect(page.getByRole('region', {name: 'Selected columns'})).toBeVisible()
+	await page.keyboard.press('Escape')
+	await expect(fields).toHaveAttribute('aria-expanded', 'false')
+
+	const downloadStarted = page.waitForEvent('download')
+	await page.getByRole('button', {name: /Export: visible/}).click()
+	await page.getByRole('menuitem', {name: 'Plain text', exact: true}).click()
+	const download = await downloadStarted
+	expect(download.suggestedFilename()).toBe('sarif-findings-all.txt')
+	const downloadPath = await download.path()
+	if (!downloadPath) throw new Error('The exported findings download has no local path')
+	const exported = await readFile(downloadPath, 'utf8')
+	expect(exported).toContain('Ottawa.Package')
+	expect(exported).toContain('Calgary.Package')
+
+	await page.getByRole('button', {name: 'Close and forget'}).click()
+	await expect(page.getByRole('button', {name: 'Close and forget'})).toHaveCount(0)
+	await expect(page.getByText('Welcome to the online SARIF Viewer demo. Drag and drop a SARIF file here to view.')).toBeVisible()
+	await expect.poll(() => page.evaluate(key => sessionStorage.getItem(`${key}:sarif`), sessionKey)).toBeNull()
 })
 
 test('keeps search and actions usable in a narrow side-by-side window', async ({page}) => {
